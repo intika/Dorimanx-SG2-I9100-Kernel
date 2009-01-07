@@ -1253,8 +1253,8 @@ out:
 		tcp_push(sk, flags, mss_now, tp->nonagle);
 	release_sock(sk);
 
-	if (copied > 0)
-		uid_stat_tcp_snd(current_uid(), copied);
+	if (copied + copied_syn)
+		uid_stat_tcp_snd(current_uid(), copied + copied_syn);
 	return copied + copied_syn;
 
 do_fault:
