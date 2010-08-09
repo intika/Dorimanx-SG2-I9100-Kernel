@@ -241,8 +241,9 @@ struct hci_dev {
 	struct delayed_work	service_cache;
 
 	struct timer_list	cmd_timer;
+
+	struct work_struct	rx_work;
 	struct tasklet_struct	cmd_task;
-	struct tasklet_struct	rx_task;
 	struct tasklet_struct	tx_task;
 
 	struct sk_buff_head	rx_q;

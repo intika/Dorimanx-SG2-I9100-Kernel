@@ -56,8 +56,8 @@
 
 int enable_hs;
 
+static void hci_rx_work(struct work_struct *work);
 static void hci_cmd_task(unsigned long arg);
-static void hci_rx_task(unsigned long arg);
 static void hci_tx_task(unsigned long arg);
 
 static DEFINE_RWLOCK(hci_task_lock);
@@ -687,9 +687,9 @@ int hci_dev_open(__u16 dev)
 		}
 	} else {
 		/* Init failed, cleanup */
-		tasklet_kill(&hdev->rx_task);
 		tasklet_kill(&hdev->tx_task);
 		tasklet_kill(&hdev->cmd_task);
+		flush_work(&hdev->rx_work);
 
 		skb_queue_purge(&hdev->cmd_q);
 		skb_queue_purge(&hdev->rx_q);
@@ -730,8 +730,8 @@ static int hci_dev_do_close(struct hci_dev *hdev)
 	}
 
 	/* Kill RX and TX tasks */
-	tasklet_kill(&hdev->rx_task);
 	tasklet_kill(&hdev->tx_task);
+	flush_work(&hdev->rx_work);
 
 	if (hdev->discov_timeout > 0) {
 		cancel_delayed_work(&hdev->discov_off);
@@ -1776,8 +1776,9 @@ int hci_register_dev(struct hci_dev *hdev)
 	hdev->sniff_max_interval = 800;
 	hdev->sniff_min_interval = 80;
 
-	tasklet_init(&hdev->cmd_task, hci_cmd_task, (unsigned long) hdev);
-	tasklet_init(&hdev->rx_task, hci_rx_task, (unsigned long) hdev);
+	INIT_WORK(&hdev->rx_work, hci_rx_work);
+
+	tasklet_init(&hdev->cmd_task, hci_cmd_task,(unsigned long) hdev);
 	tasklet_init(&hdev->tx_task, hci_tx_task, (unsigned long) hdev);
 
 	skb_queue_head_init(&hdev->rx_q);
@@ -1956,9 +1957,8 @@ int hci_recv_frame(struct sk_buff *skb)
 	/* Time stamp */
 	__net_timestamp(skb);
 
-	/* Queue frame for rx task */
 	skb_queue_tail(&hdev->rx_q, skb);
-	tasklet_schedule(&hdev->rx_task);
+	queue_work(hdev->workqueue, &hdev->rx_work);
 
 	return 0;
 }
@@ -2835,9 +2835,9 @@ static inline void hci_scodata_packet(struct hci_dev *hdev, struct sk_buff *skb)
 	kfree_skb(skb);
 }
 
-static void hci_rx_task(unsigned long arg)
+static void hci_rx_work(struct work_struct *work)
 {
-	struct hci_dev *hdev = (struct hci_dev *) arg;
+	struct hci_dev *hdev = container_of(work, struct hci_dev, rx_work);
 	struct sk_buff *skb;
 
 	BT_DBG("%s", hdev->name);
