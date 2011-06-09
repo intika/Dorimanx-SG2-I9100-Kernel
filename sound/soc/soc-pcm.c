@@ -81,7 +81,7 @@ static int soc_pcm_open(struct snd_pcm_substream *substream)
 	struct snd_soc_dai_driver *codec_dai_drv = codec_dai->driver;
 	int ret = 0;
 
-	mutex_lock_nested(&rtd->pcm_mutex, rtd->pcm_subclass);
+	mutex_lock(&pcm_mutex);
 
 	/* startup the audio subsystem */
 	if (cpu_dai->driver->ops->startup) {
@@ -211,7 +211,7 @@ static int soc_pcm_open(struct snd_pcm_substream *substream)
 	cpu_dai->active++;
 	codec_dai->active++;
 	rtd->codec->active++;
-	mutex_unlock(&rtd->pcm_mutex);
+	mutex_unlock(&pcm_mutex);
 	return 0;
 
 config_err:
@@ -230,7 +230,7 @@ platform_err:
 	if (cpu_dai->driver->ops->shutdown)
 		cpu_dai->driver->ops->shutdown(substream, cpu_dai);
 out:
-	mutex_unlock(&rtd->pcm_mutex);
+	mutex_unlock(&pcm_mutex);
 	return ret;
 }
 
@@ -245,7 +245,7 @@ static void close_delayed_work(struct work_struct *work)
 			container_of(work, struct snd_soc_pcm_runtime, delayed_work.work);
 	struct snd_soc_dai *codec_dai = rtd->codec_dai;
 
-	mutex_lock_nested(&rtd->pcm_mutex, rtd->pcm_subclass);
+	mutex_lock(&pcm_mutex);
 
 	pr_debug("pop wq checking: %s status: %s waiting: %s\n",
 		 codec_dai->driver->playback.stream_name,
@@ -260,7 +260,7 @@ static void close_delayed_work(struct work_struct *work)
 			SND_SOC_DAPM_STREAM_STOP);
 	}
 
-	mutex_unlock(&rtd->pcm_mutex);
+	mutex_unlock(&pcm_mutex);
 }
 
 /*
@@ -268,7 +268,7 @@ static void close_delayed_work(struct work_struct *work)
  * freed here. The cpu DAI, codec DAI, machine and platform are also
  * shutdown.
  */
-static int soc_pcm_close(struct snd_pcm_substream *substream)
+static int soc_codec_close(struct snd_pcm_substream *substream)
 {
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
 	struct snd_soc_platform *platform = rtd->platform;
@@ -276,7 +276,7 @@ static int soc_pcm_close(struct snd_pcm_substream *substream)
 	struct snd_soc_dai *codec_dai = rtd->codec_dai;
 	struct snd_soc_codec *codec = rtd->codec;
 
-	mutex_lock_nested(&rtd->pcm_mutex, rtd->pcm_subclass);
+	mutex_lock(&pcm_mutex);
 
 	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
 		cpu_dai->playback_active--;
@@ -289,9 +289,6 @@ static int soc_pcm_close(struct snd_pcm_substream *substream)
 	cpu_dai->active--;
 	codec_dai->active--;
 	codec->active--;
-
-	if (!cpu_dai->active && !codec_dai->active)
-		rtd->rate = 0;
 
 	/* Muting the DAC suppresses artifacts caused during digital
 	 * shutdown, for example from stopping clocks.
@@ -324,7 +321,7 @@ static int soc_pcm_close(struct snd_pcm_substream *substream)
 			SND_SOC_DAPM_STREAM_STOP);
 	}
 
-	mutex_unlock(&rtd->pcm_mutex);
+	mutex_unlock(&pcm_mutex);
 	return 0;
 }
 
@@ -341,7 +338,7 @@ static int soc_pcm_prepare(struct snd_pcm_substream *substream)
 	struct snd_soc_dai *codec_dai = rtd->codec_dai;
 	int ret = 0;
 
-	mutex_lock_nested(&rtd->pcm_mutex, rtd->pcm_subclass);
+	mutex_lock(&pcm_mutex);
 
 	if (rtd->dai_link->ops && rtd->dai_link->ops->prepare) {
 		ret = rtd->dai_link->ops->prepare(substream);
@@ -394,7 +391,7 @@ static int soc_pcm_prepare(struct snd_pcm_substream *substream)
 	snd_soc_dai_digital_mute(codec_dai, 0);
 
 out:
-	mutex_unlock(&rtd->pcm_mutex);
+	mutex_unlock(&pcm_mutex);
 	return ret;
 }
 
@@ -412,7 +409,7 @@ static int soc_pcm_hw_params(struct snd_pcm_substream *substream,
 	struct snd_soc_dai *codec_dai = rtd->codec_dai;
 	int ret = 0;
 
-	mutex_lock_nested(&rtd->pcm_mutex, rtd->pcm_subclass);
+	mutex_lock(&pcm_mutex);
 
 	if (rtd->dai_link->ops && rtd->dai_link->ops->hw_params) {
 		ret = rtd->dai_link->ops->hw_params(substream, params);
@@ -452,7 +449,7 @@ static int soc_pcm_hw_params(struct snd_pcm_substream *substream,
 	rtd->rate = params_rate(params);
 
 out:
-	mutex_unlock(&rtd->pcm_mutex);
+	mutex_unlock(&pcm_mutex);
 	return ret;
 
 platform_err:
@@ -467,7 +464,7 @@ codec_err:
 	if (rtd->dai_link->ops && rtd->dai_link->ops->hw_free)
 		rtd->dai_link->ops->hw_free(substream);
 
-	mutex_unlock(&rtd->pcm_mutex);
+	mutex_unlock(&pcm_mutex);
 	return ret;
 }
 
@@ -482,7 +479,7 @@ static int soc_pcm_hw_free(struct snd_pcm_substream *substream)
 	struct snd_soc_dai *codec_dai = rtd->codec_dai;
 	struct snd_soc_codec *codec = rtd->codec;
 
-	mutex_lock_nested(&rtd->pcm_mutex, rtd->pcm_subclass);
+	mutex_lock(&pcm_mutex);
 
 	/* apply codec digital mute */
 	if (!codec->active)
@@ -503,7 +500,7 @@ static int soc_pcm_hw_free(struct snd_pcm_substream *substream)
 	if (cpu_dai->driver->ops->hw_free)
 		cpu_dai->driver->ops->hw_free(substream, cpu_dai);
 
-	mutex_unlock(&rtd->pcm_mutex);
+	mutex_unlock(&pcm_mutex);
 	return 0;
 }
 
@@ -570,7 +567,7 @@ static snd_pcm_uframes_t soc_pcm_pointer(struct snd_pcm_substream *substream)
 /* ASoC PCM operations */
 static struct snd_pcm_ops soc_pcm_ops = {
 	.open		= soc_pcm_open,
-	.close		= soc_pcm_close,
+	.close		= soc_codec_close,
 	.hw_params	= soc_pcm_hw_params,
 	.hw_free	= soc_pcm_hw_free,
 	.prepare	= soc_pcm_prepare,
