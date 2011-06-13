@@ -13,26 +13,13 @@
 
 #include <linux/i2c.h>
 #include <linux/spi/spi.h>
+#include <linux/regmap.h>
 #include <sound/soc.h>
 
 #include <trace/events/asoc.h>
 
-#ifdef CONFIG_SPI_MASTER
-static int do_spi_write(void *control, const char *data, int len)
-{
-	struct spi_device *spi = control;
-	int ret;
-
-	ret = spi_write(spi, data, len);
-	if (ret < 0)
-		return ret;
-
-	return len;
-}
-#endif
-
-static int do_hw_write(struct snd_soc_codec *codec, unsigned int reg,
-		       unsigned int value, const void *data, int len)
+static int hw_write(struct snd_soc_codec *codec, unsigned int reg,
+		    unsigned int value)
 {
 	int ret;
 
@@ -49,13 +36,7 @@ static int do_hw_write(struct snd_soc_codec *codec, unsigned int reg,
 		return 0;
 	}
 
-	ret = codec->hw_write(codec->control_data, data, len);
-	if (ret == len)
-		return 0;
-	if (ret < 0)
-		return ret;
-	else
-		return -EIO;
+	return regmap_write(codec->control_data, reg, value);
 }
 
 static unsigned int hw_read(struct snd_soc_codec *codec, unsigned int reg)
@@ -69,8 +50,11 @@ static unsigned int hw_read(struct snd_soc_codec *codec, unsigned int reg)
 		if (codec->cache_only)
 			return -1;
 
-		BUG_ON(!codec->hw_read);
-		return codec->hw_read(codec, reg);
+		ret = regmap_read(codec->control_data, reg, &val);
+		if (ret == 0)
+			return val;
+		else
+			return ret;
 	}
 
 	ret = snd_soc_cache_read(codec, reg, &val);
@@ -265,16 +249,17 @@ static int snd_soc_16_16_write(struct snd_soc_codec *codec, unsigned int reg,
 }
 
 /* Primitive bulk write support for soc-cache.  The data pointed to by
- * `data' needs to already be in the form the hardware expects
- * including any leading register specific data.  Any data written
- * through this function will not go through the cache as it only
- * handles writing to volatile or out of bounds registers.
+ * `data' needs to already be in the form the hardware expects.  Any
+ * data written through this function will not go through the cache as
+ * it only handles writing to volatile or out of bounds registers.
+ *
+ * This is currently only supported for devices using the regmap API
+ * wrappers.
  */
-static int snd_soc_hw_bulk_write_raw(struct snd_soc_codec *codec, unsigned int reg,
+static int snd_soc_hw_bulk_write_raw(struct snd_soc_codec *codec,
+				     unsigned int reg,
 				     const void *data, size_t len)
 {
-	int ret;
-
 	/* To ensure that we don't get out of sync with the cache, check
 	 * whether the base register is volatile or if we've directly asked
 	 * to bypass the cache.  Out of bounds registers are considered
@@ -285,27 +270,7 @@ static int snd_soc_hw_bulk_write_raw(struct snd_soc_codec *codec, unsigned int r
 	    && reg < codec->driver->reg_cache_size)
 		return -EINVAL;
 
-	switch (codec->control_type) {
-#if defined(CONFIG_I2C) || (defined(CONFIG_I2C_MODULE) && defined(MODULE))
-	case SND_SOC_I2C:
-		ret = i2c_master_send(to_i2c_client(codec->dev), data, len);
-		break;
-#endif
-#if defined(CONFIG_SPI_MASTER)
-	case SND_SOC_SPI:
-		ret = spi_write(to_spi_device(codec->dev), data, len);
-		break;
-#endif
-	default:
-		BUG();
-	}
-
-	if (ret == len)
-		return 0;
-	if (ret < 0)
-		return ret;
-	else
-		return -EIO;
+	return regmap_raw_write(codec->control_data, reg, data, len);
 }
 
 static struct {
@@ -370,34 +335,20 @@ int snd_soc_codec_set_cache_io(struct snd_soc_codec *codec,
 			       int addr_bits, int data_bits,
 			       enum snd_soc_control_type control)
 {
-	int i;
+	struct regmap_config config;
 
-	for (i = 0; i < ARRAY_SIZE(io_types); i++)
-		if (io_types[i].addr_bits == addr_bits &&
-		    io_types[i].data_bits == data_bits)
-			break;
-	if (i == ARRAY_SIZE(io_types)) {
-		printk(KERN_ERR
-		       "No I/O functions for %d bit address %d bit data\n",
-		       addr_bits, data_bits);
-		return -EINVAL;
-	}
-
-	codec->write = io_types[i].write;
+	memset(&config, 0, sizeof(config));
+	codec->write = hw_write;
 	codec->read = hw_read;
 	codec->bulk_write_raw = snd_soc_hw_bulk_write_raw;
 
+	config.reg_bits = addr_bits;
+	config.val_bits = data_bits;
+
 	switch (control) {
 	case SND_SOC_I2C:
-#if defined(CONFIG_I2C) || (defined(CONFIG_I2C_MODULE) && defined(MODULE))
-		codec->hw_write = (hw_write_t)i2c_master_send;
-#endif
-		if (io_types[i].i2c_read)
-			codec->hw_read = io_types[i].i2c_read;
-
-		codec->control_data = container_of(codec->dev,
-						   struct i2c_client,
-						   dev);
+		codec->control_data = regmap_init_i2c(to_i2c_client(codec->dev),
+						      &config);
 		break;
 
 	case SND_SOC_SPI:
@@ -411,7 +362,13 @@ int snd_soc_codec_set_cache_io(struct snd_soc_codec *codec,
 						   struct spi_device,
 						   dev);
 		break;
+
+	default:
+		return -EINVAL;
 	}
+
+	if (IS_ERR(codec->control_data))
+		return PTR_ERR(codec->control_data);
 
 	return 0;
 }
