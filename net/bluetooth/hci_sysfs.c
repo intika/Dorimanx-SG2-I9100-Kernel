@@ -403,7 +403,7 @@ static int inquiry_cache_show(struct seq_file *f, void *p)
         struct discovery_state *cache = &hdev->discovery;
 	struct inquiry_entry *e;
 
-	hci_dev_lock_bh(hdev);
+	hci_dev_lock(hdev);
 	list_for_each_entry(e, &cache->all, all) {
 		struct inquiry_data *data = &e->data;
 		seq_printf(f, "%s %d %d %d 0x%.2x%.2x%.2x 0x%.4x %d %d %u\n",
@@ -415,7 +415,7 @@ static int inquiry_cache_show(struct seq_file *f, void *p)
 			   data->rssi, data->ssp_mode, e->timestamp);
 	}
 
-	hci_dev_unlock_bh(hdev);
+	hci_dev_unlock(hdev);
 
 	return 0;
 }
@@ -437,12 +437,12 @@ static int blacklist_show(struct seq_file *f, void *p)
 	struct hci_dev *hdev = f->private;
 	struct bdaddr_list *b;
 
-	hci_dev_lock_bh(hdev);
+	hci_dev_lock(hdev);
 
 	list_for_each_entry(b, &hdev->blacklist, list)
 		seq_printf(f, "%s\n", batostr(&b->bdaddr));
 
-	hci_dev_unlock_bh(hdev);
+	hci_dev_unlock(hdev);
 
 	return 0;
 }
@@ -481,12 +481,12 @@ static int uuids_show(struct seq_file *f, void *p)
 	struct hci_dev *hdev = f->private;
 	struct bt_uuid *uuid;
 
-	hci_dev_lock_bh(hdev);
+	hci_dev_lock(hdev);
 
 	list_for_each_entry(uuid, &hdev->uuids, list)
 		print_bt_uuid(f, uuid->uuid);
 
-	hci_dev_unlock_bh(hdev);
+	hci_dev_unlock(hdev);
 
 	return 0;
 }
@@ -507,11 +507,11 @@ static int auto_accept_delay_set(void *data, u64 val)
 {
 	struct hci_dev *hdev = data;
 
-	hci_dev_lock_bh(hdev);
+	hci_dev_lock(hdev);
 
 	hdev->auto_accept_delay = val;
 
-	hci_dev_unlock_bh(hdev);
+	hci_dev_unlock(hdev);
 
 	return 0;
 }
@@ -520,11 +520,11 @@ static int auto_accept_delay_get(void *data, u64 *val)
 {
 	struct hci_dev *hdev = data;
 
-	hci_dev_lock_bh(hdev);
+	hci_dev_lock(hdev);
 
 	*val = hdev->auto_accept_delay;
 
-	hci_dev_unlock_bh(hdev);
+	hci_dev_unlock(hdev);
 
 	return 0;
 }

@@ -566,14 +566,14 @@ int hci_inquiry(void __user *arg)
 	if (!hdev)
 		return -ENODEV;
 
-	hci_dev_lock_bh(hdev);
+	hci_dev_lock(hdev);
 	if (inquiry_cache_age(hdev) > INQUIRY_CACHE_AGE_MAX ||
 				inquiry_cache_empty(hdev) ||
 				ir.flags & IREQ_CACHE_FLUSH) {
 		inquiry_cache_flush(hdev);
 		do_inquiry = 1;
 	}
-	hci_dev_unlock_bh(hdev);
+	hci_dev_unlock(hdev);
 
 	timeo = ir.length * msecs_to_jiffies(2000);
 
@@ -597,9 +597,9 @@ int hci_inquiry(void __user *arg)
 		goto done;
 	}
 
-	hci_dev_lock_bh(hdev);
+	hci_dev_lock(hdev);
 	ir.num_rsp = inquiry_cache_dump(hdev, max_rsp, buf);
-	hci_dev_unlock_bh(hdev);
+	hci_dev_unlock(hdev);
 
 	BT_DBG("num_rsp %d", ir.num_rsp);
 
@@ -681,9 +681,9 @@ int hci_dev_open(__u16 dev)
 		set_bit(HCI_UP, &hdev->flags);
 		hci_notify(hdev, HCI_DEV_UP);
 		if (!test_bit(HCI_SETUP, &hdev->dev_flags)) {
-			hci_dev_lock_bh(hdev);
+			hci_dev_lock(hdev);
 			mgmt_powered(hdev, 1);
-			hci_dev_unlock_bh(hdev);
+			hci_dev_unlock(hdev);
 		}
 	} else {
 		/* Init failed, cleanup */
@@ -744,10 +744,10 @@ static int hci_dev_do_close(struct hci_dev *hdev)
 
 	cancel_delayed_work_sync(&hdev->le_scan_disable);
 
-	hci_dev_lock_bh(hdev);
+	hci_dev_lock(hdev);
 	inquiry_cache_flush(hdev);
 	hci_conn_hash_flush(hdev);
-	hci_dev_unlock_bh(hdev);
+	hci_dev_unlock(hdev);
 
 	hci_notify(hdev, HCI_DEV_DOWN);
 
@@ -784,9 +784,9 @@ static int hci_dev_do_close(struct hci_dev *hdev)
 	 * and no tasks are scheduled. */
 	hdev->close(hdev);
 
-	hci_dev_lock_bh(hdev);
+	hci_dev_lock(hdev);
 	mgmt_powered(hdev, 0);
-	hci_dev_unlock_bh(hdev);
+	hci_dev_unlock(hdev);
 
 	/* Clear flags */
 	hdev->flags = 0;
@@ -835,10 +835,10 @@ int hci_dev_reset(__u16 dev)
 	skb_queue_purge(&hdev->rx_q);
 	skb_queue_purge(&hdev->cmd_q);
 
-	hci_dev_lock_bh(hdev);
+	hci_dev_lock(hdev);
 	inquiry_cache_flush(hdev);
 	hci_conn_hash_flush(hdev);
-	hci_dev_unlock_bh(hdev);
+	hci_dev_unlock(hdev);
 
 	if (hdev->flush)
 		hdev->flush(hdev);
@@ -1763,7 +1763,7 @@ int hci_register_dev(struct hci_dev *hdev)
 	list_add_tail(&hdev->list, head);
 
 	atomic_set(&hdev->refcnt, 1);
-	spin_lock_init(&hdev->lock);
+	mutex_init(&hdev->lock);
 
 	hdev->flags = 0;
 	hdev->dev_flags = 0;
@@ -1888,9 +1888,9 @@ void hci_unregister_dev(struct hci_dev *hdev)
 
 	if (!test_bit(HCI_INIT, &hdev->flags) &&
 					!test_bit(HCI_SETUP, &hdev->dev_flags)) {
-		hci_dev_lock_bh(hdev);
+		hci_dev_lock(hdev);
 		mgmt_index_removed(hdev);
-		hci_dev_unlock_bh(hdev);
+		hci_dev_unlock(hdev);
 	}
 
 	/* mgmt_index_removed should take care of emptying the
@@ -1909,14 +1909,14 @@ void hci_unregister_dev(struct hci_dev *hdev)
 
 	destroy_workqueue(hdev->workqueue);
 
-	hci_dev_lock_bh(hdev);
+	hci_dev_lock(hdev);
 	hci_blacklist_clear(hdev);
 	hci_uuids_clear(hdev);
 	hci_link_keys_clear(hdev);
 	hci_smp_ltks_clear(hdev);
 	hci_remote_oob_data_clear(hdev);
 	hci_adv_entries_clear(hdev);
-	hci_dev_unlock_bh(hdev);
+	hci_dev_unlock(hdev);
 
 	__hci_dev_put(hdev);
 }

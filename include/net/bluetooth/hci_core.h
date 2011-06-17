@@ -159,7 +159,7 @@ struct le_scan_params {
 #define NUM_REASSEMBLY 4
 struct hci_dev {
 	struct list_head list;
-	spinlock_t	lock;
+	struct mutex	lock;
 	atomic_t	refcnt;
 
 	char		name[8];
@@ -635,10 +635,8 @@ static inline struct hci_dev *hci_dev_hold(struct hci_dev *d)
 	return NULL;
 }
 
-#define hci_dev_lock(d)		spin_lock(&d->lock)
-#define hci_dev_unlock(d)	spin_unlock(&d->lock)
-#define hci_dev_lock_bh(d)	spin_lock_bh(&d->lock)
-#define hci_dev_unlock_bh(d)	spin_unlock_bh(&d->lock)
+#define hci_dev_lock(d)		mutex_lock(&d->lock)
+#define hci_dev_unlock(d)	mutex_unlock(&d->lock)
 
 struct hci_dev *hci_dev_get(int index);
 struct hci_dev *hci_get_route(bdaddr_t *src, bdaddr_t *dst);

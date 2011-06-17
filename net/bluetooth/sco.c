@@ -189,7 +189,7 @@ static int sco_connect(struct sock *sk, __s8 is_wbs)
 	if (!hdev)
 		return -EHOSTUNREACH;
 
-	hci_dev_lock_bh(hdev);
+	hci_dev_lock(hdev);
 	/* SS_BT::VSC + HFP1.6 */
 	hdev->is_wbs = is_wbs;
 
@@ -240,7 +240,7 @@ static int sco_connect(struct sock *sk, __s8 is_wbs)
 	}
 
 done:
-	hci_dev_unlock_bh(hdev);
+	hci_dev_unlock(hdev);
 	hci_dev_put(hdev);
 	return err;
 }

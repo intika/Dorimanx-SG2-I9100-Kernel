@@ -1236,7 +1236,7 @@ int l2cap_chan_connect(struct l2cap_chan *chan)
 	if (!hdev)
 		return -EHOSTUNREACH;
 
-	hci_dev_lock_bh(hdev);
+	hci_dev_lock(hdev);
 
 	auth_type = l2cap_get_auth_type(chan);
 
@@ -1290,7 +1290,7 @@ int l2cap_chan_connect(struct l2cap_chan *chan)
 	err = 0;
 
 done:
-	hci_dev_unlock_bh(hdev);
+	hci_dev_unlock(hdev);
 	hci_dev_put(hdev);
 	return err;
 }

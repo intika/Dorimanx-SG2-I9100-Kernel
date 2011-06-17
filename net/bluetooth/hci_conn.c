@@ -968,7 +968,7 @@ int hci_get_conn_list(void __user *arg)
 
 	ci = cl->conn_info;
 
-	hci_dev_lock_bh(hdev);
+	hci_dev_lock(hdev);
 	list_for_each_entry(c, &hdev->conn_hash.list, list) {
 		bacpy(&(ci + n)->bdaddr, &c->dst);
 		(ci + n)->handle = c->handle;
@@ -988,7 +988,7 @@ int hci_get_conn_list(void __user *arg)
 		if (++n >= req.conn_num)
 			break;
 	}
-	hci_dev_unlock_bh(hdev);
+	hci_dev_unlock(hdev);
 
 	cl->dev_id = hdev->id;
 	cl->conn_num = n;
@@ -1012,7 +1012,7 @@ int hci_get_conn_info(struct hci_dev *hdev, void __user *arg)
 	if (copy_from_user(&req, arg, sizeof(req)))
 		return -EFAULT;
 
-	hci_dev_lock_bh(hdev);
+	hci_dev_lock(hdev);
 	conn = hci_conn_hash_lookup_ba(hdev, req.type, &req.bdaddr);
 	if (conn) {
 		bacpy(&ci.bdaddr, &conn->dst);
@@ -1031,7 +1031,7 @@ int hci_get_conn_info(struct hci_dev *hdev, void __user *arg)
 			ci.pkts = hdev->acl_pkts;
 		}
 	}
-	hci_dev_unlock_bh(hdev);
+	hci_dev_unlock(hdev);
 
 	if (!conn)
 		return -ENOENT;
@@ -1047,11 +1047,11 @@ int hci_get_auth_info(struct hci_dev *hdev, void __user *arg)
 	if (copy_from_user(&req, arg, sizeof(req)))
 		return -EFAULT;
 
-	hci_dev_lock_bh(hdev);
+	hci_dev_lock(hdev);
 	conn = hci_conn_hash_lookup_ba(hdev, ACL_LINK, &req.bdaddr);
 	if (conn)
 		req.type = conn->auth_type;
-	hci_dev_unlock_bh(hdev);
+	hci_dev_unlock(hdev);
 
 	if (!conn)
 		return -ENOENT;
