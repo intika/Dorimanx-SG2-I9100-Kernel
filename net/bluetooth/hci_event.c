@@ -1057,7 +1057,7 @@ static void hci_cc_le_set_scan_enable(struct hci_dev *hdev,
 		}
 
 		set_bit(HCI_LE_SCAN, &hdev->dev_flags);
-		del_timer_sync(&hdev->adv_timer);
+		cancel_delayed_work_sync(&hdev->adv_work);
 
 		hci_dev_lock(hdev);
 
@@ -1080,7 +1080,9 @@ static void hci_cc_le_set_scan_enable(struct hci_dev *hdev,
 		hci_discovery_set_state(hdev, DISCOVERY_STOPPED);
 		hci_dev_unlock(hdev);
 
-		mod_timer(&hdev->adv_timer, jiffies + ADV_CLEAR_TIMEOUT);
+		cancel_delayed_work_sync(&hdev->adv_work);
+		queue_delayed_work(hdev->workqueue, &hdev->adv_work,
+						 jiffies + ADV_CLEAR_TIMEOUT);
 		break;
 
 	default:
