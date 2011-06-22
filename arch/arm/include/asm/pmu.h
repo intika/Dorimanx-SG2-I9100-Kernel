@@ -52,7 +52,7 @@ reserve_pmu(enum arm_pmu_type type);
  * a cookie.
  */
 extern int
-release_pmu(struct platform_device *pdev);
+release_pmu(enum arm_pmu_type type);
 
 /**
  * init_pmu() - Initialise the PMU.
