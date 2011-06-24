@@ -124,7 +124,7 @@ static struct l2cap_chan *l2cap_get_chan_by_scid(struct l2cap_conn *conn, u16 ci
 	read_lock(&conn->chan_lock);
 	c = __l2cap_get_chan_by_scid(conn, cid);
 	if (c)
-		bh_lock_sock(c->sk);
+		lock_sock(c->sk);
 	read_unlock(&conn->chan_lock);
 	return c;
 }
@@ -147,7 +147,7 @@ static inline struct l2cap_chan *l2cap_get_chan_by_ident(struct l2cap_conn *conn
 	read_lock(&conn->chan_lock);
 	c = __l2cap_get_chan_by_ident(conn, ident);
 	if (c)
-		bh_lock_sock(c->sk);
+		lock_sock(c->sk);
 	read_unlock(&conn->chan_lock);
 	return c;
 }
@@ -953,7 +953,7 @@ static void l2cap_le_conn_ready(struct l2cap_conn *conn)
 
 	parent = pchan->sk;
 
-	bh_lock_sock(parent);
+	lock_sock(parent);
 
 	/* Check for backlog size */
 	if (sk_acceptq_is_full(parent)) {
@@ -986,7 +986,7 @@ static void l2cap_le_conn_ready(struct l2cap_conn *conn)
 	write_unlock_bh(&conn->chan_lock);
 
 clean:
-	bh_unlock_sock(parent);
+	release_sock(parent);
 }
 
 static void l2cap_chan_ready(struct sock *sk)
@@ -1088,9 +1088,9 @@ static void l2cap_conn_del(struct hci_conn *hcon, int err)
 	/* Kill channels */
 	list_for_each_entry_safe(chan, l, &conn->chan_l, list) {
 		sk = chan->sk;
-		bh_lock_sock(sk);
+		lock_sock(sk);
 		l2cap_chan_del(chan, err);
-		bh_unlock_sock(sk);
+		release_sock(sk);
 		chan->ops->close(chan->data);
 	}
 
@@ -2671,7 +2671,7 @@ static inline int l2cap_connect_req(struct l2cap_conn *conn, struct l2cap_cmd_hd
 
 	parent = pchan->sk;
 
-	bh_lock_sock(parent);
+	lock_sock(parent);
 
 	/* Check if the ACL is secure enough (if not SDP) */
 	if (psm != cpu_to_le16(0x0001) &&
@@ -2767,7 +2767,7 @@ static inline int l2cap_connect_req(struct l2cap_conn *conn, struct l2cap_cmd_hd
 	write_unlock_bh(&conn->chan_lock);
 
 response:
-	bh_unlock_sock(parent);
+	release_sock(parent);
 
 sendresp:
 	rsp.scid   = cpu_to_le16(scid);
@@ -2857,19 +2857,11 @@ static inline int l2cap_connect_rsp(struct l2cap_conn *conn, struct l2cap_cmd_hd
 		break;
 
 	default:
-		/* don't delete l2cap channel if sk is owned by user */
-		if (sock_owned_by_user(sk)) {
-			l2cap_state_change(chan, BT_DISCONN);
-			__clear_chan_timer(chan);
-			__set_chan_timer(chan, L2CAP_DISC_TIMEOUT * 2);
-			break;
-		}
-
 		l2cap_chan_del(chan, ECONNREFUSED);
 		break;
 	}
 
-	bh_unlock_sock(sk);
+	release_sock(sk);
 	return 0;
 }
 
@@ -2991,7 +2983,7 @@ static inline int l2cap_config_req(struct l2cap_conn *conn, struct l2cap_cmd_hdr
 	}
 
 unlock:
-	bh_unlock_sock(sk);
+	release_sock(sk);
 	return 0;
 }
 
@@ -3098,7 +3090,7 @@ static inline int l2cap_config_rsp(struct l2cap_conn *conn, struct l2cap_cmd_hdr
 	}
 
 done:
-	bh_unlock_sock(sk);
+	release_sock(sk);
 	return 0;
 }
 
@@ -3127,17 +3119,8 @@ static inline int l2cap_disconnect_req(struct l2cap_conn *conn, struct l2cap_cmd
 
 	sk->sk_shutdown = SHUTDOWN_MASK;
 
-	/* don't delete l2cap channel if sk is owned by user */
-	if (sock_owned_by_user(sk)) {
-		l2cap_state_change(chan, BT_DISCONN);
-		__clear_chan_timer(chan);
-		__set_chan_timer(chan, L2CAP_DISC_TIMEOUT * 2);
-		bh_unlock_sock(sk);
-		return 0;
-	}
-
 	l2cap_chan_del(chan, ECONNRESET);
-	bh_unlock_sock(sk);
+	release_sock(sk);
 
 	chan->ops->close(chan->data);
 	return 0;
@@ -3161,17 +3144,8 @@ static inline int l2cap_disconnect_rsp(struct l2cap_conn *conn, struct l2cap_cmd
 
 	sk = chan->sk;
 
-	/* don't delete l2cap channel if sk is owned by user */
-	if (sock_owned_by_user(sk)) {
-		l2cap_state_change(chan, BT_DISCONN);
-		__clear_chan_timer(chan);
-		__set_chan_timer(chan, L2CAP_DISC_TIMEOUT * 2);
-		bh_unlock_sock(sk);
-		return 0;
-	}
-
 	l2cap_chan_del(chan, 0);
-	bh_unlock_sock(sk);
+	release_sock(sk);
 
 	chan->ops->close(chan->data);
 	return 0;
@@ -4409,7 +4383,7 @@ drop:
 
 done:
 	if (sk)
-		bh_unlock_sock(sk);
+		release_sock(sk);
 
 	return 0;
 }
@@ -4425,7 +4399,7 @@ static inline int l2cap_conless_channel(struct l2cap_conn *conn, __le16 psm, str
 
 	/* sk = chan->sk; */
 
-	/* bh_lock_sock(sk); */
+	/* lock_sock(sk); */
 
 	/* BT_DBG("sk %p, len %d", sk, skb->len); */
 	BT_DBG("chan %p, len %d", chan, skb->len);
@@ -4445,7 +4419,7 @@ drop:
 
 /* done: */
 	/* if (sk) */
-		/* bh_unlock_sock(sk); */
+		/* release_sock(sk); */
 	return 0;
 }
 
@@ -4460,7 +4434,7 @@ static inline int l2cap_att_channel(struct l2cap_conn *conn, __le16 cid, struct 
 
 	/* sk = chan->sk; */
 
-	/* bh_lock_sock(sk); */
+	/* lock_sock(sk); */
 
 	/* BT_DBG("sk %p, len %d", sk, skb->len); */
 	BT_DBG("chan %p, len %d", chan, skb->len);
@@ -4480,7 +4454,7 @@ drop:
 
 /* done: */
 	/* if (sk) */
-		/* bh_unlock_sock(sk); */
+		/* release_sock(sk); */
 	return 0;
 }
 
@@ -4783,11 +4757,11 @@ static int l2cap_recv_acldata(struct hci_conn *hcon, struct sk_buff *skb, u16 fl
 				BT_ERR("Frame exceeding recv MTU (len %d, "
 							"MTU %d)", len,
 							chan->imtu);
-				bh_unlock_sock(sk);
+				release_sock(sk);
 				l2cap_conn_unreliable(conn, ECOMM);
 				goto drop;
 			}
-			bh_unlock_sock(sk);
+			release_sock(sk);
 		}
 
 		/* Allocate skb for the complete frame (with header) */
