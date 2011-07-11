@@ -518,22 +518,6 @@ struct neighbour *__arp_bind_neighbour(struct dst_entry *dst, __be32 nexthop)
 		&arp_tbl, &nexthop, dev);
 }
 
-int arp_bind_neighbour(struct dst_entry *dst)
-{
-	struct net_device *dev = dst->dev;
-	struct neighbour *n = dst->neighbour;
-
-	if (dev == NULL)
-		return -EINVAL;
-	if (n == NULL) {
-		n = __arp_bind_neighbour(dst, ((struct rtable *)dst)->rt_gateway);
-		if (IS_ERR(n))
-			return PTR_ERR(n);
-		dst->neighbour = n;
-	}
-	return 0;
-}
-
 /*
  * Check if we can use proxy ARP for this path
  */
