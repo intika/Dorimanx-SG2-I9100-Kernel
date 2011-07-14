@@ -611,8 +611,6 @@ extern void __lockfunc tty_lock_pair(struct tty_struct *tty,
 				struct tty_struct *tty2);
 extern void __lockfunc tty_unlock_pair(struct tty_struct *tty,
 				struct tty_struct *tty2);
-extern struct task_struct *__big_tty_mutex_owner;
-#define tty_locked()		(current == __big_tty_mutex_owner)
 
 /*
  * this shall be called only from where BTM is held (like close)
