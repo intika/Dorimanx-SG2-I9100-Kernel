@@ -189,6 +189,8 @@ static u32 *ipv4_cow_metrics(struct dst_entry *dst, unsigned long old)
 	return p;
 }
 
+static struct neighbour *ipv4_neigh_lookup(const struct dst_entry *dst, const void *daddr);
+
 static struct dst_ops ipv4_dst_ops = {
 	.family =		AF_INET,
 	.protocol =		cpu_to_be16(ETH_P_IP),
@@ -203,6 +205,7 @@ static struct dst_ops ipv4_dst_ops = {
 	.link_failure =		ipv4_link_failure,
 	.update_pmtu =		ip_rt_update_pmtu,
 	.local_out =		__ip_local_out,
+	.neigh_lookup =		ipv4_neigh_lookup,
 };
 
 #define ECN_OR_COST(class)	TC_PRIO_##class
@@ -1101,6 +1104,37 @@ static int slow_chain_length(const struct rtable *head)
 		rth = rcu_dereference_protected(rth->dst.rt_next, 1);
 	}
 	return length >> FRACT_BITS;
+}
+
+static struct neighbour *ipv4_neigh_lookup(const struct dst_entry *dst, const void *daddr)
+{
+	struct neigh_table *tbl = &arp_tbl;
+	static const __be32 inaddr_any = 0;
+	struct net_device *dev = dst->dev;
+	const __be32 *pkey = daddr;
+	struct neighbour *n;
+
+#if defined(CONFIG_ATM_CLIP) || defined(CONFIG_ATM_CLIP_MODULE)
+	if (dev->type == ARPHRD_ATM)
+		tbl = clip_tbl_hook;
+#endif
+	if (dev->flags & (IFF_LOOPBACK | IFF_POINTOPOINT))
+		pkey = &inaddr_any;
+
+	n = __ipv4_neigh_lookup(tbl, dev, *(__force u32 *)pkey);
+	if (n)
+		return n;
+	return neigh_create(tbl, pkey, dev);
+}
+
+static int rt_bind_neighbour(struct rtable *rt)
+{
+	struct neighbour *n = ipv4_neigh_lookup(&rt->dst, &rt->rt_gateway);
+	if (IS_ERR(n))
+		return PTR_ERR(n);
+	dst_set_neighbour(&rt->dst, n);
+
+	return 0;
 }
 
 static struct rtable *rt_intern_hash(unsigned int hash, struct rtable *rt,
@@ -2843,6 +2877,7 @@ static struct dst_ops ipv4_dst_blackhole_ops = {
 	.default_advmss		=	ipv4_default_advmss,
 	.update_pmtu		=	ipv4_rt_blackhole_update_pmtu,
 	.cow_metrics		=	ipv4_rt_blackhole_cow_metrics,
+	.neigh_lookup		=	ipv4_neigh_lookup,
 };
 
 struct dst_entry *ipv4_blackhole_route(struct net *net, struct dst_entry *dst_orig)
