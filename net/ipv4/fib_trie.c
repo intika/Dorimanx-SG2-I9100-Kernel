@@ -109,11 +109,11 @@ struct leaf {
 };
 
 struct leaf_info {
-    struct hlist_node hlist;
-    int plen;
-    u32 mask_plen; /* ntohl(inet_make_mask(plen)) */
-    struct list_head falh;
-    struct rcu_head rcu;
+	struct hlist_node hlist;
+	int plen;
+	u32 mask_plen; /* ntohl(inet_make_mask(plen)) */
+	struct list_head falh;
+	struct rcu_head rcu;
 };
 
 struct tnode {
