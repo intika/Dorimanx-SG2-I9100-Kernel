@@ -73,7 +73,7 @@
 #define RT6_TRACE(x...) do { ; } while (0)
 #endif
 
-static struct rt6_info *ip6_rt_copy(struct rt6_info *ort,
+static struct rt6_info *ip6_rt_copy(const struct rt6_info *ort,
 				    const struct in6_addr *dest);
 static struct dst_entry	*ip6_dst_check(struct dst_entry *dst, u32 cookie);
 static unsigned int	 ip6_default_advmss(const struct dst_entry *dst);
