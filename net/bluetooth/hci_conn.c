@@ -57,44 +57,6 @@ static void hci_le_connect(struct hci_conn *conn)
 	conn->sec_level = BT_SECURITY_LOW;
 
 	memset(&cp, 0, sizeof(cp));
-/*
-	cp.scan_interval = cpu_to_le16(0x0004);
-	cp.scan_window = cpu_to_le16(0x0004);
-	bacpy(&cp.peer_addr, &conn->dst);
-	cp.peer_addr_type = conn->dst_type;
-	cp.conn_interval_min = cpu_to_le16(0x0008); // 9.28 ms
-	cp.conn_interval_max = cpu_to_le16(0x0100); // 320 ms
-	cp.supervision_timeout = cpu_to_le16(0x0064);
-	cp.min_ce_len = cpu_to_le16(0x0001);
-	cp.max_ce_len = cpu_to_le16(0x0001);
-*/
-
-/* SSBT :: KJH + comment for connection parameters, TODO */
-
-/* Bluetooth: use recommended LE connection parameters */
-/*	The new connection parameters now match the recommended values for
-*	Proximity and Health Thermometer profiles. The previous values were
-*	ramdomly chosen, and are either too low or too high for most cases.
-*	New values:
-*	Scan Interval: 60 ms
-*	Scan Window: 30 ms
-*	Minimum Connection Interval: 50 ms
-*	Maximum Connection Interval: 70 ms
-*	Supervision Timeout: 420 ms
-*/
-/*	See "Table 5.2: Recommended Scan Interval and Scan Window Values" and
-*	"Table 5.3: Recommended Connection Interval Values" for both profiles
-*	for details. Note that the "fast connection" parameters were chosen,
-*	because we do not support yet dynamically changing these parameters from
-*	initiator side.
-*	Additionally, the Proximity profile recommends (section "4.4 Alert on
-*	Link Loss"):
-*	"It is recommended that the Link Supervision Timeout (LSTO) is set to 6x
-*	the connection interval."
-*	Minimum_CE_Length and Maximum_CE_Length were also changed from 0x0001 to
-*	0x0000 because they are informational and optional, and old value was
-*	not reflecting reality.
-*/
 	cp.scan_interval = cpu_to_le16(0x0060); /* 60ms (N*0.625ms) */
 	cp.scan_window = cpu_to_le16(0x0030); /* 30ms (N*0.625ms) */
 	bacpy(&cp.peer_addr, &conn->dst);
