@@ -58,7 +58,7 @@ int nfnetlink_subsys_register(const struct nfnetlink_subsystem *n)
 		nfnl_unlock();
 		return -EBUSY;
 	}
-	rcu_assign_pointer(subsys_table[n->subsys_id], n);
+	RCU_INIT_POINTER(subsys_table[n->subsys_id], n);
 	nfnl_unlock();
 
 	return 0;
@@ -209,7 +209,7 @@ static int __net_init nfnetlink_net_init(struct net *net)
 	if (!nfnl)
 		return -ENOMEM;
 	net->nfnl_stash = nfnl;
-	rcu_assign_pointer(net->nfnl, nfnl);
+	RCU_INIT_POINTER(net->nfnl, nfnl);
 	return 0;
 }
 

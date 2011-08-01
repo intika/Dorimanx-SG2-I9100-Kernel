@@ -826,7 +826,7 @@ init_conntrack(struct net *net, struct nf_conn *tmpl,
 		if (exp->helper) {
 			help = nf_ct_helper_ext_add(ct, GFP_ATOMIC);
 			if (help)
-				rcu_assign_pointer(help->helper, exp->helper);
+				RCU_INIT_POINTER(help->helper, exp->helper);
 		}
 
 #ifdef CONFIG_NF_CONNTRACK_MARK
@@ -1618,8 +1618,8 @@ int nf_conntrack_init(struct net *net)
 
 	if (net_eq(net, &init_net)) {
 		/* For use by REJECT target */
-		rcu_assign_pointer_nonull(ip_ct_attach, nf_conntrack_attach);
-		rcu_assign_pointer_nonull(nf_ct_destroy, destroy_conntrack);
+		RCU_INIT_POINTER(ip_ct_attach, nf_conntrack_attach);
+		RCU_INIT_POINTER(nf_ct_destroy, destroy_conntrack);
 
 		/* Howto get NAT offsets */
 		RCU_INIT_POINTER(nf_ct_nat_offset, NULL);
