@@ -2649,8 +2649,7 @@ int netdev_info(const struct net_device *dev, const char *format, ...);
 #if defined(CONFIG_DYNAMIC_DEBUG)
 #define netdev_dbg(__dev, format, args...)			\
 do {								\
-	dynamic_dev_dbg((__dev)->dev.parent, "%s: " format,	\
-			netdev_name(__dev), ##args);		\
+	dynamic_netdev_dbg(__dev, format, ##args);		\
 } while (0)
 #elif defined(DEBUG)
 #define netdev_dbg(__dev, format, args...)			\
