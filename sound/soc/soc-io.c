@@ -19,6 +19,7 @@
 
 #include <trace/events/asoc.h>
 
+#ifdef CONFIG_REGMAP
 static int hw_write(struct snd_soc_codec *codec, unsigned int reg,
 		    unsigned int value)
 {
@@ -151,3 +152,12 @@ int snd_soc_codec_set_cache_io(struct snd_soc_codec *codec,
 	return 0;
 }
 EXPORT_SYMBOL_GPL(snd_soc_codec_set_cache_io);
+#else
+int snd_soc_codec_set_cache_io(struct snd_soc_codec *codec,
+			       int addr_bits, int data_bits,
+			       enum snd_soc_control_type control)
+{
+	return -ENOTSUPP;
+}
+EXPORT_SYMBOL_GPL(snd_soc_codec_set_cache_io);
+#endif
