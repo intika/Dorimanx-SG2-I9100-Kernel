@@ -2528,10 +2528,11 @@ static inline void ____napi_schedule(struct softnet_data *sd,
 
 /*
  * __skb_get_rxhash: calculate a flow hash based on src/dst addresses
- * and src/dst port numbers. Returns a non-zero hash number on success
- * and 0 on failure.
+ * and src/dst port numbers.  Sets rxhash in skb to non-zero hash value
+ * on success, zero indicates no valid hash.  Also, sets l4_rxhash in skb
+ * if hash is a canonical 4-tuple hash over transport ports.
  */
-__u32 __skb_get_rxhash(struct sk_buff *skb)
+void __skb_get_rxhash(struct sk_buff *skb)
 {
 	int nhoff, hash = 0, poff;
 	const struct ipv6hdr *ip6;
@@ -2579,8 +2580,10 @@ __u32 __skb_get_rxhash(struct sk_buff *skb)
 	poff = proto_ports_offset(ip_proto);
 	if (poff >= 0) {
 		nhoff += poff;
-		if (pskb_may_pull(skb, nhoff + 4))
+		if (pskb_may_pull(skb, nhoff + 4)) {
 			ports.v32 = * (__force u32 *) (skb->data + nhoff);
+			skb->l4_rxhash = 1;
+		}
 	}
 
 	/* get a consistent hash (same value on both flow directions) */
@@ -2596,7 +2599,7 @@ __u32 __skb_get_rxhash(struct sk_buff *skb)
 		hash = 1;
 
 done:
-	return hash;
+	skb->rxhash = hash;
 }
 EXPORT_SYMBOL(__skb_get_rxhash);
 
