@@ -2163,7 +2163,7 @@ static struct net_device_ops dhd_ops_pri = {
 	.ndo_do_ioctl = dhd_ioctl_entry,
 	.ndo_start_xmit = dhd_start_xmit,
 	.ndo_set_mac_address = dhd_set_mac_address,
-	.ndo_set_multicast_list = dhd_set_multicast_list
+	.ndo_set_rx_mode = dhd_set_multicast_list
 };
 
 int dhd_net_attach(dhd_pub_t *dhdp, int ifidx)
