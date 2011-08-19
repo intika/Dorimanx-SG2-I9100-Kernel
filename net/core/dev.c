@@ -133,6 +133,7 @@
 #include <linux/inetdevice.h>
 #include <linux/cpu_rmap.h>
 #include <linux/if_tunnel.h>
+#include <linux/if_pppox.h>
 #include <linux/static_key.h>
 
 #include "net-sysfs.h"
@@ -2581,6 +2582,13 @@ again:
 		vlan = (const struct vlan_hdr *) (skb->data + nhoff);
 		proto = vlan->h_vlan_encapsulated_proto;
 		nhoff += sizeof(*vlan);
+		goto again;
+	case __constant_htons(ETH_P_PPP_SES):
+		if (!pskb_may_pull(skb, PPPOE_SES_HLEN + nhoff))
+			goto done;
+		proto = *((__be16 *) (skb->data + nhoff +
+				      sizeof(struct pppoe_hdr)));
+		nhoff += PPPOE_SES_HLEN;
 		goto again;
 	default:
 		goto done;
