@@ -2617,6 +2617,8 @@ again:
 			}
 		}
 		break;
+	case IPPROTO_IPIP:
+		goto again;
 	default:
 		break;
 	}
