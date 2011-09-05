@@ -256,8 +256,6 @@ struct hci_dev {
 
 	struct list_head	mgmt_pending;
 
-	struct crypto_blkcipher	*tfm;
-
 	struct discovery_state	discovery;
 	struct hci_conn_hash	conn_hash;
 	struct list_head	blacklist;

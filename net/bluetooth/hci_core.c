@@ -1852,11 +1852,6 @@ int hci_register_dev(struct hci_dev *hdev)
 	if (!hdev->workqueue)
 		goto nomem;
 
-	hdev->tfm = crypto_alloc_blkcipher("ecb(aes)", 0, CRYPTO_ALG_ASYNC);
-	if (IS_ERR(hdev->tfm))
-		BT_INFO("Failed to load transform for ecb(aes): %ld",
-							PTR_ERR(hdev->tfm));
-
 	hci_add_sysfs(hdev);
 
 	hdev->rfkill = rfkill_alloc(hdev->name, &hdev->dev,
@@ -1910,8 +1905,6 @@ int hci_unregister_dev(struct hci_dev *hdev)
 		mgmt_index_removed(hdev);
 		hci_dev_unlock_bh(hdev);
 	}
-	if (!IS_ERR(hdev->tfm))
-		crypto_free_blkcipher(hdev->tfm);
 
 	/* mgmt_index_removed should take care of emptying the
 	 * pending list */
