@@ -1857,7 +1857,7 @@ int hci_register_dev(struct hci_dev *hdev)
 		BT_INFO("Failed to load transform for ecb(aes): %ld",
 							PTR_ERR(hdev->tfm));
 
-	hci_register_sysfs(hdev);
+	hci_add_sysfs(hdev);
 
 	hdev->rfkill = rfkill_alloc(hdev->name, &hdev->dev,
 				RFKILL_TYPE_BLUETOOTH, &hci_rfkill_ops, hdev);
@@ -1924,7 +1924,7 @@ int hci_unregister_dev(struct hci_dev *hdev)
 		rfkill_destroy(hdev->rfkill);
 	}
 
-	hci_unregister_sysfs(hdev);
+	hci_del_sysfs(hdev);
 	del_timer_sync(&hdev->adv_timer);
 
 	destroy_workqueue(hdev->workqueue);
