@@ -2603,7 +2603,7 @@ static inline void skb_checksum_none_assert(const struct sk_buff *skb)
 
 bool skb_partial_csum_set(struct sk_buff *skb, u16 start, u16 off);
 
-static inline bool skb_is_recycleable(struct sk_buff *skb, int skb_size)
+static inline bool skb_is_recycleable(const struct sk_buff *skb, int skb_size)
 {
 	if (irqs_disabled())
 		return false;
