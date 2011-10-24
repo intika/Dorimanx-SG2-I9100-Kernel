@@ -1212,7 +1212,7 @@ extern void tcp_free_md5sig_pool(void);
 extern struct tcp_md5sig_pool	*tcp_get_md5sig_pool(void);
 extern void tcp_put_md5sig_pool(void);
 
-extern int tcp_md5_hash_header(struct tcp_md5sig_pool *, struct tcphdr *);
+extern int tcp_md5_hash_header(struct tcp_md5sig_pool *, const struct tcphdr *);
 extern int tcp_md5_hash_skb_data(struct tcp_md5sig_pool *, const struct sk_buff *,
 				 unsigned int header_len);
 extern int tcp_md5_hash_key(struct tcp_md5sig_pool *hp,
