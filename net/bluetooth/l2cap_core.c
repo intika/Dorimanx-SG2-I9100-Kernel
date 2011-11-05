@@ -586,7 +586,7 @@ static inline u8 l2cap_get_auth_type(struct l2cap_chan *chan)
 }
 
 /* Service level security */
-static inline int l2cap_check_security(struct l2cap_chan *chan)
+int l2cap_chan_check_security(struct l2cap_chan *chan)
 {
 	struct l2cap_conn *conn = chan->conn;
 	__u8 auth_type;
@@ -747,7 +747,7 @@ static void l2cap_do_start(struct l2cap_chan *chan)
 		if (!(conn->info_state & L2CAP_INFO_FEAT_MASK_REQ_DONE))
 			return;
 
- 		if (l2cap_check_security(chan) && __l2cap_no_conn_pending(chan))
+ 		if (l2cap_chan_check_security(chan) && __l2cap_no_conn_pending(chan))
 			l2cap_send_conn_req(chan);
 	} else {
 		struct l2cap_info_req req;
@@ -825,7 +825,7 @@ static void l2cap_conn_start(struct l2cap_conn *conn)
 		}
 
 		if (chan->state == BT_CONNECT) {
-			if (!l2cap_check_security(chan) ||
+			if (!l2cap_chan_check_security(chan) ||
 					!__l2cap_no_conn_pending(chan)) {
 				bh_unlock_sock(sk);
 				continue;
@@ -851,7 +851,7 @@ static void l2cap_conn_start(struct l2cap_conn *conn)
 			rsp.scid = cpu_to_le16(chan->dcid);
 			rsp.dcid = cpu_to_le16(chan->scid);
 
-			if (l2cap_check_security(chan)) {
+			if (l2cap_chan_check_security(chan)) {
 				if (bt_sk(sk)->defer_setup) {
 					struct sock *parent = bt_sk(sk)->parent;
 					rsp.result = cpu_to_le16(L2CAP_CR_PEND);
@@ -1252,7 +1252,7 @@ int l2cap_chan_connect(struct l2cap_chan *chan)
 	if (hcon->state == BT_CONNECTED) {
 		if (chan->chan_type != L2CAP_CHAN_CONN_ORIENTED) {
 			__clear_chan_timer(chan);
-			if (l2cap_check_security(chan))
+			if (l2cap_chan_check_security(chan))
 				l2cap_state_change(chan, BT_CONNECTED);
 /* temp to check connected le link */
 		} else if (chan->dcid == L2CAP_CID_LE_DATA) {
@@ -2709,7 +2709,7 @@ static inline int l2cap_connect_req(struct l2cap_conn *conn, struct l2cap_cmd_hd
 	chan->ident = cmd->ident;
 
 	if (conn->info_state & L2CAP_INFO_FEAT_MASK_REQ_DONE) {
-		if (l2cap_check_security(chan)) {
+		if (l2cap_chan_check_security(chan)) {
 			if (bt_sk(sk)->defer_setup) {
 				l2cap_state_change(chan, BT_CONNECT2);
 				result = L2CAP_CR_PEND;
