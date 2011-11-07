@@ -349,7 +349,7 @@ static void __l2cap_chan_add(struct l2cap_conn *conn, struct l2cap_chan *chan)
 	}
 /* END SS_BLUEZ_BT */
 
-	conn->disc_reason = 0x13;
+	conn->disc_reason = HCI_ERROR_REMOTE_USER_TERM;
 
 	chan->conn = conn;
 
@@ -1147,7 +1147,7 @@ static struct l2cap_conn *l2cap_conn_add(struct hci_conn *hcon, u8 status)
 		setup_timer(&conn->info_timer, l2cap_info_timeout,
 						(unsigned long) conn);
 
-	conn->disc_reason = 0x13;
+	conn->disc_reason = HCI_ERROR_REMOTE_USER_TERM;
 
 	return conn;
 }
@@ -2638,7 +2638,7 @@ static inline int l2cap_connect_req(struct l2cap_conn *conn, struct l2cap_cmd_hd
 	/* Check if the ACL is secure enough (if not SDP) */
 	if (psm != cpu_to_le16(0x0001) &&
 				!hci_conn_check_link_mode(conn->hcon)) {
-		conn->disc_reason = 0x05;
+		conn->disc_reason = HCI_ERROR_AUTH_FAILURE;
 		result = L2CAP_CR_SEC_BLOCK;
 		goto response;
 	}
@@ -4541,7 +4541,7 @@ static int l2cap_disconn_ind(struct hci_conn *hcon)
 	BT_DBG("hcon %p", hcon);
 
 	if ((hcon->type != ACL_LINK && hcon->type != LE_LINK) || !conn)
-		return 0x13;
+		return HCI_ERROR_REMOTE_USER_TERM;
 
 	return conn->disc_reason;
 }
