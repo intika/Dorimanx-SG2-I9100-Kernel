@@ -10,7 +10,7 @@ struct netns_mib {
 	DEFINE_SNMP_STAT(struct udp_mib, udp_statistics);
 	DEFINE_SNMP_STAT(struct udp_mib, udplite_statistics);
 	DEFINE_SNMP_STAT(struct icmp_mib, icmp_statistics);
-	DEFINE_SNMP_STAT(struct icmpmsg_mib, icmpmsg_statistics);
+	DEFINE_SNMP_STAT_ATOMIC(struct icmpmsg_mib, icmpmsg_statistics);
 
 #if IS_ENABLED(CONFIG_IPV6)
 	struct proc_dir_entry *proc_net_devsnmp6;
