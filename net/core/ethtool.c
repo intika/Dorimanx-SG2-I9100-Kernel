@@ -260,8 +260,7 @@ static u32 __ethtool_get_flags(struct net_device *dev)
 
 static int __ethtool_set_flags(struct net_device *dev, u32 data)
 {
-	u32 features = 0;
-	netdev_features_t changed;
+	netdev_features_t features = 0, changed;
 
 	if (data & ~ETH_ALL_FLAGS)
 		return -EINVAL;
