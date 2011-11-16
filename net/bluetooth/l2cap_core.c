@@ -3917,7 +3917,7 @@ static void l2cap_resend_srejframe(struct l2cap_chan *chan, u16 tx_seq)
 	}
 }
 
-static void l2cap_send_srejframe(struct l2cap_chan *chan, u16 tx_seq)
+static int l2cap_send_srejframe(struct l2cap_chan *chan, u16 tx_seq)
 {
 	struct srej_list *new;
 	u32 control;
@@ -3928,6 +3928,9 @@ static void l2cap_send_srejframe(struct l2cap_chan *chan, u16 tx_seq)
 		l2cap_send_sframe(chan, control);
 
 		new = kzalloc(sizeof(struct srej_list), GFP_ATOMIC);
+		if (!new)
+			return -ENOMEM;
+
 		new->tx_seq = chan->expected_tx_seq;
 
 		chan->expected_tx_seq = __next_seq(chan, chan->expected_tx_seq);
@@ -3936,6 +3939,8 @@ static void l2cap_send_srejframe(struct l2cap_chan *chan, u16 tx_seq)
 	}
 
 	chan->expected_tx_seq = __next_seq(chan, chan->expected_tx_seq);
+
+	return 0;
 }
 
 static inline int l2cap_data_channel_iframe(struct l2cap_chan *chan, u32 rx_control, struct sk_buff *skb)
@@ -4006,7 +4011,12 @@ static inline int l2cap_data_channel_iframe(struct l2cap_chan *chan, u32 rx_cont
 					return 0;
 				}
 			}
-			l2cap_send_srejframe(chan, tx_seq);
+
+			err = l2cap_send_srejframe(chan, tx_seq);
+			if (err < 0) {
+				l2cap_send_disconn_req(chan->conn, chan, -err);
+				return err;
+			}
 		}
 	} else {
 		expected_tx_seq_offset = __seq_offset(chan,
@@ -4028,7 +4038,11 @@ static inline int l2cap_data_channel_iframe(struct l2cap_chan *chan, u32 rx_cont
 
 		set_bit(CONN_SEND_PBIT, &chan->conn_state);
 
-		l2cap_send_srejframe(chan, tx_seq);
+		err = l2cap_send_srejframe(chan, tx_seq);
+		if (err < 0) {
+			l2cap_send_disconn_req(chan->conn, chan, -err);
+			return err;
+		}
 
 		__clear_ack_timer(chan);
 	}
