@@ -103,7 +103,6 @@ static struct l2cap_chan *__l2cap_get_chan_by_dcid(struct l2cap_conn *conn, u16 
 			return c;
 	}
 	return NULL;
-
 }
 
 static struct l2cap_chan *__l2cap_get_chan_by_scid(struct l2cap_conn *conn, u16 cid)
@@ -2008,7 +2007,7 @@ static void l2cap_add_opt_efs(void **ptr, struct l2cap_chan *chan)
 {
 	struct l2cap_conf_efs efs;
 
-	switch(chan->mode) {
+	switch (chan->mode) {
 	case L2CAP_MODE_ERTM:
 		efs.id		= chan->local_id;
 		efs.stype	= chan->local_stype;
