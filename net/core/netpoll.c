@@ -424,6 +424,7 @@ static void arp_reply(struct sk_buff *skb)
 	struct sk_buff *send_skb;
 	struct netpoll *np, *tmp;
 	unsigned long flags;
+	int hlen, tlen;
 	int hits = 0;
 
 	if (list_empty(&npinfo->rx_np))
@@ -481,8 +482,9 @@ static void arp_reply(struct sk_buff *skb)
 		if (tip != np->local_ip)
 			continue;
 
-		send_skb = find_skb(np, size + LL_ALLOCATED_SPACE(np->dev),
-				    LL_RESERVED_SPACE(np->dev));
+		hlen = LL_RESERVED_SPACE(np->dev);
+		tlen = np->dev->needed_tailroom;
+		send_skb = find_skb(np, size + hlen + tlen, hlen);
 		if (!send_skb)
 			continue;
 
