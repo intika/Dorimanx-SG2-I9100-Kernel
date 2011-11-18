@@ -57,7 +57,6 @@
 #include <net/bluetooth/smp.h>
 
 bool disable_ertm;
-int enable_hs;
 
 static u32 l2cap_feat_mask = 0x00000000;
 static u8 l2cap_fixed_chan[8] = { L2CAP_FC_L2CAP, };
@@ -4901,6 +4900,3 @@ void l2cap_exit(void)
 
 module_param(disable_ertm, bool, 0644);
 MODULE_PARM_DESC(disable_ertm, "Disable enhanced retransmission mode");
-
-module_param(enable_hs, bool, 0644);
-MODULE_PARM_DESC(enable_hs, "Enable High Speed");
