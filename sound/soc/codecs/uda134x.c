@@ -415,6 +415,7 @@ SOC_ENUM("PCM Playback De-emphasis", uda134x_mixer_enum[1]),
 SOC_SINGLE("DC Filter Enable Switch", UDA134X_STATUS0, 0, 1, 0),
 };
 
+<<<<<<< HEAD
 /* UDA1341 has the DAC/ADC power down in STATUS1 */
 static const struct snd_soc_dapm_widget uda1341_dapm_widgets[] = {
 	SND_SOC_DAPM_DAC("DAC", "Playback", UDA134X_STATUS1, 0, 0),
@@ -446,6 +447,8 @@ static const struct snd_soc_dapm_route uda134x_dapm_routes[] = {
 	{ "VOUTR", NULL, "DAC" },
 };
 
+=======
+>>>>>>> 85e7652... ASoC: Constify snd_soc_dai_ops structs
 static const struct snd_soc_dai_ops uda134x_dai_ops = {
 	.startup	= uda134x_startup,
 	.shutdown	= uda134x_shutdown,
