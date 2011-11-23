@@ -1405,6 +1405,7 @@ out:
 	return 0;
 }
 
+<<<<<<< HEAD
 static irqreturn_t wm8993_irq(int irq, void *data)
 {
 	struct wm8993_priv *wm8993 = data;
@@ -1444,6 +1445,8 @@ static irqreturn_t wm8993_irq(int irq, void *data)
 	return IRQ_HANDLED;
 }
 
+=======
+>>>>>>> 85e7652... ASoC: Constify snd_soc_dai_ops structs
 static const struct snd_soc_dai_ops wm8993_ops = {
 	.set_sysclk = wm8993_set_sysclk,
 	.set_fmt = wm8993_set_dai_fmt,
