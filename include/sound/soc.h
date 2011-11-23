@@ -803,6 +803,7 @@ struct snd_soc_card {
 	int num_dapm_widgets;
 	const struct snd_soc_dapm_route *dapm_routes;
 	int num_dapm_routes;
+	bool fully_routed;
 
 	struct work_struct deferred_resume_work;
 
