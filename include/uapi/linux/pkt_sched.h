@@ -508,6 +508,7 @@ enum {
 	TCA_NETEM_REORDER,
 	TCA_NETEM_CORRUPT,
 	TCA_NETEM_LOSS,
+	TCA_NETEM_RATE,
 	TCA_NETEM_ECN,
 	__TCA_NETEM_MAX,
 };
@@ -537,6 +538,11 @@ struct tc_netem_reorder {
 struct tc_netem_corrupt {
 	__u32	probability;
 	__u32	correlation;
+};
+
+
+struct tc_netem_rate {
+	__u32	rate;	/* byte/s */
 };
 
 enum {
