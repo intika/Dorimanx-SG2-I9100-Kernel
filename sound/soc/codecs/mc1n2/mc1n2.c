@@ -4416,9 +4416,9 @@ static int mc1n2_remove(struct platform_device *pdev)
 #endif
 
 #ifdef ALSA_VER_ANDROID_3_0
-static int mc1n2_suspend(struct snd_soc_codec *codec, pm_message_t state)
+static int mc1n2_suspend(struct snd_soc_codec *codec)
 #else
-static int mc1n2_suspend(struct platform_device *pdev, pm_message_t state)
+static int mc1n2_suspend(struct platform_device *pdev)
 #endif
 {
 #ifdef ALSA_VER_ANDROID_3_0

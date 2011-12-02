@@ -534,10 +534,7 @@ static int wm8731_startup(struct snd_pcm_substream *substream,
 	SNDRV_PCM_FMTBIT_S24_LE)
 
 static const struct snd_soc_dai_ops wm8731_dai_ops = {
-<<<<<<< HEAD
 	.startup	= wm8731_startup,
-=======
->>>>>>> 85e7652... ASoC: Constify snd_soc_dai_ops structs
 	.hw_params	= wm8731_hw_params,
 	.digital_mute	= wm8731_mute,
 	.set_sysclk	= wm8731_set_dai_sysclk,
