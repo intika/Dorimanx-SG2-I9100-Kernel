@@ -573,6 +573,7 @@ extern struct sk_buff *skb_copy(const struct sk_buff *skb,
 				gfp_t priority);
 extern struct sk_buff *__pskb_copy(struct sk_buff *skb,
 				 int headroom, gfp_t gfp_mask);
+
 extern int	       pskb_expand_head(struct sk_buff *skb,
 					int nhead, int ntail,
 					gfp_t gfp_mask);
@@ -1713,12 +1714,6 @@ static inline void netdev_free_page(struct net_device *dev, struct page *page)
 	__free_page(page);
 }
 
-static inline struct sk_buff *pskb_copy(struct sk_buff *skb,
-					gfp_t gfp_mask)
-{
-	return __pskb_copy(skb, skb_headroom(skb), gfp_mask);
-}
-
 /**
  * skb_frag_page - retrieve the page refered to by a paged fragment
  * @frag: the paged fragment
@@ -1848,6 +1843,12 @@ static inline dma_addr_t skb_frag_dma_map(struct device *dev,
 {
 	return dma_map_page(dev, skb_frag_page(frag),
 			    frag->page_offset + offset, size, dir);
+}
+
+static inline struct sk_buff *pskb_copy(struct sk_buff *skb,
+					gfp_t gfp_mask)
+{
+	return __pskb_copy(skb, skb_headroom(skb), gfp_mask);
 }
 
 /**

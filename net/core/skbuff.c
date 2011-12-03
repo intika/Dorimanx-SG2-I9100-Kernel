@@ -806,6 +806,7 @@ EXPORT_SYMBOL(skb_copy);
 /**
  *	__pskb_copy	-	create copy of an sk_buff with private head.
  *	@skb: buffer to copy
+ *	@headroom: headroom of new skb
  *	@gfp_mask: allocation priority
  *
  *	Make a copy of both an &sk_buff and part of its data, located
