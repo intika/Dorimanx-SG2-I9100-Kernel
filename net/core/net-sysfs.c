@@ -1251,9 +1251,7 @@ static const void *netdev_queue_namespace(struct kobject *kobj)
 
 static struct kobj_type netdev_queue_ktype = {
 	.sysfs_ops = &netdev_queue_sysfs_ops,
-#ifdef CONFIG_XPS
 	.release = netdev_queue_release,
-#endif
 	.default_attrs = netdev_queue_default_attrs,
 	.namespace = netdev_queue_namespace,
 };
