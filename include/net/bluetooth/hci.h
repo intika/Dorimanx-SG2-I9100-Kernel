@@ -792,6 +792,14 @@ struct hci_rp_read_bd_addr {
 	bdaddr_t bdaddr;
 } __packed;
 
+#define HCI_OP_READ_DATA_BLOCK_SIZE	0x100a
+struct hci_rp_read_data_block_size {
+	__u8     status;
+	__le16   max_acl_len;
+	__le16   block_len;
+	__le16   num_blocks;
+} __packed;
+
 /* monitoring of the RSSI of the link between two Bluetooth devices */
 #define HCI_OP_READ_RSSI		0x1405
 struct hci_cp_read_rssi {
