@@ -76,7 +76,6 @@ struct discovery_state {
 
 struct hci_conn_hash {
 	struct list_head list;
-	spinlock_t       lock;
 	unsigned int     acl_num;
 	unsigned int     sco_num;
 	unsigned int     le_num;
