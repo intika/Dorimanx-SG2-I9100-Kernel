@@ -65,6 +65,18 @@ struct net_device;
 u32 ethtool_op_get_link(struct net_device *dev);
 
 /**
+ * ethtool_rxfh_indir_default - get default value for RX flow hash indirection
+ * @index: Index in RX flow hash indirection table
+ * @n_rx_rings: Number of RX rings to use
+ *
+ * This function provides the default policy for RX flow hash indirection.
+ */
+static inline u32 ethtool_rxfh_indir_default(u32 index, u32 n_rx_rings)
+{
+	return index % n_rx_rings;
+}
+
+/**
  * struct ethtool_ops - optional netdev operations
  * @get_settings: Get various device settings including Ethernet link
  *	settings. The @cmd parameter is expected to have been cleared
