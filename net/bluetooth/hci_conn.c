@@ -459,11 +459,8 @@ struct hci_conn *hci_conn_add(struct hci_dev *hdev, int type,
 	hci_dev_hold(hdev);
 
 	hci_conn_hash_add(hdev, conn);
-	if (hdev->notify) {
-		tasklet_disable(&hdev->tx_task);
+	if (hdev->notify)
 		hdev->notify(hdev, HCI_NOTIFY_CONN_ADD);
-		tasklet_enable(&hdev->tx_task);
-	}
 
 	atomic_set(&conn->devref, 0);
 
@@ -510,11 +507,8 @@ int hci_conn_del(struct hci_conn *conn)
 	hci_chan_list_flush(conn);
 
 	hci_conn_hash_del(hdev, conn);
-	if (hdev->notify) {
-		tasklet_disable(&hdev->tx_task);
+	if (hdev->notify)
 		hdev->notify(hdev, HCI_NOTIFY_CONN_DEL);
-		tasklet_enable(&hdev->tx_task);
-	}
 
 	skb_queue_purge(&conn->data_q);
 
