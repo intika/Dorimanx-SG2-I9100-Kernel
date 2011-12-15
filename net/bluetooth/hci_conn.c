@@ -458,17 +458,16 @@ struct hci_conn *hci_conn_add(struct hci_dev *hdev, int type,
 
 	hci_dev_hold(hdev);
 
-	tasklet_disable(&hdev->tx_task);
-
 	hci_conn_hash_add(hdev, conn);
-	if (hdev->notify)
+	if (hdev->notify) {
+		tasklet_disable(&hdev->tx_task);
 		hdev->notify(hdev, HCI_NOTIFY_CONN_ADD);
+		tasklet_enable(&hdev->tx_task);
+	}
 
 	atomic_set(&conn->devref, 0);
 
 	hci_conn_init_sysfs(conn);
-
-	tasklet_enable(&hdev->tx_task);
 
 	return conn;
 }
@@ -507,15 +506,15 @@ int hci_conn_del(struct hci_conn *conn)
 		}
 	}
 
-	tasklet_disable(&hdev->tx_task);
 
 	hci_chan_list_flush(conn);
 
 	hci_conn_hash_del(hdev, conn);
-	if (hdev->notify)
+	if (hdev->notify) {
+		tasklet_disable(&hdev->tx_task);
 		hdev->notify(hdev, HCI_NOTIFY_CONN_DEL);
-
-	tasklet_enable(&hdev->tx_task);
+		tasklet_enable(&hdev->tx_task);
+	}
 
 	skb_queue_purge(&conn->data_q);
 
@@ -900,7 +899,7 @@ void hci_conn_hash_flush(struct hci_dev *hdev)
 
 	BT_DBG("hdev %s", hdev->name);
 
-	list_for_each_entry(c, &h->list, list) {
+	list_for_each_entry_rcu(c, &h->list, list) {
 		c->state = BT_CLOSED;
 
 		hci_proto_disconn_cfm(c, HCI_ERROR_LOCAL_HOST_TERM);
