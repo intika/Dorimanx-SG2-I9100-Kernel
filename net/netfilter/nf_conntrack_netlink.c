@@ -2045,6 +2045,10 @@ ctnetlink_create_expect(struct net *net, u16 zone,
 	}
 	help = nfct_help(ct);
 	if (!help) {
+		err = -EOPNOTSUPP;
+		goto out;
+	}
+	if (test_bit(IPS_USERSPACE_HELPER_BIT, &ct->status)) {
 		if (!cda[CTA_EXPECT_TIMEOUT]) {
 			err = -EINVAL;
 			goto out;
@@ -2269,7 +2273,6 @@ static void __exit ctnetlink_exit(void)
 {
 	pr_info("ctnetlink: unregistering from nfnetlink.\n");
 
-	nf_ct_remove_userspace_expectations();
 	unregister_pernet_subsys(&ctnetlink_net_ops);
 	nfnetlink_subsys_unregister(&ctnl_exp_subsys);
 	nfnetlink_subsys_unregister(&ctnl_subsys);
