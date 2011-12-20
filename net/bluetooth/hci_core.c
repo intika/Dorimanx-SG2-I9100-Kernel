@@ -60,8 +60,6 @@ static void hci_rx_work(struct work_struct *work);
 static void hci_cmd_work(struct work_struct *work);
 static void hci_tx_work(struct work_struct *work);
 
-static DEFINE_MUTEX(hci_task_lock);
-
 /* HCI device list */
 LIST_HEAD(hci_dev_list);
 DEFINE_RWLOCK(hci_dev_list_lock);
@@ -2161,8 +2159,7 @@ EXPORT_SYMBOL(hci_recv_stream_fragment);
 
 /* ---- Interface to upper protocols ---- */
 
-/* Register/Unregister protocols.
- * hci_task_lock is used to ensure that no tasks are running. */
+/* Register/Unregister protocols. */
 int hci_register_proto(struct hci_proto *hp)
 {
 	int err = 0;
@@ -2172,14 +2169,10 @@ int hci_register_proto(struct hci_proto *hp)
 	if (hp->id >= HCI_MAX_PROTO)
 		return -EINVAL;
 
-	mutex_lock(&hci_task_lock);
-
 	if (!hci_proto[hp->id])
 		hci_proto[hp->id] = hp;
 	else
 		err = -EEXIST;
-
-	mutex_unlock(&hci_task_lock);
 
 	return err;
 }
@@ -2194,14 +2187,10 @@ int hci_unregister_proto(struct hci_proto *hp)
 	if (hp->id >= HCI_MAX_PROTO)
 		return -EINVAL;
 
-	mutex_lock(&hci_task_lock);
-
 	if (hci_proto[hp->id])
 		hci_proto[hp->id] = NULL;
 	else
 		err = -ENOENT;
-
-	mutex_unlock(&hci_task_lock);
 
 	return err;
 }
@@ -2783,8 +2772,6 @@ static void hci_tx_work(struct work_struct *work)
 	struct hci_dev *hdev = container_of(work, struct hci_dev, tx_work);
 	struct sk_buff *skb;
 
-	mutex_lock(&hci_task_lock);
-
 	BT_DBG("%s acl %d sco %d le %d", hdev->name, hdev->acl_cnt,
 		hdev->sco_cnt, hdev->le_cnt);
 
@@ -2801,8 +2788,6 @@ static void hci_tx_work(struct work_struct *work)
 	/* Send next queued raw (unknown type) packet */
 	while ((skb = skb_dequeue(&hdev->raw_q)))
 		hci_send_frame(skb);
-
-	mutex_unlock(&hci_task_lock);
 }
 
 /* ----- HCI RX task (incoming data processing) ----- */
@@ -2891,8 +2876,6 @@ static void hci_rx_work(struct work_struct *work)
 
 	BT_DBG("%s", hdev->name);
 
-	mutex_lock(&hci_task_lock);
-
 	while ((skb = skb_dequeue(&hdev->rx_q))) {
 		if (atomic_read(&hdev->promisc)) {
 			/* Send copy to the sockets */
@@ -2936,8 +2919,6 @@ static void hci_rx_work(struct work_struct *work)
 			break;
 		}
 	}
-
-	mutex_unlock(&hci_task_lock);
 }
 
 static void hci_cmd_work(struct work_struct *work)
