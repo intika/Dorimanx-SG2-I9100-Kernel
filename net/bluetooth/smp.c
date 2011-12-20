@@ -188,10 +188,9 @@ static void smp_send_cmd(struct l2cap_conn *conn, u8 code, u16 len, void *data)
 	skb->priority = HCI_PRIO_MAX;
 	hci_send_acl(conn->hchan, skb, 0);
 
-	/* SSBT :: NEO + (0213) */
-	del_timer_sync(&conn->security_timer);
-	mod_timer(&conn->security_timer, jiffies +
-				msecs_to_jiffies(SMP_TIMEOUT));
+	cancel_delayed_work_sync(&conn->security_timer);
+	schedule_delayed_work(&conn->security_timer,
+					msecs_to_jiffies(SMP_TIMEOUT));
 }
 
 static __u8 authreq_to_seclevel(__u8 authreq)
@@ -273,9 +272,7 @@ static void smp_failure(struct l2cap_conn *conn, u8 reason, u8 send)
 						hcon->dst_type, reason);
 
 	if (test_and_clear_bit(HCI_CONN_LE_SMP_PEND, &conn->hcon->flags)) {
-		/* SSBT :: NEO (0213) */
-		/*del_timer(&conn->security_timer); */
-		del_timer_sync(&conn->security_timer);
+		cancel_delayed_work_sync(&conn->security_timer);
 		smp_chan_destroy(conn);
 	}
 }
@@ -1047,10 +1044,7 @@ int smp_distribute_keys(struct l2cap_conn *conn, __u8 force)
 
 	if (conn->hcon->out || force) {
 		clear_bit(HCI_CONN_LE_SMP_PEND, &conn->hcon->flags);
-		/* SSBT :: NEO (0207) */
-		/* del_timer(&conn->security_timer); */
-		del_timer_sync(&conn->security_timer);
-
+		cancel_delayed_work_sync(&conn->security_timer);
 		smp_chan_destroy(conn);
 	}
 
