@@ -926,13 +926,10 @@ done:
 }
 
 /* ----- SCO interface with lower layer (HCI) ----- */
-static int sco_connect_ind(struct hci_dev *hdev, bdaddr_t *bdaddr, __u8 type)
+int sco_connect_ind(struct hci_dev *hdev, bdaddr_t *bdaddr)
 {
 	register struct sock *sk;
 	int lm = 0;
-
-	if (type != SCO_LINK && type != ESCO_LINK)
-		return -EINVAL;
 
 	BT_DBG("hdev %s, bdaddr %s", hdev->name, batostr(bdaddr));
 
@@ -953,13 +950,9 @@ static int sco_connect_ind(struct hci_dev *hdev, bdaddr_t *bdaddr, __u8 type)
 	return lm;
 }
 
-static int sco_connect_cfm(struct hci_conn *hcon, __u8 status)
+int sco_connect_cfm(struct hci_conn *hcon, __u8 status)
 {
 	BT_DBG("hcon %p bdaddr %s status %d", hcon, batostr(&hcon->dst), status);
-
-	if (hcon->type != SCO_LINK && hcon->type != ESCO_LINK)
-		return -EINVAL;
-
 	if (!status) {
 		struct sco_conn *conn;
 
@@ -972,19 +965,15 @@ static int sco_connect_cfm(struct hci_conn *hcon, __u8 status)
 	return 0;
 }
 
-static int sco_disconn_cfm(struct hci_conn *hcon, __u8 reason)
+int sco_disconn_cfm(struct hci_conn *hcon, __u8 reason)
 {
 	BT_DBG("hcon %p reason %d", hcon, reason);
 
-	if (hcon->type != SCO_LINK && hcon->type != ESCO_LINK)
-		return -EINVAL;
-
 	sco_conn_del(hcon, bt_to_errno(reason));
-
 	return 0;
 }
 
-static int sco_recv_scodata(struct hci_conn *hcon, struct sk_buff *skb)
+int sco_recv_scodata(struct hci_conn *hcon, struct sk_buff *skb)
 {
 	struct sco_conn *conn = hcon->sco_data;
 
@@ -1059,15 +1048,6 @@ static const struct net_proto_family sco_sock_family_ops = {
 	.create	= sco_sock_create,
 };
 
-static struct hci_proto sco_hci_proto = {
-	.name		= "SCO",
-	.id		= HCI_PROTO_SCO,
-	.connect_ind	= sco_connect_ind,
-	.connect_cfm	= sco_connect_cfm,
-	.disconn_cfm	= sco_disconn_cfm,
-	.recv_scodata	= sco_recv_scodata
-};
-
 int __init sco_init(void)
 {
 	int err;
@@ -1079,13 +1059,6 @@ int __init sco_init(void)
 	err = bt_sock_register(BTPROTO_SCO, &sco_sock_family_ops);
 	if (err < 0) {
 		BT_ERR("SCO socket registration failed");
-		goto error;
-	}
-
-	err = hci_register_proto(&sco_hci_proto);
-	if (err < 0) {
-		BT_ERR("SCO protocol registration failed");
-		bt_sock_unregister(BTPROTO_SCO);
 		goto error;
 	}
 
@@ -1111,9 +1084,6 @@ void __exit sco_exit(void)
 
 	if (bt_sock_unregister(BTPROTO_SCO) < 0)
 		BT_ERR("SCO socket unregistration failed");
-
-	if (hci_unregister_proto(&sco_hci_proto) < 0)
-		BT_ERR("SCO protocol unregistration failed");
 
 	proto_unregister(&sco_proto);
 }
