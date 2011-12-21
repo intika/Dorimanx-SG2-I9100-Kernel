@@ -1629,8 +1629,7 @@ static int packet_rcv(struct sk_buff *skb, struct net_device *dev,
 	if (snaplen > res)
 		snaplen = res;
 
-	if (atomic_read(&sk->sk_rmem_alloc) + skb->truesize >=
-	    (unsigned)sk->sk_rcvbuf)
+	if (atomic_read(&sk->sk_rmem_alloc) >= sk->sk_rcvbuf)
 		goto drop_n_acct;
 
 	if (skb_shared(skb)) {
@@ -1761,8 +1760,7 @@ static int tpacket_rcv(struct sk_buff *skb, struct net_device *dev,
 	if (po->tp_version <= TPACKET_V2) {
 		if (macoff + snaplen > po->rx_ring.frame_size) {
 			if (po->copy_thresh &&
-				atomic_read(&sk->sk_rmem_alloc) + skb->truesize
-				< (unsigned)sk->sk_rcvbuf) {
+			    atomic_read(&sk->sk_rmem_alloc) < sk->sk_rcvbuf) {
 				if (skb_shared(skb)) {
 					copy_skb = skb_clone(skb, GFP_ATOMIC);
 				} else {
