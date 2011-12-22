@@ -2090,6 +2090,8 @@ static void l2cap_ack_timeout(struct work_struct *work)
 	struct l2cap_chan *chan = container_of(work, struct l2cap_chan,
 							ack_timer.work);
 
+	BT_DBG("chan %p", chan);
+
 	lock_sock(chan->sk);
 	/* l2cap_send_ack(chan);*/
 	__l2cap_send_ack(chan);
