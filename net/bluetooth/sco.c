@@ -501,7 +501,7 @@ static int sco_sock_bind(struct socket *sock, struct sockaddr *addr, int alen)
 		goto done;
 	}
 
-	write_lock_bh(&sco_sk_list.lock);
+	write_lock(&sco_sk_list.lock);
 
 	if (bacmp(src, BDADDR_ANY) && __sco_get_sock_by_addr(src)) {
 		err = -EADDRINUSE;
@@ -512,7 +512,7 @@ static int sco_sock_bind(struct socket *sock, struct sockaddr *addr, int alen)
 		sk->sk_state = BT_BOUND;
 	}
 
-	write_unlock_bh(&sco_sk_list.lock);
+	write_unlock(&sco_sk_list.lock);
 
 done:
 	release_sock(sk);
@@ -996,14 +996,14 @@ static int sco_debugfs_show(struct seq_file *f, void *p)
 {
 	struct sock *sk;
 
-	read_lock_bh(&sco_sk_list.lock);
+	read_lock(&sco_sk_list.lock);
 
 	sk_for_each(sk, &sco_sk_list.head) {
 		seq_printf(f, "%s %s %d\n", batostr(&bt_sk(sk)->src),
 				batostr(&bt_sk(sk)->dst), sk->sk_state);
 	}
 
-	read_unlock_bh(&sco_sk_list.lock);
+	read_unlock(&sco_sk_list.lock);
 
 	return 0;
 }
