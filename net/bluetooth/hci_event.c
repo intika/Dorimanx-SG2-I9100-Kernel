@@ -1106,9 +1106,8 @@ static void hci_cc_le_set_scan_enable(struct hci_dev *hdev,
 		hci_discovery_set_state(hdev, DISCOVERY_STOPPED);
 		hci_dev_unlock(hdev);
 
-		cancel_delayed_work_sync(&hdev->adv_work);
 		queue_delayed_work(hdev->workqueue, &hdev->adv_work,
-						 jiffies + ADV_CLEAR_TIMEOUT);
+							ADV_CLEAR_TIMEOUT);
 		break;
 
 	default:
