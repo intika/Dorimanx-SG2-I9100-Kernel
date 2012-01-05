@@ -57,6 +57,7 @@ struct choke_sched_data {
 	struct red_parms parms;
 
 /* Variables */
+	struct red_vars  vars;
 	struct tcf_proto *filter_list;
 	struct {
 		u32	prob_drop;	/* Early probability drops */
@@ -264,7 +265,7 @@ static bool choke_match_random(const struct choke_sched_data *q,
 static int choke_enqueue(struct sk_buff *skb, struct Qdisc *sch)
 {
 	struct choke_sched_data *q = qdisc_priv(sch);
-	struct red_parms *p = &q->parms;
+	const struct red_parms *p = &q->parms;
 	int ret = NET_XMIT_SUCCESS | __NET_XMIT_BYPASS;
 
 	if (q->filter_list) {
@@ -275,13 +276,13 @@ static int choke_enqueue(struct sk_buff *skb, struct Qdisc *sch)
 
 	choke_skb_cb(skb)->keys_valid = 0;
 	/* Compute average queue usage (see RED) */
-	p->qavg = red_calc_qavg(p, sch->q.qlen);
-	if (red_is_idling(p))
-		red_end_of_idle_period(p);
+	q->vars.qavg = red_calc_qavg(p, &q->vars, sch->q.qlen);
+	if (red_is_idling(&q->vars))
+		red_end_of_idle_period(&q->vars);
 
 	/* Is queue small? */
-	if (p->qavg <= p->qth_min)
-		p->qcount = -1;
+	if (q->vars.qavg <= p->qth_min)
+		q->vars.qcount = -1;
 	else {
 		unsigned int idx;
 
@@ -293,8 +294,8 @@ static int choke_enqueue(struct sk_buff *skb, struct Qdisc *sch)
 		}
 
 		/* Queue is large, always mark/drop */
-		if (p->qavg > p->qth_max) {
-			p->qcount = -1;
+		if (q->vars.qavg > p->qth_max) {
+			q->vars.qcount = -1;
 
 			sch->qstats.overlimits++;
 			if (use_harddrop(q) || !use_ecn(q) ||
@@ -304,10 +305,10 @@ static int choke_enqueue(struct sk_buff *skb, struct Qdisc *sch)
 			}
 
 			q->stats.forced_mark++;
-		} else if (++p->qcount) {
-			if (red_mark_probability(p, p->qavg)) {
-				p->qcount = 0;
-				p->qR = red_random(p);
+		} else if (++q->vars.qcount) {
+			if (red_mark_probability(p, &q->vars, q->vars.qavg)) {
+				q->vars.qcount = 0;
+				q->vars.qR = red_random(p);
 
 				sch->qstats.overlimits++;
 				if (!use_ecn(q) || !INET_ECN_set_ce(skb)) {
@@ -318,7 +319,7 @@ static int choke_enqueue(struct sk_buff *skb, struct Qdisc *sch)
 				q->stats.prob_mark++;
 			}
 		} else
-			p->qR = red_random(p);
+			q->vars.qR = red_random(p);
 	}
 
 	/* Admit new packet */
@@ -350,8 +351,8 @@ static struct sk_buff *choke_dequeue(struct Qdisc *sch)
 	struct sk_buff *skb;
 
 	if (q->head == q->tail) {
-		if (!red_is_idling(&q->parms))
-			red_start_of_idle_period(&q->parms);
+		if (!red_is_idling(&q->vars))
+			red_start_of_idle_period(&q->vars);
 		return NULL;
 	}
 
@@ -374,8 +375,8 @@ static unsigned int choke_drop(struct Qdisc *sch)
 	if (len > 0)
 		q->stats.other++;
 	else {
-		if (!red_is_idling(&q->parms))
-			red_start_of_idle_period(&q->parms);
+		if (!red_is_idling(&q->vars))
+			red_start_of_idle_period(&q->vars);
 	}
 
 	return len;
@@ -385,7 +386,7 @@ static void choke_reset(struct Qdisc *sch)
 {
 	struct choke_sched_data *q = qdisc_priv(sch);
 
-	red_restart(&q->parms);
+	red_restart(&q->vars);
 }
 
 static const struct nla_policy choke_policy[TCA_CHOKE_MAX + 1] = {
@@ -480,9 +481,10 @@ static int choke_change(struct Qdisc *sch, struct nlattr *opt)
 		      ctl->Plog, ctl->Scell_log,
 		      nla_data(tb[TCA_CHOKE_STAB]),
 		      max_P);
+	red_set_vars(&q->vars);
 
 	if (q->head == q->tail)
-		red_end_of_idle_period(&q->parms);
+		red_end_of_idle_period(&q->vars);
 
 	sch_tree_unlock(sch);
 	choke_free(old);
