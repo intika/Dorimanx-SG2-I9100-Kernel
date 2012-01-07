@@ -245,8 +245,6 @@ static int vhci_open(struct inode *inode, struct file *file)
 	hdev->send     = vhci_send_frame;
 	hdev->destruct = vhci_destruct;
 
-	hdev->owner = THIS_MODULE;
-
 	if (hci_register_dev(hdev) < 0) {
 		BT_ERR("Can't register HCI device");
 		kfree(data);

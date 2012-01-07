@@ -507,8 +507,6 @@ static int btuart_open(btuart_info_t *info)
 	hdev->destruct = btuart_hci_destruct;
 	hdev->ioctl    = btuart_hci_ioctl;
 
-	hdev->owner = THIS_MODULE;
-
 	spin_lock_irqsave(&(info->lock), flags);
 
 	/* Reset UART */

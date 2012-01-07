@@ -466,8 +466,6 @@ static int hci_uart_register_dev(struct hci_uart *hu)
 	hdev->destruct = hci_uart_destruct;
 	SET_HCIDEV_DEV(hdev, hu->tty->dev);
 
-	hdev->owner = THIS_MODULE;
-
 	if (test_bit(HCI_UART_RAW_DEVICE, &hu->hdev_flags))
 		set_bit(HCI_QUIRK_RAW_DEVICE, &hdev->quirks);
 

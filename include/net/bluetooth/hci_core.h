@@ -290,8 +290,6 @@ struct hci_dev {
 
 	struct rfkill		*rfkill;
 
-	struct module		*owner;
-
 	unsigned long		dev_flags;
 
 	struct delayed_work	le_scan_disable;
@@ -662,7 +660,6 @@ static inline void __hci_dev_put(struct hci_dev *d)
 static inline void hci_dev_put(struct hci_dev *d)
 {
 	__hci_dev_put(d);
-	module_put(d->owner);
 }
 
 static inline struct hci_dev *__hci_dev_hold(struct hci_dev *d)
@@ -673,9 +670,7 @@ static inline struct hci_dev *__hci_dev_hold(struct hci_dev *d)
 
 static inline struct hci_dev *hci_dev_hold(struct hci_dev *d)
 {
-	if (try_module_get(d->owner))
-		return __hci_dev_hold(d);
-	return NULL;
+	return __hci_dev_hold(d);
 }
 
 #define hci_dev_lock(d)		mutex_lock(&d->lock)

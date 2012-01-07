@@ -589,8 +589,6 @@ static int bt3c_open(bt3c_info_t *info)
 	hdev->destruct = bt3c_hci_destruct;
 	hdev->ioctl    = bt3c_hci_ioctl;
 
-	hdev->owner = THIS_MODULE;
-
 	/* Load firmware */
 	err = request_firmware(&firmware, "BT3CPCC.bin", &info->p_dev->dev);
 	if (err < 0) {
