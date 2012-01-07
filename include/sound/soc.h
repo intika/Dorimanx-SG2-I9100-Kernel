@@ -393,6 +393,7 @@ int snd_soc_get_volsw(struct snd_kcontrol *kcontrol,
 	struct snd_ctl_elem_value *ucontrol);
 int snd_soc_put_volsw(struct snd_kcontrol *kcontrol,
 	struct snd_ctl_elem_value *ucontrol);
+#define snd_soc_get_volsw_2r snd_soc_get_volsw
 #define snd_soc_put_volsw_2r snd_soc_put_volsw
 int snd_soc_info_volsw_s8(struct snd_kcontrol *kcontrol,
 	struct snd_ctl_elem_info *uinfo);
@@ -578,6 +579,7 @@ struct snd_soc_codec {
 
 	/* dapm */
 	struct snd_soc_dapm_context dapm;
+	unsigned int ignore_pmdown_time:1; /* pmdown_time is ignored at stop */
 
 #ifdef CONFIG_DEBUG_FS
 	struct dentry *debugfs_codec_root;
@@ -654,6 +656,14 @@ struct snd_soc_platform_driver {
 	int (*pcm_new)(struct snd_soc_pcm_runtime *);
 	void (*pcm_free)(struct snd_pcm *);
 
+	/* Default control and setup, added after probe() is run */
+	const struct snd_kcontrol_new *controls;
+	int num_controls;
+	const struct snd_soc_dapm_widget *dapm_widgets;
+	int num_dapm_widgets;
+	const struct snd_soc_dapm_route *dapm_routes;
+	int num_dapm_routes;
+
 	/*
 	 * For platform caused delay reporting.
 	 * Optional.
@@ -711,6 +721,9 @@ struct snd_soc_dai_link {
 
 	/* Symmetry requirements */
 	unsigned int symmetric_rates:1;
+
+	/* pmdown_time is ignored at stop */
+	unsigned int ignore_pmdown_time:1;
 
 	/* codec/machine specific init - e.g. add machine controls */
 	int (*init)(struct snd_soc_pcm_runtime *rtd);
@@ -835,8 +848,8 @@ struct snd_soc_card {
 };
 
 /* SoC machine DAI configuration, glues a codec and cpu DAI together */
-struct snd_soc_pcm_runtime  {
-	struct device dev;
+struct snd_soc_pcm_runtime {
+	struct device *dev;
 	struct snd_soc_card *card;
 	struct snd_soc_dai_link *dai_link;
 	struct mutex pcm_mutex;
@@ -922,12 +935,12 @@ static inline void *snd_soc_platform_get_drvdata(struct snd_soc_platform *platfo
 static inline void snd_soc_pcm_set_drvdata(struct snd_soc_pcm_runtime *rtd,
 		void *data)
 {
-	dev_set_drvdata(&rtd->dev, data);
+	dev_set_drvdata(rtd->dev, data);
 }
 
 static inline void *snd_soc_pcm_get_drvdata(struct snd_soc_pcm_runtime *rtd)
 {
-	return dev_get_drvdata(&rtd->dev);
+	return dev_get_drvdata(rtd->dev);
 }
 
 static inline void snd_soc_initialize_card_lists(struct snd_soc_card *card)
