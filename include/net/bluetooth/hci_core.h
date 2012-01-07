@@ -647,25 +647,15 @@ static inline void hci_conn_put(struct hci_conn *conn)
 }
 
 /* ----- HCI Devices ----- */
-static inline void __hci_dev_put(struct hci_dev *d)
+static inline void hci_dev_put(struct hci_dev *d)
 {
 	put_device(&d->dev);
 }
 
-static inline void hci_dev_put(struct hci_dev *d)
-{
-	__hci_dev_put(d);
-}
-
-static inline struct hci_dev *__hci_dev_hold(struct hci_dev *d)
+static inline struct hci_dev *hci_dev_hold(struct hci_dev *d)
 {
 	get_device(&d->dev);
 	return d;
-}
-
-static inline struct hci_dev *hci_dev_hold(struct hci_dev *d)
-{
-	return __hci_dev_hold(d);
 }
 
 #define hci_dev_lock(d)		mutex_lock(&d->lock)

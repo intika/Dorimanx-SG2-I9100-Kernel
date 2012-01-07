@@ -1873,7 +1873,7 @@ int hci_register_dev(struct hci_dev *hdev)
 	set_bit(HCI_SETUP, &hdev->dev_flags);
 
 	hci_notify(hdev, HCI_DEV_REG);
-	__hci_dev_hold(hdev);
+	hci_dev_hold(hdev);
 
 	schedule_work(&hdev->power_on);
 
@@ -1941,7 +1941,7 @@ void hci_unregister_dev(struct hci_dev *hdev)
 	hci_adv_entries_clear(hdev);
 	hci_dev_unlock(hdev);
 
-	__hci_dev_put(hdev);
+	hci_dev_put(hdev);
 }
 EXPORT_SYMBOL(hci_unregister_dev);
 
