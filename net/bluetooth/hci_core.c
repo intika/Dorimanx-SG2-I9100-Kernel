@@ -1786,7 +1786,6 @@ int hci_register_dev(struct hci_dev *hdev)
 	hdev->id = id;
 	list_add_tail(&hdev->list, head);
 
-	atomic_set(&hdev->refcnt, 1);
 	mutex_init(&hdev->lock);
 
 	hdev->flags = 0;
@@ -1874,9 +1873,9 @@ int hci_register_dev(struct hci_dev *hdev)
 	set_bit(HCI_SETUP, &hdev->dev_flags);
 
 	hci_notify(hdev, HCI_DEV_REG);
-	schedule_work(&hdev->power_on);
+	__hci_dev_hold(hdev);
 
-	hci_dev_hold(hdev);
+	schedule_work(&hdev->power_on);
 
 	return id;
 

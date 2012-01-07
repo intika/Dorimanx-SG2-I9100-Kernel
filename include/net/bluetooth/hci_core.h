@@ -153,7 +153,6 @@ struct le_scan_params {
 struct hci_dev {
 	struct list_head list;
 	struct mutex	lock;
-	atomic_t	refcnt;
 
 	char		name[8];
 	unsigned long	flags;
@@ -650,7 +649,7 @@ static inline void hci_conn_put(struct hci_conn *conn)
 /* ----- HCI Devices ----- */
 static inline void __hci_dev_put(struct hci_dev *d)
 {
-	atomic_dec(&d->refcnt);
+	put_device(&d->dev);
 }
 
 static inline void hci_dev_put(struct hci_dev *d)
@@ -660,7 +659,7 @@ static inline void hci_dev_put(struct hci_dev *d)
 
 static inline struct hci_dev *__hci_dev_hold(struct hci_dev *d)
 {
-	atomic_inc(&d->refcnt);
+	get_device(&d->dev);
 	return d;
 }
 
