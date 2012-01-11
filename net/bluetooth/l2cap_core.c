@@ -1551,33 +1551,12 @@ static int l2cap_retransmit_frames(struct l2cap_chan *chan)
 	ret = l2cap_ertm_send(chan);
 	return ret;
 }
-/*
-static void l2cap_send_ack(struct l2cap_chan *chan)
+
+static void __l2cap_send_ack(struct l2cap_chan *chan)
 {
 	u32 control = 0;
 
 	control |= __set_reqseq(chan, chan->buffer_seq);
-
-	if (test_bit(CONN_LOCAL_BUSY, &chan->conn_state)) {
-		control |= __set_ctrl_super(chan, L2CAP_SUPER_RNR);
-		set_bit(CONN_RNR_SENT, &chan->conn_state);
-		l2cap_send_sframe(chan, control);
-		return;
-	}
-
-	if (l2cap_ertm_send(chan) > 0)
-		return;
-
-	control |= __set_ctrl_super(chan, L2CAP_SUPER_RR);
-	l2cap_send_sframe(chan, control);
-}
-*/
-
-static void __l2cap_send_ack(struct l2cap_chan *chan)
-{
-	u16 control = 0;
-
-	control |= chan->buffer_seq << L2CAP_CTRL_REQSEQ_SHIFT;
 
 	if (test_bit(CONN_LOCAL_BUSY, &chan->conn_state)) {
 		control |= __set_ctrl_super(chan, L2CAP_SUPER_RNR);
@@ -2093,7 +2072,6 @@ static void l2cap_ack_timeout(struct work_struct *work)
 	BT_DBG("chan %p", chan);
 
 	lock_sock(chan->sk);
-	/* l2cap_send_ack(chan);*/
 	__l2cap_send_ack(chan);
 	release_sock(chan->sk);
 }
