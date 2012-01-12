@@ -1196,7 +1196,7 @@ static ssize_t store_xps_map(struct netdev_queue *queue,
 	}
 
 	if (nonempty) {
-		RCU_INIT_POINTER(dev->xps_maps, new_dev_maps);
+		rcu_assign_pointer(dev->xps_maps, new_dev_maps);
 	} else {
 		kfree(new_dev_maps);
 		RCU_INIT_POINTER(dev->xps_maps, NULL);
