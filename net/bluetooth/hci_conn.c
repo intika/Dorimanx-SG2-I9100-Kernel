@@ -52,7 +52,7 @@ static void hci_le_connect(struct hci_conn *conn)
 	BT_DBG("");
 
 	conn->state = BT_CONNECT;
-	conn->out = 1;
+	conn->out = true;
 	conn->link_mode |= HCI_LM_MASTER;
 	conn->sec_level = BT_SECURITY_LOW;
 
@@ -85,7 +85,7 @@ void hci_acl_connect(struct hci_conn *conn)
 	BT_DBG("%p", conn);
 
 	conn->state = BT_CONNECT;
-	conn->out = 1;
+	conn->out = true;
 
 	conn->link_mode = HCI_LM_MASTER;
 
@@ -153,7 +153,7 @@ void hci_add_sco(struct hci_conn *conn, __u16 handle)
 	BT_DBG("%p", conn);
 
 	conn->state = BT_CONNECT;
-	conn->out = 1;
+	conn->out = true;
 
 	conn->attempt++;
 
@@ -171,7 +171,7 @@ void hci_setup_sync(struct hci_conn *conn, __u16 handle)
 	BT_DBG("%p", conn);
 
 	conn->state = BT_CONNECT;
-	conn->out = 1;
+	conn->out = true;
 
 	conn->attempt++;
 
