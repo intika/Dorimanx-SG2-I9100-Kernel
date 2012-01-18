@@ -1342,8 +1342,7 @@ static int hci_outgoing_auth_needed(struct hci_dev *hdev,
 
 	/* Only request authentication for SSP connections or non-SSP
 	 * devices with sec_level HIGH or if MITM protection is requested */
-	if (!(test_bit(HCI_SSP_ENABLED, &hdev->dev_flags) &&
-			test_bit(HCI_CONN_SSP_ENABLED, &conn->flags)) &&
+	if (!hci_conn_ssp_enabled(conn) &&
 				conn->pending_sec_level != BT_SECURITY_HIGH &&
 				!(conn->auth_type & 0x01))
 		return 0;
@@ -1988,9 +1987,8 @@ static inline void hci_auth_complete_evt(struct hci_dev *hdev, struct sk_buff *s
 	/* SS_BLUEZ_BT(is80.hwang) End */
 
 	if (!ev->status) {
-		if (!(test_bit(HCI_CONN_SSP_ENABLED, &conn->flags) &&
-				test_bit(HCI_SSP_ENABLED, &hdev->dev_flags)) &&
-				test_bit(HCI_CONN_REAUTH_PEND,	&conn->flags)) {
+		if (!hci_conn_ssp_enabled(conn) &&
+				test_bit(HCI_CONN_REAUTH_PEND, &conn->flags)) {
 			BT_INFO("re-auth of legacy device is not possible.");
 		} else {
 			conn->link_mode |= HCI_LM_AUTH;
@@ -2006,9 +2004,7 @@ static inline void hci_auth_complete_evt(struct hci_dev *hdev, struct sk_buff *s
 	clear_bit(HCI_CONN_REAUTH_PEND, &conn->flags);
 
 	if (conn->state == BT_CONFIG) {
-		if (!ev->status &&
-				test_bit(HCI_SSP_ENABLED, &hdev->dev_flags) &&
-				test_bit(HCI_CONN_SSP_ENABLED, &conn->flags)) {
+		if (!ev->status && hci_conn_ssp_enabled(conn)) {
 			/* This is work-around for BCM2070 PC firmware problem
 			* after auth complete, slave side will send
 			* the HCI_OP_SET_CONN_ENCRYPT cmd 10ms later
