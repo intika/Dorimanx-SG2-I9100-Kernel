@@ -173,7 +173,6 @@ struct bat_priv {
 	struct hlist_head forw_bat_list;
 	struct hlist_head forw_bcast_list;
 	struct hlist_head gw_list;
-	struct hlist_head softif_neigh_vids;
 	struct list_head tt_changes_list; /* tracks changes in a OGM int */
 	struct list_head vis_send_list;
 	struct hashtable_t *orig_hash;
@@ -190,8 +189,6 @@ struct bat_priv {
 	spinlock_t gw_list_lock; /* protects gw_list and curr_gw */
 	spinlock_t vis_hash_lock; /* protects vis_hash */
 	spinlock_t vis_list_lock; /* protects vis_info::recv_list */
-	spinlock_t softif_neigh_lock; /* protects soft-interface neigh list */
-	spinlock_t softif_neigh_vid_lock; /* protects soft-interface vid list */
 	atomic_t num_local_tt;
 	/* Checksum of the local table, recomputed before sending a new OGM */
 	atomic_t tt_crc;
@@ -325,22 +322,23 @@ struct recvlist_node {
 	uint8_t mac[ETH_ALEN];
 };
 
-struct softif_neigh_vid {
+struct bat_algo_ops {
 	struct hlist_node list;
-	struct bat_priv *bat_priv;
-	short vid;
-	atomic_t refcount;
-	struct softif_neigh __rcu *softif_neigh;
-	struct rcu_head rcu;
-	struct hlist_head softif_neigh_list;
-};
-
-struct softif_neigh {
-	struct hlist_node list;
-	uint8_t addr[ETH_ALEN];
-	unsigned long last_seen;
-	atomic_t refcount;
-	struct rcu_head rcu;
+	char *name;
+	/* init OGM when hard-interface is enabled */
+	void (*bat_ogm_init)(struct hard_iface *hard_iface);
+	/* init primary OGM when primary interface is selected */
+	void (*bat_ogm_init_primary)(struct hard_iface *hard_iface);
+	/* init mac addresses of the OGM belonging to this hard-interface */
+	void (*bat_ogm_update_mac)(struct hard_iface *hard_iface);
+	/* prepare a new outgoing OGM for the send queue */
+	void (*bat_ogm_schedule)(struct hard_iface *hard_iface,
+				 int tt_num_changes);
+	/* send scheduled OGM */
+	void (*bat_ogm_emit)(struct forw_packet *forw_packet);
+	/* receive incoming OGM */
+	void (*bat_ogm_receive)(struct hard_iface *if_incoming,
+				struct sk_buff *skb);
 };
 
 #endif /* _NET_BATMAN_ADV_TYPES_H_ */
