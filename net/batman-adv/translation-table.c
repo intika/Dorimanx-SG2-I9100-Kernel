@@ -27,6 +27,7 @@
 #include "hash.h"
 #include "originator.h"
 #include "routing.h"
+#include "bridge_loop_avoidance.h"
 
 #include <linux/crc16.h>
 
@@ -1626,10 +1627,15 @@ out:
 bool send_tt_response(struct bat_priv *bat_priv,
 		      struct tt_query_packet *tt_request)
 {
-	if (is_my_mac(tt_request->dst))
+	if (is_my_mac(tt_request->dst)) {
+		/* don't answer backbone gws! */
+		if (bla_is_backbone_gw_orig(bat_priv, tt_request->src))
+			return true;
+
 		return send_my_tt_response(bat_priv, tt_request);
-	else
+	} else {
 		return send_other_tt_response(bat_priv, tt_request);
+	}
 }
 
 static void _tt_update_changes(struct bat_priv *bat_priv,
@@ -1732,6 +1738,10 @@ void handle_tt_response(struct bat_priv *bat_priv,
 		tt_response->src, tt_response->ttvn,
 		tt_response->tt_data,
 		(tt_response->flags & TT_FULL_TABLE ? 'F' : '.'));
+
+	/* we should have never asked a backbone gw */
+	if (bla_is_backbone_gw_orig(bat_priv, tt_response->src))
+		goto out;
 
 	orig_node = orig_hash_find(bat_priv, tt_response->src);
 	if (!orig_node)
@@ -2064,8 +2074,14 @@ void tt_update_orig(struct bat_priv *bat_priv, struct orig_node *orig_node,
 	uint8_t orig_ttvn = (uint8_t)atomic_read(&orig_node->last_ttvn);
 	bool full_table = true;
 
-	/* the ttvn increased by one -> we can apply the attached changes */
-	if (ttvn - orig_ttvn == 1) {
+	/* don't care about a backbone gateways updates. */
+	if (bla_is_backbone_gw_orig(bat_priv, orig_node->orig))
+		return;
+
+	/* orig table not initialised AND first diff is in the OGM OR the ttvn
+	 * increased by one -> we can apply the attached changes */
+	if ((!orig_node->tt_initialised && ttvn == 1) ||
+	    ttvn - orig_ttvn == 1) {
 		/* the OGM could not contain the changes due to their size or
 		 * because they have already been sent TT_OGM_APPEND_MAX times.
 		 * In this case send a tt request */
