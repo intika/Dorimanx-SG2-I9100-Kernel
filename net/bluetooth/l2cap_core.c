@@ -72,8 +72,6 @@ static int l2cap_build_conf_req(struct l2cap_chan *chan, void *data);
 static void l2cap_send_disconn_req(struct l2cap_conn *conn,
 				struct l2cap_chan *chan, int err);
 
-static int l2cap_ertm_data_rcv(struct l2cap_chan *chan, struct sk_buff *skb);
-
 /* workaround for a2dp chopping in multi connection. */
 static struct l2cap_conn *av_conn;
 static struct l2cap_conn *hid_conn;
@@ -4251,7 +4249,7 @@ static inline int l2cap_data_channel_sframe(struct l2cap_chan *chan, u32 rx_cont
 	return 0;
 }
 
-int l2cap_ertm_data_rcv(struct l2cap_chan *chan, struct sk_buff *skb)
+static int l2cap_ertm_data_rcv(struct l2cap_chan *chan, struct sk_buff *skb)
 {
 	u32 control;
 	u16 req_seq;
