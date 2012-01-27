@@ -1207,11 +1207,17 @@ static void ndisc_router_discovery(struct sk_buff *skb)
 
 	rt = rt6_get_dflt_router(&ipv6_hdr(skb)->saddr, skb->dev);
 
-	if (rt)
-		neigh = dst_get_neighbour_noref(&rt->dst);
-
+	if (rt) {
+		neigh = dst_neigh_lookup(&rt->dst, &ipv6_hdr(skb)->saddr);
+		if (!neigh) {
+			ND_PRINTK0(KERN_ERR
+				   "ICMPv6 RA: %s() got default router without neighbour.\n",
+				   __func__);
+			dst_release(&rt->dst);
+			return;
+		}
+	}
 	if (rt && lifetime == 0) {
-		neigh_clone(neigh);
 		ip6_del_rt(rt);
 		rt = NULL;
 	}
@@ -1228,7 +1234,7 @@ static void ndisc_router_discovery(struct sk_buff *skb)
 			return;
 		}
 
-		neigh = dst_get_neighbour_noref(&rt->dst);
+		neigh = dst_neigh_lookup(&rt->dst, &ipv6_hdr(skb)->saddr);
 		if (neigh == NULL) {
 			ND_PRINTK0(KERN_ERR
 				   "ICMPv6 RA: %s() got default router without neighbour.\n",
@@ -1398,7 +1404,7 @@ skip_routeinfo:
 out:
 	if (rt)
 		dst_release(&rt->dst);
-	else if (neigh)
+	if (neigh)
 		neigh_release(neigh);
 }
 
