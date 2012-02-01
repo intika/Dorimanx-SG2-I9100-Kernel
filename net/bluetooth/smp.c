@@ -537,8 +537,6 @@ void smp_chan_destroy(struct l2cap_conn *conn)
 
 	BUG_ON(!smp);
 
-	/* clear_bit(HCI_CONN_LE_SMP_PEND, &conn->hcon->flags); */
-
 	if (smp->tfm)
 		crypto_free_blkcipher(smp->tfm);
 
