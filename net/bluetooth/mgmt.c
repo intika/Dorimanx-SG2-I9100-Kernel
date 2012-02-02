@@ -2835,6 +2835,9 @@ int mgmt_control(struct sock *sk, struct msghdr *msg, size_t msglen)
 	case MGMT_OP_UNPAIR_DEVICE:
 		err = unpair_device(sk, index, cp, len);
 		break;
+	case MGMT_OP_CANCEL_PAIR_DEVICE:
+		err = cancel_pair_device(sk, index, buf + sizeof(*hdr), len);
+		break;
 	case MGMT_OP_USER_CONFIRM_REPLY:
 		err = user_confirm_reply(sk, index, cp, len);
 		break;
