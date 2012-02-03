@@ -1082,7 +1082,7 @@ static void hci_cc_le_set_scan_enable(struct hci_dev *hdev,
 		hci_req_complete(hdev, HCI_OP_LE_SET_SCAN_ENABLE, status);
 
 		if (status) {
-	hci_dev_lock(hdev);
+			hci_dev_lock(hdev);
 			mgmt_start_discovery_failed(hdev, status);
 			hci_dev_unlock(hdev);
 			return;
