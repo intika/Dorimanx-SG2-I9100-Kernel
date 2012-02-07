@@ -122,7 +122,7 @@ struct batman_header {
 	uint16_t tt_crc;
 } __packed;
 
-#define BATMAN_OGM_LEN sizeof(struct batman_ogm_packet)
+#define BATMAN_OGM_HLEN sizeof(struct batman_ogm_packet)
 
 struct icmp_packet {
 	uint8_t  packet_type;
