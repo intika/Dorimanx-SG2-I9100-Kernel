@@ -1521,7 +1521,6 @@ int hci_blacklist_clear(struct hci_dev *hdev)
 	return 0;
 }
 
-/* sync from bluez git */
 int hci_blacklist_add(struct hci_dev *hdev, bdaddr_t *bdaddr, u8 type)
 {
 	struct bdaddr_list *entry;
@@ -1543,7 +1542,6 @@ int hci_blacklist_add(struct hci_dev *hdev, bdaddr_t *bdaddr, u8 type)
 	return mgmt_device_blocked(hdev, bdaddr, type);
 }
 
-/* sync from bluez git */
 int hci_blacklist_del(struct hci_dev *hdev, bdaddr_t *bdaddr, u8 type)
 {
 	struct bdaddr_list *entry;

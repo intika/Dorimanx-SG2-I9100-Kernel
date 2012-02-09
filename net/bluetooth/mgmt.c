@@ -2309,9 +2309,8 @@ static int block_device(struct sock *sk, u16 index, void *data, u16 len)
 						MGMT_STATUS_INVALID_PARAMS);
 
 	hci_dev_lock(hdev);
-	/* sync from bluez git */
-	err = hci_blacklist_add(hdev, &cp->addr.bdaddr, cp->addr.type);
 
+	err = hci_blacklist_add(hdev, &cp->addr.bdaddr, cp->addr.type);
 	if (err < 0)
 		err = cmd_status(sk, index, MGMT_OP_BLOCK_DEVICE,
 							MGMT_STATUS_FAILED);
@@ -2343,7 +2342,7 @@ static int unblock_device(struct sock *sk, u16 index, void *data, u16 len)
 						MGMT_STATUS_INVALID_PARAMS);
 
 	hci_dev_lock(hdev);
-	/* sync from bluez git */
+
 	err = hci_blacklist_del(hdev, &cp->addr.bdaddr, cp->addr.type);
 
 	if (err < 0)
