@@ -190,18 +190,6 @@ struct mgmt_cp_load_long_term_keys {
 	struct mgmt_ltk_info keys[0];
 } __packed;
 
-/*
-#define MGMT_OP_REMOVE_KEYS		0x0014
-struct mgmt_cp_remove_keys {
-	bdaddr_t bdaddr;
-	__u8 disconnect;
-} __packed;
-struct mgmt_rp_remove_keys {
-	bdaddr_t bdaddr;
-	__u8 status;
-};
-*/
-
 #define MGMT_OP_DISCONNECT		0x0014
 struct mgmt_cp_disconnect {
 	struct mgmt_addr_info addr;
