@@ -794,6 +794,10 @@ set_rcvbuf:
 			ret = -EOPNOTSUPP;
 		break;
 
+	case SO_NOFCS:
+		sock_valbool_flag(sk, SOCK_NOFCS, valbool);
+		break;
+
 #ifdef CONFIG_NET_LL_RX_POLL
 	case SO_BUSY_POLL:
 	/* allow unprivileged users to decrease the value */
