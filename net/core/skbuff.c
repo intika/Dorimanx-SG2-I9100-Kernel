@@ -2873,7 +2873,7 @@ int skb_gro_receive(struct sk_buff **head, struct sk_buff *skb)
 	nskb->prev = p;
 
 	nskb->data_len += p->len;
-	nskb->truesize += p->len;
+	nskb->truesize += p->truesize;
 	nskb->len += p->len;
 
 	*head = nskb;
@@ -2883,6 +2883,7 @@ int skb_gro_receive(struct sk_buff **head, struct sk_buff *skb)
 	p = nskb;
 
 merge:
+	p->truesize += skb->truesize - len;
 	if (offset > headlen) {
 		unsigned int eat = offset - headlen;
 
