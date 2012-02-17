@@ -2188,6 +2188,46 @@ static int remove_remote_oob_data(struct sock *sk, u16 index,
 	return err;
 }
 
+static int discovery(struct hci_dev *hdev)
+{
+	int err;
+
+	if (lmp_host_le_capable(hdev)) {
+		if (lmp_bredr_capable(hdev)) {
+			err = hci_le_scan(hdev, LE_SCAN_TYPE,
+						LE_SCAN_INT, LE_SCAN_WIN,
+						LE_SCAN_TIMEOUT_BREDR_LE);
+		} else {
+			hdev->discovery.type = DISCOV_TYPE_LE;
+			err = hci_le_scan(hdev, LE_SCAN_TYPE,
+						LE_SCAN_INT, LE_SCAN_WIN,
+						LE_SCAN_TIMEOUT_LE_ONLY);
+		}
+	} else {
+		hdev->discovery.type = DISCOV_TYPE_BREDR;
+		err = hci_do_inquiry(hdev, INQUIRY_LEN_BREDR);
+	}
+
+	return err;
+}
+
+int mgmt_interleaved_discovery(struct hci_dev *hdev)
+{
+	int err;
+
+	BT_DBG("%s", hdev->name);
+
+	hci_dev_lock(hdev);
+
+	err = hci_do_inquiry(hdev, INQUIRY_LEN_BREDR_LE);
+	if (err < 0)
+		hci_discovery_set_state(hdev, DISCOVERY_STOPPED);
+
+	hci_dev_unlock(hdev);
+
+	return err;
+}
+
 static int start_discovery(struct sock *sk, u16 index,
 						void *data, u16 len)
 {
@@ -2231,13 +2271,16 @@ static int start_discovery(struct sock *sk, u16 index,
 
 	switch (hdev->discovery.type) {
 	case DISCOV_TYPE_BREDR:
-	case DISCOV_TYPE_INTERLEAVED:
 		err = hci_do_inquiry(hdev, INQUIRY_LEN_BREDR);
 		break;
 
 	case DISCOV_TYPE_LE:
 		err = hci_le_scan(hdev, LE_SCAN_TYPE, LE_SCAN_INT,
 					LE_SCAN_WIN, LE_SCAN_TIMEOUT_LE_ONLY);
+		break;
+
+	case DISCOV_TYPE_INTERLEAVED:
+		err = discovery(hdev);
 		break;
 
 	default:
