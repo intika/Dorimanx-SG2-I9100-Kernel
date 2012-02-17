@@ -1565,8 +1565,8 @@ static int send_pin_code_neg_reply(struct sock *sk, u16 index,
 	if (!cmd)
 		return -ENOMEM;
 
-	err = hci_send_cmd(hdev, HCI_OP_PIN_CODE_NEG_REPLY, sizeof(cp->bdaddr),
-								&cp->bdaddr);
+	err = hci_send_cmd(hdev, HCI_OP_PIN_CODE_NEG_REPLY,
+				sizeof(cp->addr.bdaddr), &cp->addr.bdaddr);
 	if (err < 0)
 		mgmt_pending_remove(cmd);
 
@@ -1578,7 +1578,6 @@ static int pin_code_reply(struct sock *sk, u16 index, void *data, u16 len)
 	struct hci_dev *hdev;
 	struct hci_conn *conn;
 	struct mgmt_cp_pin_code_reply *cp = data;
-	struct mgmt_cp_pin_code_neg_reply ncp;
 	struct hci_cp_pin_code_reply reply;
 	struct pending_cmd *cmd;
 	int err;
@@ -1602,7 +1601,7 @@ static int pin_code_reply(struct sock *sk, u16 index, void *data, u16 len)
 		goto failed;
 	}
 
-	conn = hci_conn_hash_lookup_ba(hdev, ACL_LINK, &cp->bdaddr);
+	conn = hci_conn_hash_lookup_ba(hdev, ACL_LINK, &cp->addr.bdaddr);
 	if (!conn) {
 		err = cmd_status(sk, index, MGMT_OP_PIN_CODE_REPLY,
 						MGMT_STATUS_NOT_CONNECTED);
@@ -1615,7 +1614,7 @@ static int pin_code_reply(struct sock *sk, u16 index, void *data, u16 len)
 		goto failed;
 	}
 
-	bacpy(&reply.bdaddr, &cp->bdaddr);
+	bacpy(&reply.bdaddr, &cp->addr.bdaddr);
 	reply.pin_len = cp->pin_len;
 	memcpy(reply.pin_code, cp->pin_code, sizeof(reply.pin_code));
 
@@ -3320,7 +3319,8 @@ int mgmt_pin_code_request(struct hci_dev *hdev, bdaddr_t *bdaddr, u8 secure)
 {
 	struct mgmt_ev_pin_code_request ev;
 
-	bacpy(&ev.bdaddr, bdaddr);
+	bacpy(&ev.addr.bdaddr, bdaddr);
+	ev.addr.type = MGMT_ADDR_BREDR;
 	ev.secure = secure;
 
 	return mgmt_event(MGMT_EV_PIN_CODE_REQUEST, hdev, &ev, sizeof(ev),
@@ -3338,7 +3338,8 @@ int mgmt_pin_code_reply_complete(struct hci_dev *hdev, bdaddr_t *bdaddr,
 	if (!cmd)
 		return -ENOENT;
 
-	bacpy(&rp.bdaddr, bdaddr);
+	bacpy(&rp.addr.bdaddr, bdaddr);
+	rp.addr.type = MGMT_ADDR_BREDR;
 	rp.status = mgmt_status(status);
 
 	err = cmd_complete(cmd->sk, hdev->id, MGMT_OP_PIN_CODE_REPLY, &rp,
@@ -3360,7 +3361,8 @@ int mgmt_pin_code_neg_reply_complete(struct hci_dev *hdev, bdaddr_t *bdaddr,
 	if (!cmd)
 		return -ENOENT;
 
-	bacpy(&rp.bdaddr, bdaddr);
+	bacpy(&rp.addr.bdaddr, bdaddr);
+	rp.addr.type = MGMT_ADDR_BREDR;
 	rp.status = mgmt_status(status);
 
 	err = cmd_complete(cmd->sk, hdev->id, MGMT_OP_PIN_CODE_NEG_REPLY, &rp,
