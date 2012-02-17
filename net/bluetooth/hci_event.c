@@ -1105,7 +1105,7 @@ static void hci_cc_le_set_scan_enable(struct hci_dev *hdev,
 		* then addr type(random or public) can't be found in hci_connect.
 		* so we remove hci_adv_entries_clear(hdev)
 		*/
-		hci_discovery_set_state(hdev, DISCOVERY_LE_SCAN);
+		hci_discovery_set_state(hdev, DISCOVERY_FINDING);
 		hci_dev_unlock(hdev);
 		break;
 
@@ -1202,7 +1202,7 @@ static inline void hci_cs_inquiry(struct hci_dev *hdev, __u8 status)
 	set_bit(HCI_INQUIRY, &hdev->flags);
 
 	hci_dev_lock(hdev);
-	hci_discovery_set_state(hdev, DISCOVERY_INQUIRY);
+	hci_discovery_set_state(hdev, DISCOVERY_FINDING);
 	hci_dev_unlock(hdev);
 }
 
@@ -1693,7 +1693,7 @@ static inline void hci_inquiry_complete_evt(struct hci_dev *hdev, struct sk_buff
 
 	hci_dev_lock(hdev);
 
-	if (discov->state != DISCOVERY_INQUIRY)
+	if (discov->state != DISCOVERY_FINDING)
 		goto unlock;
 
 	if (list_empty(&discov->resolve)) {
