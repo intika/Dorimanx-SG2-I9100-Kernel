@@ -36,8 +36,8 @@
 
 bool enable_le;
 
-#define MGMT_VERSION	0
-#define MGMT_REVISION	1
+#define MGMT_VERSION	1
+#define MGMT_REVISION	0
 
 static const u16 mgmt_commands[] = {
 	MGMT_OP_READ_INDEX_LIST,
