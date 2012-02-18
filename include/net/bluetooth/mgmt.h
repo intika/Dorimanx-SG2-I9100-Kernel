@@ -192,7 +192,6 @@ struct mgmt_cp_disconnect {
 } __packed;
 struct mgmt_rp_disconnect {
 	struct mgmt_addr_info addr;
-	__u8 status;
 } __packed;
 
 #define MGMT_OP_GET_CONNECTIONS		0x0015
@@ -209,7 +208,6 @@ struct mgmt_cp_pin_code_reply {
 } __packed;
 struct mgmt_rp_pin_code_reply {
 	struct mgmt_addr_info addr;
-	uint8_t status;
 } __packed;
 
 #define MGMT_OP_PIN_CODE_NEG_REPLY	0x0017
@@ -229,7 +227,6 @@ struct mgmt_cp_pair_device {
 } __packed;
 struct mgmt_rp_pair_device {
 	struct mgmt_addr_info addr;
-	__u8 status;
 } __packed;
 
 #define MGMT_OP_CANCEL_PAIR_DEVICE	0x001A
@@ -241,7 +238,6 @@ struct mgmt_cp_unpair_device {
 } __packed;
 struct mgmt_rp_unpair_device {
 	struct mgmt_addr_info addr;
-	__u8 status;
 };
 
 #define MGMT_OP_USER_CONFIRM_REPLY	0x001C
@@ -250,7 +246,6 @@ struct mgmt_cp_user_confirm_reply {
 } __packed;
 struct mgmt_rp_user_confirm_reply {
 	struct mgmt_addr_info addr;
-	__u8 status;
 } __packed;
 
 #define MGMT_OP_USER_CONFIRM_NEG_REPLY	0x001D
@@ -265,7 +260,6 @@ struct mgmt_cp_user_passkey_reply {
 } __packed;
 struct mgmt_rp_user_passkey_reply {
 	struct mgmt_addr_info addr;
-	__u8 status;
 } __packed;
 
 #define MGMT_OP_USER_PASSKEY_NEG_REPLY	0x001F
@@ -305,7 +299,6 @@ struct mgmt_cp_confirm_name {
 } __packed;
 struct mgmt_rp_confirm_name {
 	struct mgmt_addr_info addr;
-	__u8 status;
 } __packed;
 
 #define MGMT_OP_BLOCK_DEVICE		0x0026
@@ -327,6 +320,7 @@ struct mgmt_rp_le_test_end {
 #define MGMT_EV_CMD_COMPLETE		0x0001
 struct mgmt_ev_cmd_complete {
 	__le16 opcode;
+	__u8 status;
 	__u8 data[0];
 } __packed;
 
