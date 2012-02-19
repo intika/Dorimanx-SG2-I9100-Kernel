@@ -2468,6 +2468,7 @@ static int block_device(struct sock *sk, u16 index, void *data, u16 len)
 {
 	struct hci_dev *hdev;
 	struct mgmt_cp_block_device *cp = data;
+	u8 status;
 	int err;
 
 	BT_DBG("hci%u", index);
@@ -2478,18 +2479,20 @@ static int block_device(struct sock *sk, u16 index, void *data, u16 len)
 
 	hdev = hci_dev_get(index);
 	if (!hdev)
-		return cmd_status(sk, index, MGMT_OP_BLOCK_DEVICE,
-						MGMT_STATUS_INVALID_PARAMS);
+		return cmd_complete(sk, index, MGMT_OP_BLOCK_DEVICE,
+						MGMT_STATUS_INVALID_PARAMS,
+						&cp->addr, sizeof(cp->addr));
 
 	hci_dev_lock(hdev);
 
 	err = hci_blacklist_add(hdev, &cp->addr.bdaddr, cp->addr.type);
 	if (err < 0)
-		err = cmd_status(sk, index, MGMT_OP_BLOCK_DEVICE,
-							MGMT_STATUS_FAILED);
+		status = MGMT_STATUS_FAILED;
 	else
-		err = cmd_complete(sk, index, MGMT_OP_BLOCK_DEVICE, 0,
-								NULL, 0);
+		status = 0;
+
+	err = cmd_complete(sk, index, MGMT_OP_BLOCK_DEVICE, status,
+						&cp->addr, sizeof(cp->addr));
 
 	hci_dev_unlock(hdev);
 	hci_dev_put(hdev);
@@ -2501,6 +2504,7 @@ static int unblock_device(struct sock *sk, u16 index, void *data, u16 len)
 {
 	struct hci_dev *hdev;
 	struct mgmt_cp_unblock_device *cp = data;
+	u8 status;
 	int err;
 
 	BT_DBG("hci%u", index);
@@ -2511,19 +2515,20 @@ static int unblock_device(struct sock *sk, u16 index, void *data, u16 len)
 
 	hdev = hci_dev_get(index);
 	if (!hdev)
-		return cmd_status(sk, index, MGMT_OP_UNBLOCK_DEVICE,
-						MGMT_STATUS_INVALID_PARAMS);
+		return cmd_complete(sk, index, MGMT_OP_UNBLOCK_DEVICE,
+						MGMT_STATUS_INVALID_PARAMS,
+						&cp->addr, sizeof(cp->addr));
 
 	hci_dev_lock(hdev);
 
 	err = hci_blacklist_del(hdev, &cp->addr.bdaddr, cp->addr.type);
-
 	if (err < 0)
-		err = cmd_status(sk, index, MGMT_OP_UNBLOCK_DEVICE,
-						MGMT_STATUS_INVALID_PARAMS);
+		status = MGMT_STATUS_INVALID_PARAMS;
 	else
-		err = cmd_complete(sk, index, MGMT_OP_UNBLOCK_DEVICE, 0,
-								NULL, 0);
+		status = 0;
+
+	err = cmd_complete(sk, index, MGMT_OP_UNBLOCK_DEVICE, status,
+						&cp->addr, sizeof(cp->addr));
 
 	hci_dev_unlock(hdev);
 	hci_dev_put(hdev);
