@@ -648,7 +648,7 @@ static int hci_sock_bind(struct socket *sock, struct sockaddr *addr, int addr_le
 		break;
 
 	case HCI_CHANNEL_CONTROL:
-		if (haddr.hci_dev != HCI_DEV_NONE || !enable_mgmt) {
+		if (haddr.hci_dev != HCI_DEV_NONE) {
 			err = -EINVAL;
 			goto done;
 		}
