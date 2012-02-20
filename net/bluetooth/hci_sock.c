@@ -597,6 +597,11 @@ static int hci_sock_setsockopt(struct socket *sock, int level, int optname, char
 
 	lock_sock(sk);
 
+	if (hci_pi(sk)->channel != HCI_CHANNEL_RAW) {
+		err = -EINVAL;
+		goto done;
+	}
+
 	switch (optname) {
 	case HCI_DATA_DIR:
 		if (get_user(opt, (int __user *)optval)) {
@@ -659,6 +664,7 @@ static int hci_sock_setsockopt(struct socket *sock, int level, int optname, char
 		break;
 	}
 
+done:
 	release_sock(sk);
 	return err;
 }
