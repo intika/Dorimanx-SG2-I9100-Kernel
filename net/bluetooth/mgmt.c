@@ -748,7 +748,7 @@ static int set_powered(struct sock *sk, u16 index, void *data, u16 len)
 	struct mgmt_mode *cp = data;
 	struct hci_dev *hdev;
 	struct pending_cmd *cmd;
-	int err, up;
+	int err;
 
 	BT_DBG("request for hci%u", index);
 
@@ -773,8 +773,7 @@ static int set_powered(struct sock *sk, u16 index, void *data, u16 len)
 		}
 	}
 
-	up = test_bit(HCI_UP, &hdev->flags);
-	if ((cp->val && up) || (!cp->val && !up)) {
+	if (!!cp->val == hdev_is_powered(hdev)) {
 		err = send_settings_rsp(sk, MGMT_OP_SET_POWERED, hdev);
 		goto failed;
 	}
@@ -825,7 +824,7 @@ static int set_discoverable(struct sock *sk, u16 index, void *data, u16 len)
 
 	hci_dev_lock(hdev);
 
-	if (!test_bit(HCI_UP, &hdev->flags)) {
+	if (!hdev_is_powered(hdev)) {
 		err = cmd_status(sk, index, MGMT_OP_SET_DISCOVERABLE,
 						MGMT_STATUS_NOT_POWERED);
 		goto failed;
@@ -893,7 +892,7 @@ static int set_connectable(struct sock *sk, u16 index, void *data, u16 len)
 
 	hci_dev_lock(hdev);
 
-	if (!test_bit(HCI_UP, &hdev->flags)) {
+	if (!hdev_is_powered(hdev)) {
 		err = cmd_status(sk, index, MGMT_OP_SET_CONNECTABLE,
 						MGMT_STATUS_NOT_POWERED);
 		goto failed;
@@ -1031,7 +1030,7 @@ static int set_link_security(struct sock *sk, u16 index, void *data, u16 len)
 
 	hci_dev_lock(hdev);
 
-	if (!test_bit(HCI_UP, &hdev->flags)) {
+	if (!hdev_is_powered(hdev)) {
 		err = cmd_status(sk, index, MGMT_OP_SET_LINK_SECURITY,
 						MGMT_STATUS_NOT_POWERED);
 		goto failed;
@@ -1090,7 +1089,7 @@ static int set_ssp(struct sock *sk, u16 index, void *data, u16 len)
 
 	hci_dev_lock(hdev);
 
-	if (!test_bit(HCI_UP, &hdev->flags)) {
+	if (!hdev_is_powered(hdev)) {
 		err = cmd_status(sk, index, MGMT_OP_SET_SSP,
 						MGMT_STATUS_NOT_POWERED);
 		goto failed;
@@ -1655,7 +1654,7 @@ static int pin_code_reply(struct sock *sk, u16 index, void *data, u16 len)
 
 	hci_dev_lock(hdev);
 
-	if (!test_bit(HCI_UP, &hdev->flags)) {
+	if (!hdev_is_powered(hdev)) {
 		err = cmd_status(sk, index, MGMT_OP_PIN_CODE_REPLY,
 						MGMT_STATUS_NOT_POWERED);
 		goto failed;
@@ -1708,7 +1707,7 @@ static int pin_code_neg_reply(struct sock *sk, u16 index, void *data, u16 len)
 
 	hci_dev_lock(hdev);
 
-	if (!test_bit(HCI_UP, &hdev->flags)) {
+	if (!hdev_is_powered(hdev)) {
 		err = cmd_status(sk, index, MGMT_OP_PIN_CODE_NEG_REPLY,
 						MGMT_STATUS_NOT_POWERED);
 		goto failed;
@@ -1966,7 +1965,7 @@ static int user_pairing_resp(struct sock *sk, u16 index, bdaddr_t *bdaddr,
 
 	hci_dev_lock(hdev);
 
-	if (!test_bit(HCI_UP, &hdev->flags)) {
+	if (!hdev_is_powered(hdev)) {
 		err = cmd_status(sk, index, mgmt_op, MGMT_STATUS_NOT_POWERED);
 		goto done;
 	}
@@ -2141,7 +2140,7 @@ static int read_local_oob_data(struct sock *sk, u16 index)
 
 	hci_dev_lock(hdev);
 
-	if (!test_bit(HCI_UP, &hdev->flags)) {
+	if (!hdev_is_powered(hdev)) {
 		err = cmd_status(sk, index, MGMT_OP_READ_LOCAL_OOB_DATA,
 						MGMT_STATUS_NOT_POWERED);
 		goto unlock;
@@ -2312,7 +2311,7 @@ static int start_discovery(struct sock *sk, u16 index,
 
 	hci_dev_lock(hdev);
 
-	if (!test_bit(HCI_UP, &hdev->flags)) {
+	if (!hdev_is_powered(hdev)) {
 		err = cmd_status(sk, index, MGMT_OP_START_DISCOVERY,
 						MGMT_STATUS_NOT_POWERED);
 		goto failed;
