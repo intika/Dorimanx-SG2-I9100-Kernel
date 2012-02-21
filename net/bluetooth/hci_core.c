@@ -746,8 +746,7 @@ static int hci_dev_do_close(struct hci_dev *hdev)
 		cancel_delayed_work(&hdev->discov_off);
 		hdev->discov_timeout = 0;
 	}
-	if (test_and_clear_bit(HCI_AUTO_OFF, &hdev->dev_flags))
-		cancel_delayed_work(&hdev->power_off);
+
 	if (test_and_clear_bit(HCI_SERVICE_CACHE, &hdev->dev_flags))
 		cancel_delayed_work(&hdev->service_cache);
 
@@ -794,9 +793,11 @@ static int hci_dev_do_close(struct hci_dev *hdev)
 	 * and no tasks are scheduled. */
 	hdev->close(hdev);
 
-	hci_dev_lock(hdev);
-	mgmt_powered(hdev, 0);
-	hci_dev_unlock(hdev);
+	if (!test_and_clear_bit(HCI_AUTO_OFF, &hdev->dev_flags)) {
+		hci_dev_lock(hdev);
+		mgmt_powered(hdev, 0);
+		hci_dev_unlock(hdev);
+	}
 
 	/* Clear flags */
 	hdev->flags = 0;
@@ -821,7 +822,12 @@ int hci_dev_close(__u16 dev)
 	hdev = hci_dev_get(dev);
 	if (!hdev)
 		return -ENODEV;
+
+	if (test_and_clear_bit(HCI_AUTO_OFF, &hdev->dev_flags))
+		cancel_delayed_work(&hdev->power_off);
+
 	err = hci_dev_do_close(hdev);
+
 	hci_dev_put(hdev);
 	return err;
 }
@@ -1116,9 +1122,8 @@ static void hci_power_off(struct work_struct *work)
 							power_off.work);
 
 	BT_DBG("%s", hdev->name);
-	clear_bit(HCI_AUTO_OFF, &hdev->dev_flags);
 
-	hci_dev_close(hdev->id);
+	hci_dev_do_close(hdev);
 }
 
 static void hci_discov_off(struct work_struct *work)
