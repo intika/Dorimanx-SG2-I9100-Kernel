@@ -1295,6 +1295,12 @@ static int set_dev_class(struct sock *sk, u16 index, void *data, u16 len)
 
 	hci_dev_lock(hdev);
 
+	if (!hdev_is_powered(hdev)) {
+		err = cmd_status(sk, index, MGMT_OP_SET_DEV_CLASS,
+						MGMT_STATUS_NOT_POWERED);
+		goto unlock;
+	}
+
 	hdev->major_class = cp->major;
 	hdev->minor_class = cp->minor;
 
@@ -1311,6 +1317,7 @@ static int set_dev_class(struct sock *sk, u16 index, void *data, u16 len)
 		err = cmd_complete(sk, index, MGMT_OP_SET_DEV_CLASS, 0,
 								NULL, 0);
 
+unlock:
 	hci_dev_unlock(hdev);
 	hci_dev_put(hdev);
 
@@ -2106,7 +2113,14 @@ static int set_local_name(struct sock *sk, u16 index, void *data,
 
 	hci_dev_lock(hdev);
 
-	cmd = mgmt_pending_add(sk, MGMT_OP_SET_LOCAL_NAME, hdev, data, len);
+	if (!hdev_is_powered(hdev)) {
+		err = cmd_status(sk, index, MGMT_OP_SET_LOCAL_NAME,
+						MGMT_STATUS_NOT_POWERED);
+		goto failed;
+	}
+
+	cmd = mgmt_pending_add(sk, MGMT_OP_SET_LOCAL_NAME, hdev, data,
+									len);
 	if (!cmd) {
 		err = -ENOMEM;
 		goto failed;
