@@ -1163,9 +1163,8 @@ static inline void hci_cc_write_le_host_supported(struct hci_dev *hdev,
 	BT_DBG("%s status 0x%x", hdev->name, status);
 
 	sent = hci_sent_cmd_data(hdev, HCI_OP_WRITE_LE_HOST_SUPPORTED);
-	if (sent && test_bit(HCI_MGMT, &hdev->dev_flags)) {
-				mgmt_le_enable_complete(hdev, sent->le, status);
-	}
+	if (sent && test_bit(HCI_MGMT, &hdev->dev_flags))
+		mgmt_le_enable_complete(hdev, sent->le, status);
 
 	if (status)
 		return;
