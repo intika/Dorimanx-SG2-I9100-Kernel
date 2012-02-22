@@ -809,6 +809,8 @@ static int hci_dev_do_close(struct hci_dev *hdev)
 
 	hdev->dev_flags = persistflags;
 
+	memset(hdev->eir, 0, sizeof(hdev->eir));
+
 	hci_req_unlock(hdev);
 
 	hci_dev_put(hdev);
