@@ -757,7 +757,8 @@ static void l2cap_do_start(struct l2cap_chan *chan)
 		if (!(conn->info_state & L2CAP_INFO_FEAT_MASK_REQ_DONE))
 			return;
 
- 		if (l2cap_chan_check_security(chan) && __l2cap_no_conn_pending(chan))
+ 		if (l2cap_chan_check_security(chan) &&
+				__l2cap_no_conn_pending(chan))
 			l2cap_send_conn_req(chan);
 	} else {
 		struct l2cap_info_req req;
