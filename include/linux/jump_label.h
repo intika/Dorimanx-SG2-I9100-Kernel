@@ -69,8 +69,8 @@ struct static_key {
 #endif
 };
 
-struct jump_label_key_deferred {
-	struct jump_label_key key;
+struct static_key_deferred {
+	struct static_key key;
 	unsigned long timeout;
 	struct delayed_work work;
 };
@@ -134,10 +134,10 @@ extern void arch_jump_label_transform_static(struct jump_entry *entry,
 extern int jump_label_text_reserved(void *start, void *end);
 extern void static_key_slow_inc(struct static_key *key);
 extern void static_key_slow_dec(struct static_key *key);
-extern void jump_label_dec_deferred(struct jump_label_key_deferred *key);
+extern void static_key_slow_dec_deferred(struct static_key_deferred *key);
 extern void jump_label_apply_nops(struct module *mod);
-extern void jump_label_rate_limit(struct jump_label_key_deferred *key,
-		unsigned long rl);
+extern void
+jump_label_rate_limit(struct static_key_deferred *key, unsigned long rl);
 
 #define STATIC_KEY_INIT_TRUE ((struct static_key) \
 	{ .enabled = ATOMIC_INIT(1), .entries = (void *)1 })
@@ -155,6 +155,10 @@ static __always_inline void jump_label_init(void)
 	static_key_initialized = true;
 }
 
+struct static_key_deferred {
+	struct static_key  key;
+};
+
 static __always_inline bool static_key_false(struct static_key *key)
 {
 	if (unlikely(atomic_read(&key->enabled) > 0))
@@ -168,10 +172,6 @@ static __always_inline bool static_key_true(struct static_key *key)
 		return true;
 	return false;
 }
-
-struct jump_label_key_deferred {
-	struct jump_label_key  key;
-};
 
 /* Deprecated. Please use 'static_key_false() instead. */
 static __always_inline bool static_branch(struct static_key *key)
@@ -193,9 +193,9 @@ static inline void static_key_slow_dec(struct static_key *key)
 	atomic_dec(&key->enabled);
 }
 
-static inline void jump_label_dec_deferred(struct jump_label_key_deferred *key)
+static inline void static_key_slow_dec_deferred(struct static_key_deferred *key)
 {
-	jump_label_dec(&key->key);
+	static_key_slow_dec(&key->key);
 }
 
 static inline int jump_label_text_reserved(void *start, void *end)
@@ -211,7 +211,8 @@ static inline int jump_label_apply_nops(struct module *mod)
 	return 0;
 }
 
-static inline void jump_label_rate_limit(struct jump_label_key_deferred *key,
+static inline void
+jump_label_rate_limit(struct static_key_deferred *key,
 		unsigned long rl)
 {
 }
