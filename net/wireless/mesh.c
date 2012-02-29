@@ -22,6 +22,8 @@
 #define MESH_PREQ_MIN_INT	10
 #define MESH_DIAM_TRAVERSAL_TIME 50
 
+#define MESH_RSSI_THRESHOLD	0
+
 /*
  * A path will be refreshed if it is used PATH_REFRESH_TIME milliseconds
  * before timing out.  This way it will remain ACTIVE and no data frames
@@ -56,6 +58,7 @@ const struct mesh_config default_mesh_config = {
 	.dot11MeshHWMPRannInterval = MESH_RANN_INTERVAL,
 	.dot11MeshGateAnnouncementProtocol = false,
 	.dot11MeshForwarding = true,
+	.rssi_threshold = MESH_RSSI_THRESHOLD,
 	.ht_opmode = IEEE80211_HT_OP_MODE_PROTECTION_NONHT_MIXED,
 };
 
