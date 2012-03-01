@@ -32,7 +32,7 @@
 /* SSBT :: KJH + */
 #include <asm/unaligned.h>
 
-#define SMP_TIMEOUT 30000 /* 30 seconds */
+#define SMP_TIMEOUT	msecs_to_jiffies(30000)
 
 static inline void swap128(u8 src[16], u8 dst[16])
 {
@@ -189,8 +189,7 @@ static void smp_send_cmd(struct l2cap_conn *conn, u8 code, u16 len, void *data)
 	hci_send_acl(conn->hchan, skb, 0);
 
 	cancel_delayed_work_sync(&conn->security_timer);
-	schedule_delayed_work(&conn->security_timer,
-					msecs_to_jiffies(SMP_TIMEOUT));
+	schedule_delayed_work(&conn->security_timer, SMP_TIMEOUT);
 }
 
 static __u8 authreq_to_seclevel(__u8 authreq)
