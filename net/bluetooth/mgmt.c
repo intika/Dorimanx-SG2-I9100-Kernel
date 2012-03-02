@@ -2903,7 +2903,7 @@ int mgmt_control(struct sock *sk, struct msghdr *msg, size_t msglen)
 		hdev = hci_dev_get(index);
 		if (!hdev) {
 			err = cmd_status(sk, index, opcode,
-					MGMT_STATUS_INVALID_PARAMS);
+					MGMT_STATUS_INVALID_INDEX);
 			goto done;
 		}
 	}
@@ -2921,7 +2921,7 @@ int mgmt_control(struct sock *sk, struct msghdr *msg, size_t msglen)
 	if ((hdev && opcode < MGMT_OP_READ_INFO) ||
 			(!hdev && opcode >= MGMT_OP_READ_INFO)) {
 		err = cmd_status(sk, index, opcode,
-						MGMT_STATUS_INVALID_PARAMS);
+						MGMT_STATUS_INVALID_INDEX);
 		goto done;
 	}
 
@@ -2968,7 +2968,7 @@ int mgmt_index_added(struct hci_dev *hdev)
 
 int mgmt_index_removed(struct hci_dev *hdev)
 {
-	u8 status = MGMT_STATUS_INVALID_PARAMS;
+	u8 status = MGMT_STATUS_INVALID_INDEX;
 
 	mgmt_pending_foreach(0, hdev, cmd_status_rsp, &status);
 
