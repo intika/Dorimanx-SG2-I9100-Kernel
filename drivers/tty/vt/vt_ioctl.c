@@ -671,11 +671,8 @@ int vt_ioctl(struct tty_struct *tty,
 			return -EPERM;
 		if (arg == 0 || arg > MAX_NR_CONSOLES)
 			ret = -ENXIO;
-		else {
-			tty_lock();
+		else
 			ret = vt_waitactive(arg);
-			tty_unlock();
-		}
 		break;
 
 	/*
