@@ -1111,16 +1111,12 @@ int mgmt_le_test_end_complete(struct hci_dev *hdev, u8 status, __u16 num_pkts);
 /* HCI info for socket */
 #define hci_pi(sk) ((struct hci_pinfo *) sk)
 
-/* HCI socket flags */
-#define HCI_PI_MGMT_INIT	0
-
 struct hci_pinfo {
 	struct bt_sock    bt;
 	struct hci_dev    *hdev;
 	struct hci_filter filter;
 	__u32             cmsg_mask;
 	unsigned short   channel;
-	unsigned long     flags;
 };
 
 /* HCI security filter */
