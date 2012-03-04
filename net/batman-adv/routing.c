@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2011 B.A.T.M.A.N. contributors:
+ * Copyright (C) 2007-2012 B.A.T.M.A.N. contributors:
  *
  * Marek Lindner, Simon Wunderlich
  *
@@ -76,7 +76,7 @@ static void _update_route(struct bat_priv *bat_priv,
 		bat_dbg(DBG_ROUTES, bat_priv, "Deleting route towards: %pM\n",
 			orig_node->orig);
 		tt_global_del_orig(bat_priv, orig_node,
-				    "Deleted route towards originator");
+				   "Deleted route towards originator");
 
 	/* route added */
 	} else if ((!curr_router) && (neigh_node)) {
@@ -87,8 +87,7 @@ static void _update_route(struct bat_priv *bat_priv,
 	/* route changed */
 	} else if (neigh_node && curr_router) {
 		bat_dbg(DBG_ROUTES, bat_priv,
-			"Changing route towards: %pM "
-			"(now via %pM - was via %pM)\n",
+			"Changing route towards: %pM (now via %pM - was via %pM)\n",
 			orig_node->orig, neigh_node->addr,
 			curr_router->addr);
 	}
@@ -233,54 +232,51 @@ void bonding_save_primary(const struct orig_node *orig_node,
 int window_protected(struct bat_priv *bat_priv, int32_t seq_num_diff,
 		     unsigned long *last_reset)
 {
-	if ((seq_num_diff <= -TQ_LOCAL_WINDOW_SIZE)
-		|| (seq_num_diff >= EXPECTED_SEQNO_RANGE)) {
-		if (time_after(jiffies, *last_reset +
-			msecs_to_jiffies(RESET_PROTECTION_MS))) {
+	if ((seq_num_diff <= -TQ_LOCAL_WINDOW_SIZE) ||
+	    (seq_num_diff >= EXPECTED_SEQNO_RANGE)) {
+		if (has_timed_out(*last_reset, RESET_PROTECTION_MS)) {
 
 			*last_reset = jiffies;
 			bat_dbg(DBG_BATMAN, bat_priv,
 				"old packet received, start protection\n");
 
 			return 0;
-		} else
+		} else {
 			return 1;
+		}
 	}
 	return 0;
 }
 
-int recv_bat_ogm_packet(struct sk_buff *skb, struct hard_iface *hard_iface)
+bool check_management_packet(struct sk_buff *skb,
+			     struct hard_iface *hard_iface,
+			     int header_len)
 {
 	struct ethhdr *ethhdr;
 
 	/* drop packet if it has not necessary minimum size */
-	if (unlikely(!pskb_may_pull(skb, BATMAN_OGM_HLEN)))
-		return NET_RX_DROP;
+	if (unlikely(!pskb_may_pull(skb, header_len)))
+		return false;
 
 	ethhdr = (struct ethhdr *)skb_mac_header(skb);
 
 	/* packet with broadcast indication but unicast recipient */
 	if (!is_broadcast_ether_addr(ethhdr->h_dest))
-		return NET_RX_DROP;
+		return false;
 
 	/* packet with broadcast sender address */
 	if (is_broadcast_ether_addr(ethhdr->h_source))
-		return NET_RX_DROP;
+		return false;
 
 	/* create a copy of the skb, if needed, to modify it. */
 	if (skb_cow(skb, 0) < 0)
-		return NET_RX_DROP;
+		return false;
 
 	/* keep skb linear */
 	if (skb_linearize(skb) < 0)
-		return NET_RX_DROP;
+		return false;
 
-	ethhdr = (struct ethhdr *)skb_mac_header(skb);
-
-	bat_ogm_receive(ethhdr, skb->data, skb_headlen(skb), hard_iface);
-
-	kfree_skb(skb);
-	return NET_RX_SUCCESS;
+	return true;
 }
 
 static int recv_my_icmp_packet(struct bat_priv *bat_priv,
@@ -323,7 +319,7 @@ static int recv_my_icmp_packet(struct bat_priv *bat_priv,
 	memcpy(icmp_packet->dst, icmp_packet->orig, ETH_ALEN);
 	memcpy(icmp_packet->orig, primary_if->net_dev->dev_addr, ETH_ALEN);
 	icmp_packet->msg_type = ECHO_REPLY;
-	icmp_packet->ttl = TTL;
+	icmp_packet->header.ttl = TTL;
 
 	send_skb_packet(skb, router->if_incoming, router->addr);
 	ret = NET_RX_SUCCESS;
@@ -351,9 +347,8 @@ static int recv_icmp_ttl_exceeded(struct bat_priv *bat_priv,
 
 	/* send TTL exceeded if packet is an echo request (traceroute) */
 	if (icmp_packet->msg_type != ECHO_REQUEST) {
-		pr_debug("Warning - can't forward icmp packet from %pM to "
-			 "%pM: ttl exceeded\n", icmp_packet->orig,
-			 icmp_packet->dst);
+		pr_debug("Warning - can't forward icmp packet from %pM to %pM: ttl exceeded\n",
+			 icmp_packet->orig, icmp_packet->dst);
 		goto out;
 	}
 
@@ -379,7 +374,7 @@ static int recv_icmp_ttl_exceeded(struct bat_priv *bat_priv,
 	memcpy(icmp_packet->dst, icmp_packet->orig, ETH_ALEN);
 	memcpy(icmp_packet->orig, primary_if->net_dev->dev_addr, ETH_ALEN);
 	icmp_packet->msg_type = TTL_EXCEEDED;
-	icmp_packet->ttl = TTL;
+	icmp_packet->header.ttl = TTL;
 
 	send_skb_packet(skb, router->if_incoming, router->addr);
 	ret = NET_RX_SUCCESS;
@@ -435,7 +430,7 @@ int recv_icmp_packet(struct sk_buff *skb, struct hard_iface *recv_if)
 	if ((hdr_size == sizeof(struct icmp_packet_rr)) &&
 	    (icmp_packet->rr_cur < BAT_RR_LEN)) {
 		memcpy(&(icmp_packet->rr[icmp_packet->rr_cur]),
-			ethhdr->h_dest, ETH_ALEN);
+		       ethhdr->h_dest, ETH_ALEN);
 		icmp_packet->rr_cur++;
 	}
 
@@ -444,7 +439,7 @@ int recv_icmp_packet(struct sk_buff *skb, struct hard_iface *recv_if)
 		return recv_my_icmp_packet(bat_priv, skb, hdr_size);
 
 	/* TTL exceeded */
-	if (icmp_packet->ttl < 2)
+	if (icmp_packet->header.ttl < 2)
 		return recv_icmp_ttl_exceeded(bat_priv, skb);
 
 	/* get routing information */
@@ -463,7 +458,7 @@ int recv_icmp_packet(struct sk_buff *skb, struct hard_iface *recv_if)
 	icmp_packet = (struct icmp_packet_rr *)skb->data;
 
 	/* decrement ttl */
-	icmp_packet->ttl--;
+	icmp_packet->header.ttl--;
 
 	/* route it */
 	send_skb_packet(skb, router->if_incoming, router->addr);
@@ -687,9 +682,9 @@ int recv_roam_adv(struct sk_buff *skb, struct hard_iface *recv_if)
 	if (!orig_node)
 		goto out;
 
-	bat_dbg(DBG_TT, bat_priv, "Received ROAMING_ADV from %pM "
-		"(client %pM)\n", roam_adv_packet->src,
-		roam_adv_packet->client);
+	bat_dbg(DBG_TT, bat_priv,
+		"Received ROAMING_ADV from %pM (client %pM)\n",
+		roam_adv_packet->src, roam_adv_packet->client);
 
 	tt_global_add(bat_priv, orig_node, roam_adv_packet->client,
 		      atomic_read(&orig_node->last_ttvn) + 1, true, false);
@@ -825,10 +820,9 @@ static int route_unicast_packet(struct sk_buff *skb, struct hard_iface *recv_if)
 	unicast_packet = (struct unicast_packet *)skb->data;
 
 	/* TTL exceeded */
-	if (unicast_packet->ttl < 2) {
-		pr_debug("Warning - can't forward unicast packet from %pM to "
-			 "%pM: ttl exceeded\n", ethhdr->h_source,
-			 unicast_packet->dest);
+	if (unicast_packet->header.ttl < 2) {
+		pr_debug("Warning - can't forward unicast packet from %pM to %pM: ttl exceeded\n",
+			 ethhdr->h_source, unicast_packet->dest);
 		goto out;
 	}
 
@@ -850,7 +844,7 @@ static int route_unicast_packet(struct sk_buff *skb, struct hard_iface *recv_if)
 
 	unicast_packet = (struct unicast_packet *)skb->data;
 
-	if (unicast_packet->packet_type == BAT_UNICAST &&
+	if (unicast_packet->header.packet_type == BAT_UNICAST &&
 	    atomic_read(&bat_priv->fragmentation) &&
 	    skb->len > neigh_node->if_incoming->net_dev->mtu) {
 		ret = frag_send_skb(skb, bat_priv,
@@ -858,7 +852,7 @@ static int route_unicast_packet(struct sk_buff *skb, struct hard_iface *recv_if)
 		goto out;
 	}
 
-	if (unicast_packet->packet_type == BAT_UNICAST_FRAG &&
+	if (unicast_packet->header.packet_type == BAT_UNICAST_FRAG &&
 	    frag_can_reassemble(skb, neigh_node->if_incoming->net_dev->mtu)) {
 
 		ret = frag_reassemble_skb(skb, bat_priv, &new_skb);
@@ -877,7 +871,7 @@ static int route_unicast_packet(struct sk_buff *skb, struct hard_iface *recv_if)
 	}
 
 	/* decrement ttl */
-	unicast_packet->ttl--;
+	unicast_packet->header.ttl--;
 
 	/* route it */
 	send_skb_packet(skb, neigh_node->if_incoming, neigh_node->addr);
@@ -947,10 +941,10 @@ static int check_unicast_ttvn(struct bat_priv *bat_priv,
 			orig_node_free_ref(orig_node);
 		}
 
-		bat_dbg(DBG_ROUTES, bat_priv, "TTVN mismatch (old_ttvn %u "
-			"new_ttvn %u)! Rerouting unicast packet (for %pM) to "
-			"%pM\n", unicast_packet->ttvn, curr_ttvn,
-			ethhdr->h_dest, unicast_packet->dest);
+		bat_dbg(DBG_ROUTES, bat_priv,
+			"TTVN mismatch (old_ttvn %u new_ttvn %u)! Rerouting unicast packet (for %pM) to %pM\n",
+			unicast_packet->ttvn, curr_ttvn, ethhdr->h_dest,
+			unicast_packet->dest);
 
 		unicast_packet->ttvn = curr_ttvn;
 	}
@@ -1051,7 +1045,7 @@ int recv_bcast_packet(struct sk_buff *skb, struct hard_iface *recv_if)
 	if (is_my_mac(bcast_packet->orig))
 		goto out;
 
-	if (bcast_packet->ttl < 2)
+	if (bcast_packet->header.ttl < 2)
 		goto out;
 
 	orig_node = orig_hash_find(bat_priv, bcast_packet->orig);
