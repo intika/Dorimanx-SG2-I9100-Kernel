@@ -175,7 +175,7 @@ struct hci_dev {
 	__u16		hci_rev;
 	__u8		lmp_ver;
 	__u16		manufacturer;
-	__le16		lmp_subver;
+	__u16		lmp_subver;
 	__u16		voice_setting;
 	__u8		io_capability;
 	__s8		inq_tx_power;
