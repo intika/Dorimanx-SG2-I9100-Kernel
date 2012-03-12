@@ -944,7 +944,7 @@ int smp_distribute_keys(struct l2cap_conn *conn, __u8 force)
 		hci_add_ltk(conn->hcon->hdev, 1, conn->dst, smp->smp_key_size,
 						ediv, ident.rand, enc.ltk);
 
-		ident.ediv = cpu_to_le16(ediv);
+		ident.ediv = ediv;
 
 		smp_send_cmd(conn, SMP_CMD_MASTER_IDENT, sizeof(ident), &ident);
 
