@@ -161,7 +161,7 @@ static int ecw2cw(int ecw)
  * HT abilities for a specific band.
  */
 static u32 ieee80211_enable_ht(struct ieee80211_sub_if_data *sdata,
-			       struct ieee80211_ht_info *hti,
+			       struct ieee80211_ht_operation *ht_oper,
 			       const u8 *bssid, u16 ap_ht_cap_flags,
 			       bool beacon_htcap_ie)
 {
@@ -169,7 +169,7 @@ static u32 ieee80211_enable_ht(struct ieee80211_sub_if_data *sdata,
 	struct ieee80211_supported_band *sband;
 	struct sta_info *sta;
 	u32 changed = 0;
-	int hti_cfreq;
+	int ht_cfreq;
 	u16 ht_opmode;
 	bool enable_ht = true;
 	enum nl80211_channel_type prev_chantype;
@@ -179,8 +179,23 @@ static u32 ieee80211_enable_ht(struct ieee80211_sub_if_data *sdata,
 
 	prev_chantype = sdata->vif.bss_conf.channel_type;
 
-	/* HT is not supported */
-	if (!sband->ht_cap.ht_supported)
+	ht_cfreq = ieee80211_channel_to_frequency(ht_oper->primary_chan,
+						  sband->band);
+	/* check that channel matches the right operating channel */
+	if (local->hw.conf.channel->center_freq != ht_cfreq) {
+		/* Some APs mess this up, evidently.
+		 * Netgear WNDR3700 sometimes reports 4 higher than
+		 * the actual channel, for instance.
+		 */
+		printk(KERN_DEBUG
+		       "%s: Wrong control channel in association"
+		       " response: configured center-freq: %d"
+		       " ht-cfreq: %d  ht->control_chan: %d"
+		       " band: %d.  Disabling HT.\n",
+		       sdata->name,
+		       local->hw.conf.channel->center_freq,
+		       ht_cfreq, ht_oper->primary_chan,
+		       sband->band);
 		enable_ht = false;
 
 	if (enable_ht) {
@@ -211,8 +226,9 @@ static u32 ieee80211_enable_ht(struct ieee80211_sub_if_data *sdata,
 		if (!(ap_ht_cap_flags & IEEE80211_HT_CAP_40MHZ_INTOLERANT) &&
 		    !ieee80111_cfg_override_disables_ht40(sdata) &&
 		    (sband->ht_cap.cap & IEEE80211_HT_CAP_SUP_WIDTH_20_40) &&
-		    (hti->ht_param & IEEE80211_HT_PARAM_CHAN_WIDTH_ANY)) {
-			switch(hti->ht_param & IEEE80211_HT_PARAM_CHA_SEC_OFFSET) {
+		    (ht_oper->ht_param & IEEE80211_HT_PARAM_CHAN_WIDTH_ANY)) {
+			switch (ht_oper->ht_param &
+					IEEE80211_HT_PARAM_CHA_SEC_OFFSET) {
 			case IEEE80211_HT_PARAM_CHA_SEC_ABOVE:
 				if (!(local->hw.conf.channel->flags &
 				    IEEE80211_CHAN_NO_HT40PLUS))
@@ -268,7 +284,7 @@ static u32 ieee80211_enable_ht(struct ieee80211_sub_if_data *sdata,
 				IEEE80211_QUEUE_STOP_REASON_CHTYPE_CHANGE);
 	}
 
-	ht_opmode = le16_to_cpu(hti->operation_mode);
+	ht_opmode = le16_to_cpu(ht_oper->operation_mode);
 
 	/* if bss configuration changed store the new one */
 	if (sdata->ht_opmode_valid != enable_ht ||
@@ -284,9 +300,96 @@ static u32 ieee80211_enable_ht(struct ieee80211_sub_if_data *sdata,
 
 /* frame sending functions */
 
-static void ieee80211_send_deauth_disassoc(struct ieee80211_sub_if_data *sdata,
-					   const u8 *bssid, u16 stype, u16 reason,
-					   void *cookie, bool send_frame)
+static int ieee80211_compatible_rates(const u8 *supp_rates, int supp_rates_len,
+				      struct ieee80211_supported_band *sband,
+				      u32 *rates)
+{
+	int i, j, count;
+	*rates = 0;
+	count = 0;
+	for (i = 0; i < supp_rates_len; i++) {
+		int rate = (supp_rates[i] & 0x7F) * 5;
+
+		for (j = 0; j < sband->n_bitrates; j++)
+			if (sband->bitrates[j].bitrate == rate) {
+				*rates |= BIT(j);
+				count++;
+				break;
+			}
+	}
+
+	return count;
+}
+
+static void ieee80211_add_ht_ie(struct ieee80211_sub_if_data *sdata,
+				struct sk_buff *skb, const u8 *ht_oper_ie,
+				struct ieee80211_supported_band *sband,
+				struct ieee80211_channel *channel,
+				enum ieee80211_smps_mode smps)
+{
+	struct ieee80211_ht_operation *ht_oper;
+	u8 *pos;
+	u32 flags = channel->flags;
+	u16 cap;
+	struct ieee80211_sta_ht_cap ht_cap;
+
+	BUILD_BUG_ON(sizeof(ht_cap) != sizeof(sband->ht_cap));
+
+	if (!ht_oper_ie)
+		return;
+
+	if (ht_oper_ie[1] < sizeof(struct ieee80211_ht_operation))
+		return;
+
+	memcpy(&ht_cap, &sband->ht_cap, sizeof(ht_cap));
+	ieee80211_apply_htcap_overrides(sdata, &ht_cap);
+
+	ht_oper = (struct ieee80211_ht_operation *)(ht_oper_ie + 2);
+
+	/* determine capability flags */
+	cap = ht_cap.cap;
+
+	switch (ht_oper->ht_param & IEEE80211_HT_PARAM_CHA_SEC_OFFSET) {
+	case IEEE80211_HT_PARAM_CHA_SEC_ABOVE:
+		if (flags & IEEE80211_CHAN_NO_HT40PLUS) {
+			cap &= ~IEEE80211_HT_CAP_SUP_WIDTH_20_40;
+			cap &= ~IEEE80211_HT_CAP_SGI_40;
+		}
+		break;
+	case IEEE80211_HT_PARAM_CHA_SEC_BELOW:
+		if (flags & IEEE80211_CHAN_NO_HT40MINUS) {
+			cap &= ~IEEE80211_HT_CAP_SUP_WIDTH_20_40;
+			cap &= ~IEEE80211_HT_CAP_SGI_40;
+		}
+		break;
+	}
+
+	/* set SM PS mode properly */
+	cap &= ~IEEE80211_HT_CAP_SM_PS;
+	switch (smps) {
+	case IEEE80211_SMPS_AUTOMATIC:
+	case IEEE80211_SMPS_NUM_MODES:
+		WARN_ON(1);
+	case IEEE80211_SMPS_OFF:
+		cap |= WLAN_HT_CAP_SM_PS_DISABLED <<
+			IEEE80211_HT_CAP_SM_PS_SHIFT;
+		break;
+	case IEEE80211_SMPS_STATIC:
+		cap |= WLAN_HT_CAP_SM_PS_STATIC <<
+			IEEE80211_HT_CAP_SM_PS_SHIFT;
+		break;
+	case IEEE80211_SMPS_DYNAMIC:
+		cap |= WLAN_HT_CAP_SM_PS_DYNAMIC <<
+			IEEE80211_HT_CAP_SM_PS_SHIFT;
+		break;
+	}
+
+	/* reserve and fill IE */
+	pos = skb_put(skb, sizeof(struct ieee80211_ht_cap) + 2);
+	ieee80211_ie_build_ht_cap(pos, &ht_cap, cap);
+}
+
+static void ieee80211_send_assoc(struct ieee80211_sub_if_data *sdata)
 {
 	struct ieee80211_local *local = sdata->local;
 	struct ieee80211_if_managed *ifmgd = &sdata->u.mgd;
@@ -301,6 +404,168 @@ static void ieee80211_send_deauth_disassoc(struct ieee80211_sub_if_data *sdata,
 
 	mgmt = (struct ieee80211_mgmt *) skb_put(skb, 24);
 	memset(mgmt, 0, 24);
+	memcpy(mgmt->da, assoc_data->bss->bssid, ETH_ALEN);
+	memcpy(mgmt->sa, sdata->vif.addr, ETH_ALEN);
+	memcpy(mgmt->bssid, assoc_data->bss->bssid, ETH_ALEN);
+
+	if (!is_zero_ether_addr(assoc_data->prev_bssid)) {
+		skb_put(skb, 10);
+		mgmt->frame_control = cpu_to_le16(IEEE80211_FTYPE_MGMT |
+						  IEEE80211_STYPE_REASSOC_REQ);
+		mgmt->u.reassoc_req.capab_info = cpu_to_le16(capab);
+		mgmt->u.reassoc_req.listen_interval =
+				cpu_to_le16(local->hw.conf.listen_interval);
+		memcpy(mgmt->u.reassoc_req.current_ap, assoc_data->prev_bssid,
+		       ETH_ALEN);
+	} else {
+		skb_put(skb, 4);
+		mgmt->frame_control = cpu_to_le16(IEEE80211_FTYPE_MGMT |
+						  IEEE80211_STYPE_ASSOC_REQ);
+		mgmt->u.assoc_req.capab_info = cpu_to_le16(capab);
+		mgmt->u.assoc_req.listen_interval =
+				cpu_to_le16(local->hw.conf.listen_interval);
+	}
+
+	/* SSID */
+	pos = skb_put(skb, 2 + assoc_data->ssid_len);
+	*pos++ = WLAN_EID_SSID;
+	*pos++ = assoc_data->ssid_len;
+	memcpy(pos, assoc_data->ssid, assoc_data->ssid_len);
+
+	/* add all rates which were marked to be used above */
+	supp_rates_len = rates_len;
+	if (supp_rates_len > 8)
+		supp_rates_len = 8;
+
+	pos = skb_put(skb, supp_rates_len + 2);
+	*pos++ = WLAN_EID_SUPP_RATES;
+	*pos++ = supp_rates_len;
+
+	count = 0;
+	for (i = 0; i < sband->n_bitrates; i++) {
+		if (BIT(i) & rates) {
+			int rate = sband->bitrates[i].bitrate;
+			*pos++ = (u8) (rate / 5);
+			if (++count == 8)
+				break;
+		}
+	}
+
+	if (rates_len > count) {
+		pos = skb_put(skb, rates_len - count + 2);
+		*pos++ = WLAN_EID_EXT_SUPP_RATES;
+		*pos++ = rates_len - count;
+
+		for (i++; i < sband->n_bitrates; i++) {
+			if (BIT(i) & rates) {
+				int rate = sband->bitrates[i].bitrate;
+				*pos++ = (u8) (rate / 5);
+			}
+		}
+	}
+
+	if (capab & WLAN_CAPABILITY_SPECTRUM_MGMT) {
+		/* 1. power capabilities */
+		pos = skb_put(skb, 4);
+		*pos++ = WLAN_EID_PWR_CAPABILITY;
+		*pos++ = 2;
+		*pos++ = 0; /* min tx power */
+		*pos++ = local->oper_channel->max_power; /* max tx power */
+
+		/* 2. supported channels */
+		/* TODO: get this in reg domain format */
+		pos = skb_put(skb, 2 * sband->n_channels + 2);
+		*pos++ = WLAN_EID_SUPPORTED_CHANNELS;
+		*pos++ = 2 * sband->n_channels;
+		for (i = 0; i < sband->n_channels; i++) {
+			*pos++ = ieee80211_frequency_to_channel(
+					sband->channels[i].center_freq);
+			*pos++ = 1; /* one channel in the subband*/
+		}
+	}
+
+	/* if present, add any custom IEs that go before HT */
+	if (assoc_data->ie_len && assoc_data->ie) {
+		static const u8 before_ht[] = {
+			WLAN_EID_SSID,
+			WLAN_EID_SUPP_RATES,
+			WLAN_EID_EXT_SUPP_RATES,
+			WLAN_EID_PWR_CAPABILITY,
+			WLAN_EID_SUPPORTED_CHANNELS,
+			WLAN_EID_RSN,
+			WLAN_EID_QOS_CAPA,
+			WLAN_EID_RRM_ENABLED_CAPABILITIES,
+			WLAN_EID_MOBILITY_DOMAIN,
+			WLAN_EID_SUPPORTED_REGULATORY_CLASSES,
+		};
+		noffset = ieee80211_ie_split(assoc_data->ie, assoc_data->ie_len,
+					     before_ht, ARRAY_SIZE(before_ht),
+					     offset);
+		pos = skb_put(skb, noffset - offset);
+		memcpy(pos, assoc_data->ie + offset, noffset - offset);
+		offset = noffset;
+	}
+
+	if (!(ifmgd->flags & IEEE80211_STA_DISABLE_11N))
+		ieee80211_add_ht_ie(sdata, skb, assoc_data->ht_operation_ie,
+				    sband, local->oper_channel, ifmgd->ap_smps);
+
+	/* if present, add any custom non-vendor IEs that go after HT */
+	if (assoc_data->ie_len && assoc_data->ie) {
+		noffset = ieee80211_ie_split_vendor(assoc_data->ie,
+						    assoc_data->ie_len,
+						    offset);
+		pos = skb_put(skb, noffset - offset);
+		memcpy(pos, assoc_data->ie + offset, noffset - offset);
+		offset = noffset;
+	}
+
+	if (assoc_data->wmm) {
+		if (assoc_data->uapsd) {
+			qos_info = ifmgd->uapsd_queues;
+			qos_info |= (ifmgd->uapsd_max_sp_len <<
+				     IEEE80211_WMM_IE_STA_QOSINFO_SP_SHIFT);
+		} else {
+			qos_info = 0;
+		}
+
+		pos = skb_put(skb, 9);
+		*pos++ = WLAN_EID_VENDOR_SPECIFIC;
+		*pos++ = 7; /* len */
+		*pos++ = 0x00; /* Microsoft OUI 00:50:F2 */
+		*pos++ = 0x50;
+		*pos++ = 0xf2;
+		*pos++ = 2; /* WME */
+		*pos++ = 0; /* WME info */
+		*pos++ = 1; /* WME ver */
+		*pos++ = qos_info;
+	}
+
+	/* add any remaining custom (i.e. vendor specific here) IEs */
+	if (assoc_data->ie_len && assoc_data->ie) {
+		noffset = assoc_data->ie_len;
+		pos = skb_put(skb, noffset - offset);
+		memcpy(pos, assoc_data->ie + offset, noffset - offset);
+	}
+
+	IEEE80211_SKB_CB(skb)->flags |= IEEE80211_TX_INTFL_DONT_ENCRYPT;
+	ieee80211_tx_skb(sdata, skb);
+}
+
+static void ieee80211_send_deauth_disassoc(struct ieee80211_sub_if_data *sdata,
+					   const u8 *bssid, u16 stype,
+					   u16 reason, bool send_frame,
+					   u8 *frame_buf)
+{
+	struct ieee80211_local *local = sdata->local;
+	struct ieee80211_if_managed *ifmgd = &sdata->u.mgd;
+	struct sk_buff *skb;
+	struct ieee80211_mgmt *mgmt = (void *)frame_buf;
+
+	/* build frame */
+	mgmt->frame_control = cpu_to_le16(IEEE80211_FTYPE_MGMT | stype);
+	mgmt->duration = 0; /* initialize only */
+	mgmt->seq_ctrl = 0; /* initialize only */
 	memcpy(mgmt->da, bssid, ETH_ALEN);
 	memcpy(mgmt->sa, sdata->vif.addr, ETH_ALEN);
 	memcpy(mgmt->bssid, bssid, ETH_ALEN);
@@ -1666,10 +1931,9 @@ static bool ieee80211_assoc_success(struct ieee80211_work *wk,
 
 	local->oper_channel = wk->chan;
 
-	if (elems.ht_info_elem && elems.wmm_param &&
-	    (sdata->local->hw.queues >= 4) &&
+	if (elems.ht_operation && elems.wmm_param &&
 	    !(ifmgd->flags & IEEE80211_STA_DISABLE_11N))
-		changed |= ieee80211_enable_ht(sdata, elems.ht_info_elem,
+		changed |= ieee80211_enable_ht(sdata, elems.ht_operation,
 					       cbss->bssid, ap_ht_cap_flags,
 					       false);
 
@@ -1801,7 +2065,7 @@ static const u64 care_about_ies =
 	(1ULL << WLAN_EID_CHANNEL_SWITCH) |
 	(1ULL << WLAN_EID_PWR_CONSTRAINT) |
 	(1ULL << WLAN_EID_HT_CAPABILITY) |
-	(1ULL << WLAN_EID_HT_INFORMATION);
+	(1ULL << WLAN_EID_HT_OPERATION);
 
 static void ieee80211_rx_mgmt_beacon(struct ieee80211_sub_if_data *sdata,
 				     struct ieee80211_mgmt *mgmt,
@@ -1981,7 +2245,7 @@ static void ieee80211_rx_mgmt_beacon(struct ieee80211_sub_if_data *sdata,
 			erp_valid, erp_value);
 
 
-	if (elems.ht_cap_elem && elems.ht_info_elem && elems.wmm_param &&
+	if (elems.ht_cap_elem && elems.ht_operation && elems.wmm_param &&
 	    !(ifmgd->flags & IEEE80211_STA_DISABLE_11N)) {
 		struct sta_info *sta;
 		struct ieee80211_supported_band *sband;
@@ -2004,7 +2268,7 @@ static void ieee80211_rx_mgmt_beacon(struct ieee80211_sub_if_data *sdata,
 
 		rcu_read_unlock();
 
-		changed |= ieee80211_enable_ht(sdata, elems.ht_info_elem,
+		changed |= ieee80211_enable_ht(sdata, elems.ht_operation,
 					       bssid, ap_ht_cap_flags, true);
 	}
 
@@ -2684,21 +2948,12 @@ int ieee80211_mgd_assoc(struct ieee80211_sub_if_data *sdata,
 	} else
 		ifmgd->ap_smps = ifmgd->req_smps;
 
-	wk->assoc.smps = ifmgd->ap_smps;
-	/*
-	 * IEEE802.11n does not allow TKIP/WEP as pairwise ciphers in HT mode.
-	 * We still associate in non-HT mode (11a/b/g) if any one of these
-	 * ciphers is configured as pairwise.
-	 * We can set this to true for non-11n hardware, that'll be checked
-	 * separately along with the peer capabilities.
-	 */
-	wk->assoc.use_11n = !(ifmgd->flags & IEEE80211_STA_DISABLE_11N);
-	wk->assoc.capability = req->bss->capability;
-	wk->assoc.wmm_used = bss->wmm_used;
-	wk->assoc.supp_rates = bss->supp_rates;
-	wk->assoc.supp_rates_len = bss->supp_rates_len;
-	wk->assoc.ht_information_ie =
-		ieee80211_bss_get_ie(req->bss, WLAN_EID_HT_INFORMATION);
+	assoc_data->capability = req->bss->capability;
+	assoc_data->wmm = bss->wmm_used && (local->hw.queues >= 4);
+	assoc_data->supp_rates = bss->supp_rates;
+	assoc_data->supp_rates_len = bss->supp_rates_len;
+	assoc_data->ht_operation_ie =
+		ieee80211_bss_get_ie(req->bss, WLAN_EID_HT_OPERATION);
 
 	if (bss->wmm_used && bss->uapsd_supported &&
 	    (sdata->local->hw.flags & IEEE80211_HW_SUPPORTS_UAPSD)) {

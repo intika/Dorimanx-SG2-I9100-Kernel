@@ -373,6 +373,42 @@ enum ieee80211_sta_flags {
 	IEEE80211_STA_RESET_SIGNAL_AVE	= BIT(9),
 };
 
+struct ieee80211_mgd_auth_data {
+	struct cfg80211_bss *bss;
+	unsigned long timeout;
+	int tries;
+	u16 algorithm, expected_transaction;
+
+	u8 key[WLAN_KEY_LEN_WEP104];
+	u8 key_len, key_idx;
+	bool done;
+
+	size_t ie_len;
+	u8 ie[];
+};
+
+struct ieee80211_mgd_assoc_data {
+	struct cfg80211_bss *bss;
+	const u8 *supp_rates;
+	const u8 *ht_operation_ie;
+
+	unsigned long timeout;
+	int tries;
+
+	u16 capability;
+	u8 prev_bssid[ETH_ALEN];
+	u8 ssid[IEEE80211_MAX_SSID_LEN];
+	u8 ssid_len;
+	u8 supp_rates_len;
+	bool wmm, uapsd;
+	bool have_beacon;
+	bool sent_assoc;
+	bool synced;
+
+	size_t ie_len;
+	u8 ie[];
+};
+
 struct ieee80211_if_managed {
 	struct timer_list timer;
 	struct timer_list conn_mon_timer;
@@ -1070,7 +1106,7 @@ struct ieee802_11_elems {
 	u8 *wmm_info;
 	u8 *wmm_param;
 	struct ieee80211_ht_cap *ht_cap_elem;
-	struct ieee80211_ht_info *ht_info_elem;
+	struct ieee80211_ht_operation *ht_operation;
 	struct ieee80211_meshconf_ie *mesh_config;
 	u8 *mesh_id;
 	u8 *peering;
@@ -1426,10 +1462,9 @@ size_t ieee80211_ie_split(const u8 *ies, size_t ielen,
 size_t ieee80211_ie_split_vendor(const u8 *ies, size_t ielen, size_t offset);
 u8 *ieee80211_ie_build_ht_cap(u8 *pos, struct ieee80211_sta_ht_cap *ht_cap,
 			      u16 cap);
-u8 *ieee80211_ie_build_ht_info(u8 *pos,
-				struct ieee80211_sta_ht_cap *ht_cap,
-				struct ieee80211_channel *channel,
-				enum nl80211_channel_type channel_type);
+u8 *ieee80211_ie_build_ht_oper(u8 *pos, struct ieee80211_sta_ht_cap *ht_cap,
+			       struct ieee80211_channel *channel,
+			       enum nl80211_channel_type channel_type);
 
 /* internal work items */
 void ieee80211_work_init(struct ieee80211_local *local);
@@ -1459,7 +1494,10 @@ bool ieee80211_set_channel_type(struct ieee80211_local *local,
 				struct ieee80211_sub_if_data *sdata,
 				enum nl80211_channel_type chantype);
 enum nl80211_channel_type
-ieee80211_ht_info_to_channel_type(struct ieee80211_ht_info *ht_info);
+ieee80211_ht_oper_to_channel_type(struct ieee80211_ht_operation *ht_oper);
+enum nl80211_channel_type ieee80211_get_tx_channel_type(
+					struct ieee80211_local *local,
+					enum nl80211_channel_type channel_type);
 
 #ifdef CONFIG_MAC80211_NOINLINE
 #define debug_noinline noinline
