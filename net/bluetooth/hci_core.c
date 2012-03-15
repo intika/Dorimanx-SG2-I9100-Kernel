@@ -1706,6 +1706,25 @@ static int hci_do_le_scan(struct hci_dev *hdev, u8 type, u16 interval,
 	return 0;
 }
 
+int hci_cancel_le_scan(struct hci_dev *hdev)
+{
+	struct hci_cp_le_set_scan_enable cp;
+
+	BT_DBG("%s", hdev->name);
+
+	if (!test_bit(HCI_LE_SCAN, &hdev->dev_flags))
+		return -EPERM;
+
+	/* to do : if use cancel_delayed_work_sync, then error will occur.
+	* cancel_delayed_work_sync(&hdev->le_scan_disable);
+	*/
+	cancel_delayed_work(&hdev->le_scan_disable);
+
+	memset(&cp, 0, sizeof(cp));
+
+	return hci_send_cmd(hdev, HCI_OP_LE_SET_SCAN_ENABLE, sizeof(cp), &cp);
+}
+
 static void le_scan_disable_work(struct work_struct *work)
 {
 	struct hci_dev *hdev = container_of(work, struct hci_dev,
@@ -1748,26 +1767,6 @@ int hci_le_scan(struct hci_dev *hdev, u8 type, u16 interval, u16 window,
 	queue_work(system_long_wq, &hdev->le_scan);
 
 	return 0;
-}
-
-/* for stop le scan */
-int hci_cancel_le_scan(struct hci_dev *hdev)
-{
-	struct hci_cp_le_set_scan_enable cp;
-
-	BT_DBG("%s", hdev->name);
-
-	if (!test_bit(HCI_LE_SCAN, &hdev->dev_flags))
-		return -EPERM;
-
-	/* to do : if use cancel_delayed_work_sync, then error will occur.
-	* cancel_delayed_work_sync(&hdev->le_scan_disable);
-	*/
-	cancel_delayed_work(&hdev->le_scan_disable);
-
-	memset(&cp, 0, sizeof(cp));
-
-	return hci_send_cmd(hdev, HCI_OP_LE_SET_SCAN_ENABLE, sizeof(cp), &cp);
 }
 
 /* Register HCI device */
