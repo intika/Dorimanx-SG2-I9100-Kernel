@@ -18,6 +18,13 @@
 # define NFS_DEBUG
 #endif
 
+/*
+ * Enable dprintk() debugging support for nfs client.
+ */
+#ifdef CONFIG_NFS_DEBUG
+# define NFS_DEBUG
+#endif
+
 #include <linux/in.h>
 #include <linux/mm.h>
 #include <linux/pagemap.h>
