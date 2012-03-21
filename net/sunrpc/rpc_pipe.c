@@ -986,6 +986,7 @@ enum {
 	RPCAUTH_statd,
 	RPCAUTH_nfsd4_cb,
 	RPCAUTH_cache,
+	RPCAUTH_nfsd,
 	RPCAUTH_RootEOF
 };
 
@@ -1016,6 +1017,10 @@ static const struct rpc_filelist files[] = {
 	},
 	[RPCAUTH_cache] = {
 		.name = "cache",
+		.mode = S_IFDIR | S_IRUGO | S_IXUGO,
+	},
+	[RPCAUTH_nfsd] = {
+		.name = "nfsd",
 		.mode = S_IFDIR | S_IRUGO | S_IXUGO,
 	},
 };
