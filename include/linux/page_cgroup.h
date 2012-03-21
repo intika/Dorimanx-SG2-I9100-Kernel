@@ -7,7 +7,6 @@ enum {
 	PCG_USED, /* this object is in use. */
 	PCG_MIGRATION, /* under page migration */
 	/* flags for mem_cgroup and file and I/O status */
-	PCG_MOVE_LOCK, /* For race between move_account v.s. following bits */
 	PCG_FILE_MAPPED, /* page is accounted as "mapped" */
 	/* No lock in page_cgroup */
 	PCG_ACCT_LRU, /* page has been accounted for (under lru_lock) */
@@ -97,24 +96,6 @@ static inline void unlock_page_cgroup(struct page_cgroup *pc)
 	bit_spin_unlock(PCG_LOCK, &pc->flags);
 }
 
-static inline void move_lock_page_cgroup(struct page_cgroup *pc,
-	unsigned long *flags)
-{
-	/*
-	 * We know updates to pc->flags of page cache's stats are from both of
-	 * usual context or IRQ context. Disable IRQ to avoid deadlock.
-	 */
-	local_irq_save(*flags);
-	bit_spin_lock(PCG_MOVE_LOCK, &pc->flags);
-}
-
-static inline void move_unlock_page_cgroup(struct page_cgroup *pc,
-	unsigned long *flags)
-{
-	bit_spin_unlock(PCG_MOVE_LOCK, &pc->flags);
-	local_irq_restore(*flags);
-}
-
 #ifdef CONFIG_SPARSEMEM
 #define PCG_ARRAYID_WIDTH	SECTIONS_SHIFT
 #else
@@ -149,6 +130,9 @@ static inline unsigned long page_cgroup_array_id(struct page_cgroup *pc)
 }
 
 #else /* CONFIG_MEMCG */
+=======
+#else /* CONFIG_CGROUP_MEM_RES_CTLR */
+>>>>>>> 312734c0... memcg: remove PCG_MOVE_LOCK flag from page_cgroup
 struct page_cgroup;
 
 static inline void __meminit pgdat_page_cgroup_init(struct pglist_data *pgdat)
