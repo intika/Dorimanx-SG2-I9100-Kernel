@@ -86,6 +86,9 @@ enum mesh_deferred_task_flags {
  * @state_lock: mesh path state lock used to protect changes to the
  * mpath itself.  No need to take this lock when adding or removing
  * an mpath to a hash bucket on a path table.
+ * @rann_snd_addr: the RANN sender address
+ * @rann_metric: the aggregated path metric towards the root node
+ * @is_root: the destination station of this path is a root node
  * @is_gate: the destination station of this path is a mesh gate
  *
  *
@@ -110,6 +113,9 @@ struct mesh_path {
 	u8 discovery_retries;
 	enum mesh_path_flags flags;
 	spinlock_t state_lock;
+	u8 rann_snd_addr[ETH_ALEN];
+	u32 rann_metric;
+	bool is_root;
 	bool is_gate;
 };
 
