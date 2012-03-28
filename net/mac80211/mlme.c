@@ -2740,8 +2740,54 @@ int ieee80211_mgd_assoc(struct ieee80211_sub_if_data *sdata,
 	sdata->control_port_protocol = req->crypto.control_port_ethertype;
 	sdata->control_port_no_encrypt = req->crypto.control_port_no_encrypt;
 
-	ieee80211_add_work(wk);
-	return 0;
+	/* kick off associate process */
+
+	ifmgd->assoc_data = assoc_data;
+
+	err = ieee80211_prep_connection(sdata, req->bss, true);
+	if (err)
+		goto err_clear;
+
+	if (!bss->dtim_period &&
+	    sdata->local->hw.flags & IEEE80211_HW_NEED_DTIM_PERIOD) {
+		/*
+		 * Wait up to one beacon interval ...
+		 * should this be more if we miss one?
+		 */
+		printk(KERN_DEBUG "%s: waiting for beacon from %pM\n",
+		       sdata->name, ifmgd->bssid);
+		assoc_data->timeout = TU_TO_EXP_TIME(req->bss->beacon_interval);
+	} else {
+		assoc_data->have_beacon = true;
+		assoc_data->sent_assoc = false;
+		assoc_data->timeout = jiffies;
+	}
+	run_again(ifmgd, assoc_data->timeout);
+
+	if (bss->corrupt_data) {
+		char *corrupt_type = "data";
+		if (bss->corrupt_data & IEEE80211_BSS_CORRUPT_BEACON) {
+			if (bss->corrupt_data &
+					IEEE80211_BSS_CORRUPT_PROBE_RESP)
+				corrupt_type = "beacon and probe response";
+			else
+				corrupt_type = "beacon";
+		} else if (bss->corrupt_data & IEEE80211_BSS_CORRUPT_PROBE_RESP)
+			corrupt_type = "probe response";
+		printk(KERN_DEBUG "%s: associating with AP with corrupt %s\n",
+		       sdata->name, corrupt_type);
+	}
+
+	err = 0;
+	goto out;
+ err_clear:
+	ifmgd->assoc_data = NULL;
+ err_free:
+	kfree(assoc_data);
+ out:
+	mutex_unlock(&ifmgd->mtx);
+
+	return err;
 }
 
 int ieee80211_mgd_deauth(struct ieee80211_sub_if_data *sdata,
