@@ -376,8 +376,7 @@ struct sta_info {
 	unsigned int lost_packets;
 	unsigned int beacon_loss_count;
 
-	/* should be right in front of sta to be in the same cache line */
-	bool dummy;
+	bool supports_40mhz;
 
 	/* keep last! */
 	struct ieee80211_sta sta;
