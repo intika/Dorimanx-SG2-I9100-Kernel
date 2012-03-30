@@ -1588,6 +1588,29 @@ enum ieee80211_ampdu_mlme_action {
 };
 
 /**
+ * enum ieee80211_frame_release_type - frame release reason
+ * @IEEE80211_FRAME_RELEASE_PSPOLL: frame released for PS-Poll
+ * @IEEE80211_FRAME_RELEASE_UAPSD: frame(s) released due to
+ *	frame received on trigger-enabled AC
+ */
+enum ieee80211_frame_release_type {
+	IEEE80211_FRAME_RELEASE_PSPOLL,
+	IEEE80211_FRAME_RELEASE_UAPSD,
+};
+
+/**
+ * enum ieee80211_rate_control_changed - flags to indicate what changed
+ *
+ * @IEEE80211_RC_BW_CHANGED: The bandwidth that can be used to transmit
+ *	to this station changed.
+ * @IEEE80211_RC_SMPS_CHANGED: The SMPS state of the station changed.
+ */
+enum ieee80211_rate_control_changed {
+	IEEE80211_RC_BW_CHANGED		= BIT(0),
+	IEEE80211_RC_SMPS_CHANGED	= BIT(1),
+};
+
+/**
  * struct ieee80211_ops - callbacks from mac80211 to the driver
  *
  * This structure contains various callbacks that the driver may
@@ -1752,6 +1775,21 @@ enum ieee80211_ampdu_mlme_action {
  *	associated station, AP,  IBSS/WDS/mesh peer etc. For a VIF operating
  *	in AP mode, this callback will not be called when the flag
  *	%IEEE80211_HW_AP_LINK_PS is set. Must be atomic.
+ *
+ * @sta_state: Notifies low level driver about state transition of a
+ *	station (which can be the AP, a client, IBSS/WDS/mesh peer etc.)
+ *	This callback is mutually exclusive with @sta_add/@sta_remove.
+ *	It must not fail for down transitions but may fail for transitions
+ *	up the list of states.
+ *	The callback can sleep.
+ *
+ * @sta_rc_update: Notifies the driver of changes to the bitrates that can be
+ *	used to transmit to the station. The changes are advertised with bits
+ *	from &enum ieee80211_rate_control_changed and the values are reflected
+ *	in the station data. This callback should only be used when the driver
+ *	uses hardware rate control (%IEEE80211_HW_HAS_RATE_CONTROL) since
+ *	otherwise the rate control algorithm is notified directly.
+ *	Must be atomic.
  *
  * @conf_tx: Configure TX queue parameters (EDCF (aifs, cw_min, cw_max),
  *	bursting) for a hardware TX queue.
@@ -1920,7 +1958,16 @@ struct ieee80211_ops {
 			  struct ieee80211_sta *sta);
 	void (*sta_notify)(struct ieee80211_hw *hw, struct ieee80211_vif *vif,
 			enum sta_notify_cmd, struct ieee80211_sta *sta);
-	int (*conf_tx)(struct ieee80211_hw *hw, u16 queue,
+	int (*sta_state)(struct ieee80211_hw *hw, struct ieee80211_vif *vif,
+			 struct ieee80211_sta *sta,
+			 enum ieee80211_sta_state old_state,
+			 enum ieee80211_sta_state new_state);
+	void (*sta_rc_update)(struct ieee80211_hw *hw,
+			      struct ieee80211_vif *vif,
+			      struct ieee80211_sta *sta,
+			      u32 changed);
+	int (*conf_tx)(struct ieee80211_hw *hw,
+		       struct ieee80211_vif *vif, u16 queue,
 		       const struct ieee80211_tx_queue_params *params);
 	u64 (*get_tsf)(struct ieee80211_hw *hw);
 	void (*set_tsf)(struct ieee80211_hw *hw, u64 tsf);
@@ -2967,16 +3014,6 @@ void ieee80211_ready_on_channel(struct ieee80211_hw *hw);
 void ieee80211_remain_on_channel_expired(struct ieee80211_hw *hw);
 
 /* Rate control API */
-
-/**
- * enum rate_control_changed - flags to indicate which parameter changed
- *
- * @IEEE80211_RC_HT_CHANGED: The HT parameters of the operating channel have
- *	changed, rate control algorithm can update its internal state if needed.
- */
-enum rate_control_changed {
-	IEEE80211_RC_HT_CHANGED = BIT(0)
-};
 
 /**
  * struct ieee80211_tx_rate_control - rate control information for/from RC algo
