@@ -1315,6 +1315,18 @@ enum ieee80211_key_len {
 };
 
 /**
+ * enum - mesh synchronization method identifier
+ *
+ * @IEEE80211_SYNC_METHOD_NEIGHBOR_OFFSET: the default synchronization method
+ * @IEEE80211_SYNC_METHOD_VENDOR: a vendor specific synchronization method
+ * that will be specified in a vendor specific information element
+ */
+enum {
+	IEEE80211_SYNC_METHOD_NEIGHBOR_OFFSET = 1,
+	IEEE80211_SYNC_METHOD_VENDOR = 255,
+};
+
+/**
  * enum - mesh path selection protocol identifier
  *
  * @IEEE80211_PATH_PROTOCOL_HWMP: the default path selection protocol
