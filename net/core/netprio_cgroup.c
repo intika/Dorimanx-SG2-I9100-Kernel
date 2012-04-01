@@ -247,23 +247,12 @@ static struct cftype ss_files[] = {
 
 struct cgroup_subsys net_prio_subsys = {
 	.name		= "net_prio",
-	.css_alloc	= cgrp_css_alloc,
-	.css_online	= cgrp_css_online,
-	.css_free	= cgrp_css_free,
-	.attach		= net_prio_attach,
-	.subsys_id	= net_prio_subsys_id,
-	.base_cftypes	= ss_files,
-	.module		= THIS_MODULE,
-};
-
-struct cgroup_subsys net_prio_subsys = {
-	.name		= "net_prio",
 	.create		= cgrp_create,
 	.destroy	= cgrp_destroy,
-	.populate	= cgrp_populate,
 #ifdef CONFIG_NETPRIO_CGROUP
 	.subsys_id	= net_prio_subsys_id,
 #endif
+	.base_cftypes	= ss_files,
 	.module		= THIS_MODULE
 };
 
