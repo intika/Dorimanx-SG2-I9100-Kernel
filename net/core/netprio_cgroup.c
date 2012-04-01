@@ -256,6 +256,17 @@ struct cgroup_subsys net_prio_subsys = {
 	.module		= THIS_MODULE,
 };
 
+struct cgroup_subsys net_prio_subsys = {
+	.name		= "net_prio",
+	.create		= cgrp_create,
+	.destroy	= cgrp_destroy,
+	.populate	= cgrp_populate,
+#ifdef CONFIG_NETPRIO_CGROUP
+	.subsys_id	= net_prio_subsys_id,
+#endif
+	.module		= THIS_MODULE
+};
+
 static int netprio_device_event(struct notifier_block *unused,
 				unsigned long event, void *ptr)
 {

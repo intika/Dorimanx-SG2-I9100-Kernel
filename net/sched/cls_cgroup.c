@@ -115,6 +115,17 @@ struct cgroup_subsys net_cls_subsys = {
 	.broken_hierarchy = true,
 };
 
+struct cgroup_subsys net_cls_subsys = {
+	.name		= "net_cls",
+	.create		= cgrp_create,
+	.destroy	= cgrp_destroy,
+	.populate	= cgrp_populate,
+#ifdef CONFIG_NET_CLS_CGROUP
+	.subsys_id	= net_cls_subsys_id,
+#endif
+	.module		= THIS_MODULE,
+};
+
 struct cls_cgroup_head {
 	u32			handle;
 	struct tcf_exts		exts;
