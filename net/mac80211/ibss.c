@@ -386,7 +386,7 @@ static void ieee80211_rx_bss_info(struct ieee80211_sub_if_data *sdata,
 
 		if (elems->supp_rates) {
 			supp_rates = ieee80211_sta_get_rates(local, elems,
-							     band);
+							     band, NULL);
 			if (sta) {
 				u32 prev_rates;
 
@@ -536,7 +536,7 @@ static void ieee80211_rx_bss_info(struct ieee80211_sub_if_data *sdata,
 		       sdata->name, mgmt->bssid);
 #endif
 		ieee80211_sta_join_ibss(sdata, bss);
-		supp_rates = ieee80211_sta_get_rates(local, elems, band);
+		supp_rates = ieee80211_sta_get_rates(local, elems, band, NULL);
 		ieee80211_ibss_add_sta(sdata, mgmt->bssid, mgmt->sa,
 				       supp_rates);
 		rcu_read_unlock();
