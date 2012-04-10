@@ -438,7 +438,7 @@ int nfc_targets_found(struct nfc_dev *dev, struct nfc_target *targets,
 	dev->polling = false;
 
 	for (i = 0; i < n_targets; i++)
-		targets[i].idx = dev->target_idx++;
+		targets[i].idx = dev->target_next_idx++;
 
 	spin_lock_bh(&dev->targets_lock);
 
