@@ -95,7 +95,7 @@ int nfc_dev_down(struct nfc_dev *dev)
 		goto error;
 	}
 
-	if (dev->polling || dev->remote_activated) {
+	if (dev->polling || dev->activated_target_idx != NFC_TARGET_IDX_NONE) {
 		rc = -EBUSY;
 		goto error;
 	}
@@ -181,13 +181,13 @@ error:
 	return rc;
 }
 
-int nfc_dep_link_up(struct nfc_dev *dev, int target_index,
-					u8 comm_mode, u8 rf_mode)
+int nfc_dep_link_up(struct nfc_dev *dev, int target_index, u8 comm_mode)
 {
 	int rc = 0;
+	u8 *gb;
+	size_t gb_len;
 
-	pr_debug("dev_name=%s comm:%d rf:%d\n",
-			dev_name(&dev->dev), comm_mode, rf_mode);
+	pr_debug("dev_name=%s comm %d\n", dev_name(&dev->dev), comm_mode);
 
 	if (!dev->ops->dep_link_up)
 		return -EOPNOTSUPP;
@@ -204,7 +204,15 @@ int nfc_dep_link_up(struct nfc_dev *dev, int target_index,
 		goto error;
 	}
 
-	rc = dev->ops->dep_link_up(dev, target_index, comm_mode, rf_mode);
+	gb = nfc_llcp_general_bytes(dev, &gb_len);
+	if (gb_len > NFC_MAX_GT_LEN) {
+		rc = -EINVAL;
+		goto error;
+	}
+
+	rc = dev->ops->dep_link_up(dev, target_index, comm_mode, gb, gb_len);
+	if (!rc)
+		dev->activated_target_idx = target_index;
 
 error:
 	device_unlock(&dev->dev);
@@ -240,6 +248,7 @@ int nfc_dep_link_down(struct nfc_dev *dev)
 	rc = dev->ops->dep_link_down(dev);
 	if (!rc) {
 		dev->dep_link_up = false;
+		dev->activated_target_idx = NFC_TARGET_IDX_NONE;
 		nfc_llcp_mac_is_down(dev);
 		nfc_genl_dep_link_down_event(dev);
 	}
@@ -250,7 +259,7 @@ error:
 }
 
 int nfc_dep_link_is_up(struct nfc_dev *dev, u32 target_idx,
-					u8 comm_mode, u8 rf_mode)
+		       u8 comm_mode, u8 rf_mode)
 {
 	dev->dep_link_up = true;
 	dev->dep_rf_mode = rf_mode;
@@ -284,7 +293,7 @@ int nfc_activate_target(struct nfc_dev *dev, u32 target_idx, u32 protocol)
 
 	rc = dev->ops->activate_target(dev, target_idx, protocol);
 	if (!rc)
-		dev->remote_activated = true;
+		dev->activated_target_idx = target_idx;
 
 error:
 	device_unlock(&dev->dev);
@@ -312,7 +321,7 @@ int nfc_deactivate_target(struct nfc_dev *dev, u32 target_idx)
 	}
 
 	dev->ops->deactivate_target(dev, target_idx);
-	dev->remote_activated = false;
+	dev->activated_target_idx = NFC_TARGET_IDX_NONE;
 
 error:
 	device_unlock(&dev->dev);
@@ -330,10 +339,8 @@ error:
  *
  * The user must wait for the callback before calling this function again.
  */
-int nfc_data_exchange(struct nfc_dev *dev, u32 target_idx,
-					struct sk_buff *skb,
-					data_exchange_cb_t cb,
-					void *cb_context)
+int nfc_data_exchange(struct nfc_dev *dev, u32 target_idx, struct sk_buff *skb,
+		      data_exchange_cb_t cb, void *cb_context)
 {
 	int rc;
 
@@ -348,6 +355,18 @@ int nfc_data_exchange(struct nfc_dev *dev, u32 target_idx,
 		goto error;
 	}
 
+	if (dev->activated_target_idx == NFC_TARGET_IDX_NONE) {
+		rc = -ENOTCONN;
+		kfree_skb(skb);
+		goto error;
+	}
+
+	if (target_idx != dev->activated_target_idx) {
+		rc = -EADDRNOTAVAIL;
+		kfree_skb(skb);
+		goto error;
+	}
+
 	rc = dev->ops->data_exchange(dev, target_idx, skb, cb, cb_context);
 
 error:
@@ -357,8 +376,7 @@ error:
 
 int nfc_set_remote_general_bytes(struct nfc_dev *dev, u8 *gb, u8 gb_len)
 {
-	pr_debug("dev_name=%s gb_len=%d\n",
-			dev_name(&dev->dev), gb_len);
+	pr_debug("dev_name=%s gb_len=%d\n", dev_name(&dev->dev), gb_len);
 
 	if (gb_len > NFC_MAX_GT_LEN)
 		return -EINVAL;
@@ -367,12 +385,6 @@ int nfc_set_remote_general_bytes(struct nfc_dev *dev, u8 *gb, u8 gb_len)
 }
 EXPORT_SYMBOL(nfc_set_remote_general_bytes);
 
-u8 *nfc_get_local_general_bytes(struct nfc_dev *dev, u8 *gt_len)
-{
-	return nfc_llcp_general_bytes(dev, gt_len);
-}
-EXPORT_SYMBOL(nfc_get_local_general_bytes);
-
 /**
  * nfc_alloc_send_skb - allocate a skb for data exchange responses
  *
@@ -380,8 +392,8 @@ EXPORT_SYMBOL(nfc_get_local_general_bytes);
  * @gfp: gfp flags
  */
 struct sk_buff *nfc_alloc_send_skb(struct nfc_dev *dev, struct sock *sk,
-					unsigned int flags, unsigned int size,
-					unsigned int *err)
+				   unsigned int flags, unsigned int size,
+				   unsigned int *err)
 {
 	struct sk_buff *skb;
 	unsigned int total_size;
@@ -428,8 +440,8 @@ EXPORT_SYMBOL(nfc_alloc_recv_skb);
  * are found. After calling this function, the device driver must stop
  * polling for targets.
  */
-int nfc_targets_found(struct nfc_dev *dev, struct nfc_target *targets,
-							int n_targets)
+int nfc_targets_found(struct nfc_dev *dev,
+		      struct nfc_target *targets, int n_targets)
 {
 	int i;
 
@@ -446,7 +458,7 @@ int nfc_targets_found(struct nfc_dev *dev, struct nfc_target *targets,
 
 	kfree(dev->targets);
 	dev->targets = kmemdup(targets, n_targets * sizeof(struct nfc_target),
-								GFP_ATOMIC);
+			       GFP_ATOMIC);
 
 	if (!dev->targets) {
 		dev->n_targets = 0;
@@ -485,6 +497,7 @@ int nfc_target_lost(struct nfc_dev *dev, u32 target_idx)
 
 	dev->targets_generation++;
 	dev->n_targets--;
+	dev->activated_target_idx = NFC_TARGET_IDX_NONE;
 
 	if (dev->n_targets) {
 		memcpy(&dev->targets[i], &dev->targets[i + 1],
@@ -545,15 +558,14 @@ struct nfc_dev *nfc_get_device(unsigned idx)
  * @supported_protocols: NFC protocols supported by the device
  */
 struct nfc_dev *nfc_allocate_device(struct nfc_ops *ops,
-					u32 supported_protocols,
-					int tx_headroom,
-					int tx_tailroom)
+				    u32 supported_protocols,
+				    int tx_headroom, int tx_tailroom)
 {
 	static atomic_t dev_no = ATOMIC_INIT(0);
 	struct nfc_dev *dev;
 
 	if (!ops->start_poll || !ops->stop_poll || !ops->activate_target ||
-		!ops->deactivate_target || !ops->data_exchange)
+	    !ops->deactivate_target || !ops->data_exchange)
 		return NULL;
 
 	if (!supported_protocols)
@@ -578,6 +590,8 @@ struct nfc_dev *nfc_allocate_device(struct nfc_ops *ops,
 
 	/* first generation must not be 0 */
 	dev->targets_generation = 1;
+
+	dev->activated_target_idx = NFC_TARGET_IDX_NONE;
 
 	return dev;
 }
