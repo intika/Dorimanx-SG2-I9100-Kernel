@@ -2258,7 +2258,7 @@ static int ip_route_input_slow(struct sk_buff *skb, __be32 daddr, __be32 saddr,
 	struct flowi4	fl4;
 	unsigned int	flags = 0;
 	u32		itag = 0;
-	struct rtable *rth;
+	struct rtable	*rth;
 	unsigned int	hash;
 	__be32		spec_dst;
 	int		err = -EINVAL;
@@ -2434,7 +2434,7 @@ martian_source_keep_err:
 int ip_route_input_common(struct sk_buff *skb, __be32 daddr, __be32 saddr,
 			   u8 tos, struct net_device *dev, bool noref)
 {
-	struct rtable *rth;
+	struct rtable	*rth;
 	unsigned int	hash;
 	int iif = dev->ifindex;
 	struct net *net;

@@ -59,7 +59,7 @@ struct nfc_ops {
 };
 
 struct nfc_dev {
-	unsigned idx;
+	unsigned int idx;
 	struct device dev;
 	bool polling;
 	u32 supported_protocols;
