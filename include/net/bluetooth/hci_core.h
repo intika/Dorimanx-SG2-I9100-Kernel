@@ -275,6 +275,7 @@ struct hci_conn {
 	__u8		remote_cap;
 	__u8		remote_oob;
 	__u8		remote_auth;
+	bool		flush_key;
 
 	unsigned int	sent;
 
