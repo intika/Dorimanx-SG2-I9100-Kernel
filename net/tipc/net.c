@@ -181,12 +181,13 @@ int tipc_net_start(u32 addr)
 	tipc_subscr_stop();
 	tipc_cfg_stop();
 
+	write_lock_bh(&tipc_net_lock);
 	tipc_own_addr = addr;
 	tipc_mode = TIPC_NET_MODE;
 	tipc_named_reinit();
 	tipc_port_reinit();
-
 	tipc_bclink_init();
+	write_unlock_bh(&tipc_net_lock);
 
 	tipc_k_signal((Handler)tipc_subscr_start, 0);
 	tipc_k_signal((Handler)tipc_cfg_init, 0);
