@@ -172,6 +172,9 @@ static inline u32 ethtool_rxfh_indir_default(u32 index, u32 n_rx_rings)
  * @get_ts_info: Get the time stamping and PTP hardware clock capabilities.
  *	Drivers supporting transmit time stamps in software should set this to
  *	ethtool_op_get_ts_info().
+ * @get_module_info: Get the size and type of the eeprom contained within
+ *	a plug-in module.
+ * @get_module_eeprom: Get the eeprom information from the plug-in module
  *
  * All operations are optional (i.e. the function pointer may be set
  * to %NULL) and callers must take this into account.  Callers must
@@ -235,6 +238,10 @@ struct ethtool_ops {
 				 struct ethtool_dump *, void *);
 	int	(*set_dump)(struct net_device *, struct ethtool_dump *);
 	int	(*get_ts_info)(struct net_device *, struct ethtool_ts_info *);
+	int	(*get_module_info)(struct net_device *,
+				   struct ethtool_modinfo *);
+	int	(*get_module_eeprom)(struct net_device *,
+				     struct ethtool_eeprom *, u8 *);
 
 };
 
