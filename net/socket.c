@@ -2629,6 +2629,7 @@ EXPORT_SYMBOL(sock_unregister);
 static int __init sock_init(void)
 {
 	int err;
+
 	/*
 	 *      Initialize the network sysctl infrastructure.
 	 */
