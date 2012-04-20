@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2011 B.A.T.M.A.N. contributors:
+ * Copyright (C) 2007-2012 B.A.T.M.A.N. contributors:
  *
  * Marek Lindner, Simon Wunderlich
  *
@@ -45,6 +45,10 @@ static void bat_get_drvinfo(struct net_device *dev,
 static u32 bat_get_msglevel(struct net_device *dev);
 static void bat_set_msglevel(struct net_device *dev, u32 value);
 static u32 bat_get_link(struct net_device *dev);
+static void batadv_get_strings(struct net_device *dev, u32 stringset, u8 *data);
+static void batadv_get_ethtool_stats(struct net_device *dev,
+				     struct ethtool_stats *stats, u64 *data);
+static int batadv_get_sset_count(struct net_device *dev, int stringset);
 
 static const struct ethtool_ops bat_ethtool_ops = {
 	.get_settings = bat_get_settings,
@@ -52,6 +56,9 @@ static const struct ethtool_ops bat_ethtool_ops = {
 	.get_msglevel = bat_get_msglevel,
 	.set_msglevel = bat_set_msglevel,
 	.get_link = bat_get_link,
+	.get_strings = batadv_get_strings,
+	.get_ethtool_stats = batadv_get_ethtool_stats,
+	.get_sset_count = batadv_get_sset_count,
 };
 
 int my_skb_head_push(struct sk_buff *skb, unsigned int len)
@@ -108,6 +115,7 @@ static int interface_set_mac_addr(struct net_device *dev, void *p)
 	}
 
 	memcpy(dev->dev_addr, addr->sa_data, ETH_ALEN);
+	dev->addr_assign_type &= ~NET_ADDR_RANDOM;
 	return 0;
 }
 
@@ -200,11 +208,11 @@ static int interface_tx(struct sk_buff *skb, struct net_device *soft_iface)
 			goto dropped;
 
 		bcast_packet = (struct bcast_packet *)skb->data;
-		bcast_packet->version = COMPAT_VERSION;
-		bcast_packet->ttl = TTL;
+		bcast_packet->header.version = COMPAT_VERSION;
+		bcast_packet->header.ttl = TTL;
 
 		/* batman packet type: broadcast */
-		bcast_packet->packet_type = BAT_BCAST;
+		bcast_packet->header.packet_type = BAT_BCAST;
 
 		/* hw address of first interface is the orig mac because only
 		 * this mac is known throughout the mesh */
@@ -326,7 +334,6 @@ static const struct net_device_ops bat_netdev_ops = {
 static void interface_setup(struct net_device *dev)
 {
 	struct bat_priv *priv = netdev_priv(dev);
-	char dev_addr[ETH_ALEN];
 
 	ether_setup(dev);
 
@@ -343,8 +350,7 @@ static void interface_setup(struct net_device *dev)
 	dev->hard_header_len = BAT_HEADER_LEN;
 
 	/* generate random address */
-	random_ether_addr(dev_addr);
-	memcpy(dev->dev_addr, dev_addr, ETH_ALEN);
+	eth_hw_addr_random(dev);
 
 	SET_ETHTOOL_OPS(dev, &bat_ethtool_ops);
 
@@ -400,9 +406,18 @@ struct net_device *softif_create(const char *name)
 	bat_priv->primary_if = NULL;
 	bat_priv->num_ifaces = 0;
 
+	bat_priv->bat_counters = __alloc_percpu(sizeof(uint64_t) * BAT_CNT_NUM,
+						__alignof__(uint64_t));
+	if (!bat_priv->bat_counters)
+		goto unreg_soft_iface;
+
+	ret = bat_algo_select(bat_priv, bat_routing_algo);
+	if (ret < 0)
+		goto free_bat_counters;
+
 	ret = sysfs_add_meshif(soft_iface);
 	if (ret < 0)
-		goto unreg_soft_iface;
+		goto free_bat_counters;
 
 	ret = debugfs_add_meshif(soft_iface);
 	if (ret < 0)
@@ -418,6 +433,8 @@ unreg_debugfs:
 	debugfs_del_meshif(soft_iface);
 unreg_sysfs:
 	sysfs_del_meshif(soft_iface);
+free_bat_counters:
+	free_percpu(bat_priv->bat_counters);
 unreg_soft_iface:
 	unregister_netdevice(soft_iface);
 	return NULL;
@@ -482,4 +499,52 @@ static void bat_set_msglevel(struct net_device *dev, u32 value)
 static u32 bat_get_link(struct net_device *dev)
 {
 	return 1;
+}
+
+/* Inspired by drivers/net/ethernet/dlink/sundance.c:1702
+ * Declare each description string in struct.name[] to get fixed sized buffer
+ * and compile time checking for strings longer than ETH_GSTRING_LEN.
+ */
+static const struct {
+	const char name[ETH_GSTRING_LEN];
+} bat_counters_strings[] = {
+	{ "forward" },
+	{ "forward_bytes" },
+	{ "mgmt_tx" },
+	{ "mgmt_tx_bytes" },
+	{ "mgmt_rx" },
+	{ "mgmt_rx_bytes" },
+	{ "tt_request_tx" },
+	{ "tt_request_rx" },
+	{ "tt_response_tx" },
+	{ "tt_response_rx" },
+	{ "tt_roam_adv_tx" },
+	{ "tt_roam_adv_rx" },
+};
+
+static void batadv_get_strings(struct net_device *dev, uint32_t stringset,
+			       uint8_t *data)
+{
+	if (stringset == ETH_SS_STATS)
+		memcpy(data, bat_counters_strings,
+		       sizeof(bat_counters_strings));
+}
+
+static void batadv_get_ethtool_stats(struct net_device *dev,
+				     struct ethtool_stats *stats,
+				     uint64_t *data)
+{
+	struct bat_priv *bat_priv = netdev_priv(dev);
+	int i;
+
+	for (i = 0; i < BAT_CNT_NUM; i++)
+		data[i] = batadv_sum_counter(bat_priv, i);
+}
+
+static int batadv_get_sset_count(struct net_device *dev, int stringset)
+{
+	if (stringset == ETH_SS_STATS)
+		return BAT_CNT_NUM;
+
+	return -EOPNOTSUPP;
 }
