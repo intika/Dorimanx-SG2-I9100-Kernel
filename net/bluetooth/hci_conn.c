@@ -540,35 +540,31 @@ struct hci_conn *hci_connect(struct hci_dev *hdev, int type,
 		struct smp_ltk *ltk;
 
 		le = hci_conn_hash_lookup_ba(hdev, LE_LINK, dst);
-		if (le) {
-			BT_DBG("There is connected le link");
-			hci_conn_hold(le);
-			return le;
+		if (!le) {
+			ltk = hci_find_ltk_by_addr(hdev, dst, 100);
+			if (ltk) {
+				BT_DBG("There is stored LTK");
+				le = hci_conn_add(hdev, LE_LINK, 0, dst);
+				if (!le)
+					return ERR_PTR(-ENOMEM);
+				le->dst_type = ltk->bdaddr_type;
+			} else {
+				le = hci_conn_hash_lookup_state(hdev, LE_LINK,
+								BT_CONNECT);
+				if (le)
+					return ERR_PTR(-EBUSY);
+
+				le = hci_conn_add(hdev, LE_LINK, 0, dst);
+				if (!le)
+					return ERR_PTR(-ENOMEM);
+				le->dst_type = bdaddr_to_le(dst_type);
+			}
+
+			hci_le_connect(le);
 		}
 
-		ltk = hci_find_ltk_by_addr(hdev, dst, 100);
-
-		if (ltk) {
-			BT_DBG("There is stored LTK");
-			le = hci_conn_add(hdev, LE_LINK, 0, dst);
-			if (!le)
-				return ERR_PTR(-ENOMEM);
-			le->dst_type = ltk->bdaddr_type;
-		} else {
-			le = hci_conn_hash_lookup_state(hdev, LE_LINK,
-							BT_CONNECT);
-			if (le)
-				return ERR_PTR(-EBUSY);
-
-			le = hci_conn_add(hdev, LE_LINK, 0, dst);
-			if (!le)
-				return ERR_PTR(-ENOMEM);
-			le->dst_type = bdaddr_to_le(dst_type);
-		}
-
-		BT_DBG("----- le->dst_type %x", le->dst_type);
-
-		hci_le_connect(le);
+		le->pending_sec_level = sec_level;
+		le->auth_type = auth_type;
 
 		hci_conn_hold(le);
 
