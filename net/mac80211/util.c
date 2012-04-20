@@ -1755,3 +1755,4 @@ int ieee80211_ave_rssi(struct ieee80211_vif *vif)
 
 	return ifmgd->ave_beacon_signal;
 }
+EXPORT_SYMBOL_GPL(ieee80211_ave_rssi);
