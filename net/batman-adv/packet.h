@@ -120,7 +120,7 @@ struct batman_header {
 	uint8_t  tq;
 	uint8_t  tt_num_changes;
 	uint8_t  ttvn; /* translation table version number */
-	uint16_t tt_crc;
+	__be16   tt_crc;
 } __packed;
 
 #define BATMAN_OGM_HLEN sizeof(struct batman_ogm_packet)
