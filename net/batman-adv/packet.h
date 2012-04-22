@@ -105,7 +105,7 @@ enum bla_claimframe {
 struct bla_claim_dst {
 	uint8_t magic[3];	/* FF:43:05 */
 	uint8_t type;		/* bla_claimframe */
-	uint16_t group;		/* group id */
+	__be16 group;		/* group id */
 } __packed;
 
 struct batman_header {
@@ -132,7 +132,7 @@ struct icmp_packet {
 	uint8_t  msg_type; /* see ICMP message types above */
 	uint8_t  dst[ETH_ALEN];
 	uint8_t  orig[ETH_ALEN];
-	uint16_t seqno;
+	__be16   seqno;
 	uint8_t  uid;
 	uint8_t  reserved;
 } __packed;
@@ -148,7 +148,7 @@ struct icmp_packet_rr {
 	uint8_t  msg_type; /* see ICMP message types above */
 	uint8_t  dst[ETH_ALEN];
 	uint8_t  orig[ETH_ALEN];
-	uint16_t seqno;
+	__be16   seqno;
 	uint8_t  uid;
 	uint8_t  rr_cur;
 	uint8_t  rr[BAT_RR_LEN][ETH_ALEN];
@@ -171,7 +171,7 @@ struct unicast_frag_packet {
 	uint8_t  flags;
 	uint8_t  align;
 	uint8_t  orig[ETH_ALEN];
-	uint16_t seqno;
+	__be16   seqno;
 } __packed;
 
 struct bcast_packet {
@@ -179,7 +179,7 @@ struct bcast_packet {
 	uint8_t  version;  /* batman version field */
 	uint8_t  ttl;
 	uint8_t  reserved;
-	uint32_t seqno;
+	__be32   seqno;
 	uint8_t  orig[ETH_ALEN];
 } __packed;
 
@@ -188,7 +188,7 @@ struct vis_packet {
 	uint8_t  version;        /* batman version field */
 	uint8_t  ttl;		 /* TTL */
 	uint8_t  vis_type;	 /* which type of vis-participant sent this? */
-	uint32_t seqno;		 /* sequence number */
+	__be32   seqno;		 /* sequence number */
 	uint8_t  entries;	 /* number of entries behind this struct */
 	uint8_t  reserved;
 	uint8_t  vis_orig[ETH_ALEN];	/* originator reporting its neighbors */
