@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2011 B.A.T.M.A.N. contributors:
+ * Copyright (C) 2007-2012 B.A.T.M.A.N. contributors:
  *
  * Marek Lindner, Simon Wunderlich, Antonio Quartulli
  *
@@ -107,14 +107,6 @@ static struct tt_global_entry *tt_global_hash_find(struct bat_priv *bat_priv,
 					       struct tt_global_entry, common);
 	return tt_global_entry;
 
-}
-
-static bool is_out_of_time(unsigned long starting_time, unsigned long timeout)
-{
-	unsigned long deadline;
-	deadline = starting_time + msecs_to_jiffies(timeout);
-
-	return time_after(jiffies, deadline);
 }
 
 static void tt_local_entry_free_ref(struct tt_local_entry *tt_local_entry)
@@ -238,6 +230,11 @@ void tt_local_add(struct net_device *soft_iface, const uint8_t *addr,
 	if (compare_eth(addr, soft_iface->dev_addr))
 		tt_local_entry->common.flags |= TT_CLIENT_NOPURGE;
 
+	/* The local entry has to be marked as NEW to avoid to send it in
+	 * a full table response going out before the next ttvn increment
+	 * (consistency check) */
+	tt_local_entry->common.flags |= TT_CLIENT_NEW;
+
 	hash_added = hash_add(bat_priv->tt_local_hash, compare_tt, choose_orig,
 			 &tt_local_entry->common,
 			 &tt_local_entry->common.hash_entry);
@@ -249,11 +246,6 @@ void tt_local_add(struct net_device *soft_iface, const uint8_t *addr,
 	}
 
 	tt_local_event(bat_priv, addr, tt_local_entry->common.flags);
-
-	/* The local entry has to be marked as NEW to avoid to send it in
-	 * a full table response going out before the next ttvn increment
-	 * (consistency check) */
-	tt_local_entry->common.flags |= TT_CLIENT_NEW;
 
 	/* remove address from global hash if present */
 	tt_global_entry = tt_global_hash_find(bat_priv, addr);
@@ -296,7 +288,7 @@ int tt_changes_fill_buffer(struct bat_priv *bat_priv,
 	atomic_set(&bat_priv->tt_local_changes, 0);
 
 	list_for_each_entry_safe(entry, safe, &bat_priv->tt_changes_list,
-			list) {
+				 list) {
 		if (count < tot_changes) {
 			memcpy(buff + tt_len(count),
 			       &entry->change, sizeof(struct tt_change));
@@ -344,21 +336,21 @@ int tt_local_seq_print_text(struct seq_file *seq, void *offset)
 
 	primary_if = primary_if_get_selected(bat_priv);
 	if (!primary_if) {
-		ret = seq_printf(seq, "BATMAN mesh %s disabled - "
-				 "please specify interfaces to enable it\n",
+		ret = seq_printf(seq,
+				 "BATMAN mesh %s disabled - please specify interfaces to enable it\n",
 				 net_dev->name);
 		goto out;
 	}
 
 	if (primary_if->if_status != IF_ACTIVE) {
-		ret = seq_printf(seq, "BATMAN mesh %s disabled - "
-				 "primary interface not active\n",
+		ret = seq_printf(seq,
+				 "BATMAN mesh %s disabled - primary interface not active\n",
 				 net_dev->name);
 		goto out;
 	}
 
-	seq_printf(seq, "Locally retrieved addresses (from %s) "
-		   "announced via TT (TTVN: %u):\n",
+	seq_printf(seq,
+		   "Locally retrieved addresses (from %s) announced via TT (TTVN: %u):\n",
 		   net_dev->name, (uint8_t)atomic_read(&bat_priv->ttvn));
 
 	for (i = 0; i < hash->size; i++) {
@@ -368,17 +360,17 @@ int tt_local_seq_print_text(struct seq_file *seq, void *offset)
 		hlist_for_each_entry_rcu(tt_common_entry, node,
 					 head, hash_entry) {
 			seq_printf(seq, " * %pM [%c%c%c%c%c]\n",
-					tt_common_entry->addr,
-					(tt_common_entry->flags &
-					 TT_CLIENT_ROAM ? 'R' : '.'),
-					(tt_common_entry->flags &
-					 TT_CLIENT_NOPURGE ? 'P' : '.'),
-					(tt_common_entry->flags &
-					 TT_CLIENT_NEW ? 'N' : '.'),
-					(tt_common_entry->flags &
-					 TT_CLIENT_PENDING ? 'X' : '.'),
-					(tt_common_entry->flags &
-					 TT_CLIENT_WIFI ? 'W' : '.'));
+				   tt_common_entry->addr,
+				   (tt_common_entry->flags &
+				    TT_CLIENT_ROAM ? 'R' : '.'),
+				   (tt_common_entry->flags &
+				    TT_CLIENT_NOPURGE ? 'P' : '.'),
+				   (tt_common_entry->flags &
+				    TT_CLIENT_NEW ? 'N' : '.'),
+				   (tt_common_entry->flags &
+				    TT_CLIENT_PENDING ? 'X' : '.'),
+				   (tt_common_entry->flags &
+				    TT_CLIENT_WIFI ? 'W' : '.'));
 		}
 		rcu_read_unlock();
 	}
@@ -390,7 +382,7 @@ out:
 
 static void tt_local_set_pending(struct bat_priv *bat_priv,
 				 struct tt_local_entry *tt_local_entry,
-				 uint16_t flags)
+				 uint16_t flags, const char *message)
 {
 	tt_local_event(bat_priv, tt_local_entry->common.addr,
 		       tt_local_entry->common.flags | flags);
@@ -399,6 +391,10 @@ static void tt_local_set_pending(struct bat_priv *bat_priv,
 	 * to be kept in the table in order to send it in a full table
 	 * response issued before the net ttvn increment (consistency check) */
 	tt_local_entry->common.flags |= TT_CLIENT_PENDING;
+
+	bat_dbg(DBG_TT, bat_priv,
+		"Local tt entry (%pM) pending to be removed: %s\n",
+		tt_local_entry->common.addr, message);
 }
 
 void tt_local_remove(struct bat_priv *bat_priv, const uint8_t *addr,
@@ -411,10 +407,7 @@ void tt_local_remove(struct bat_priv *bat_priv, const uint8_t *addr,
 		goto out;
 
 	tt_local_set_pending(bat_priv, tt_local_entry, TT_CLIENT_DEL |
-			     (roaming ? TT_CLIENT_ROAM : NO_FLAGS));
-
-	bat_dbg(DBG_TT, bat_priv, "Local tt entry (%pM) pending to be removed: "
-		"%s\n", tt_local_entry->common.addr, message);
+			     (roaming ? TT_CLIENT_ROAM : NO_FLAGS), message);
 out:
 	if (tt_local_entry)
 		tt_local_entry_free_ref(tt_local_entry);
@@ -447,15 +440,12 @@ static void tt_local_purge(struct bat_priv *bat_priv)
 			if (tt_local_entry->common.flags & TT_CLIENT_PENDING)
 				continue;
 
-			if (!is_out_of_time(tt_local_entry->last_seen,
-					    TT_LOCAL_TIMEOUT * 1000))
+			if (!has_timed_out(tt_local_entry->last_seen,
+					   TT_LOCAL_TIMEOUT))
 				continue;
 
 			tt_local_set_pending(bat_priv, tt_local_entry,
-					     TT_CLIENT_DEL);
-			bat_dbg(DBG_TT, bat_priv, "Local tt entry (%pM) "
-				"pending to be removed: timed out\n",
-				tt_local_entry->common.addr);
+					     TT_CLIENT_DEL, "timed out");
 		}
 		spin_unlock_bh(list_lock);
 	}
@@ -691,15 +681,15 @@ int tt_global_seq_print_text(struct seq_file *seq, void *offset)
 
 	primary_if = primary_if_get_selected(bat_priv);
 	if (!primary_if) {
-		ret = seq_printf(seq, "BATMAN mesh %s disabled - please "
-				 "specify interfaces to enable it\n",
+		ret = seq_printf(seq,
+				 "BATMAN mesh %s disabled - please specify interfaces to enable it\n",
 				 net_dev->name);
 		goto out;
 	}
 
 	if (primary_if->if_status != IF_ACTIVE) {
-		ret = seq_printf(seq, "BATMAN mesh %s disabled - "
-				 "primary interface not active\n",
+		ret = seq_printf(seq,
+				 "BATMAN mesh %s disabled - primary interface not active\n",
 				 net_dev->name);
 		goto out;
 	}
@@ -901,7 +891,7 @@ void tt_global_del_orig(struct bat_priv *bat_priv,
 
 		spin_lock_bh(list_lock);
 		hlist_for_each_entry_safe(tt_common_entry, node, safe,
-					 head, hash_entry) {
+					  head, hash_entry) {
 			tt_global_entry = container_of(tt_common_entry,
 						       struct tt_global_entry,
 						       common);
@@ -921,6 +911,7 @@ void tt_global_del_orig(struct bat_priv *bat_priv,
 		spin_unlock_bh(list_lock);
 	}
 	atomic_set(&orig_node->tt_size, 0);
+	orig_node->tt_initialised = false;
 }
 
 static void tt_global_roam_purge(struct bat_priv *bat_priv)
@@ -945,12 +936,12 @@ static void tt_global_roam_purge(struct bat_priv *bat_priv)
 						       common);
 			if (!(tt_global_entry->common.flags & TT_CLIENT_ROAM))
 				continue;
-			if (!is_out_of_time(tt_global_entry->roam_at,
-					    TT_CLIENT_ROAM_TIMEOUT * 1000))
+			if (!has_timed_out(tt_global_entry->roam_at,
+					   TT_CLIENT_ROAM_TIMEOUT))
 				continue;
 
-			bat_dbg(DBG_TT, bat_priv, "Deleting global "
-				"tt entry (%pM): Roaming timeout\n",
+			bat_dbg(DBG_TT, bat_priv,
+				"Deleting global tt entry (%pM): Roaming timeout\n",
 				tt_global_entry->common.addr);
 
 			hlist_del_rcu(node);
@@ -1188,8 +1179,7 @@ static void tt_req_purge(struct bat_priv *bat_priv)
 
 	spin_lock_bh(&bat_priv->tt_req_list_lock);
 	list_for_each_entry_safe(node, safe, &bat_priv->tt_req_list, list) {
-		if (is_out_of_time(node->issued_at,
-		    TT_REQUEST_TIMEOUT * 1000)) {
+		if (has_timed_out(node->issued_at, TT_REQUEST_TIMEOUT)) {
 			list_del(&node->list);
 			kfree(node);
 		}
@@ -1207,8 +1197,8 @@ static struct tt_req_node *new_tt_req_node(struct bat_priv *bat_priv,
 	spin_lock_bh(&bat_priv->tt_req_list_lock);
 	list_for_each_entry(tt_req_node_tmp, &bat_priv->tt_req_list, list) {
 		if (compare_eth(tt_req_node_tmp, orig_node) &&
-		    !is_out_of_time(tt_req_node_tmp->issued_at,
-				    TT_REQUEST_TIMEOUT * 1000))
+		    !has_timed_out(tt_req_node_tmp->issued_at,
+				   TT_REQUEST_TIMEOUT))
 			goto unlock;
 	}
 
@@ -1345,11 +1335,11 @@ static int send_tt_request(struct bat_priv *bat_priv,
 	tt_request = (struct tt_query_packet *)skb_put(skb,
 				sizeof(struct tt_query_packet));
 
-	tt_request->packet_type = BAT_TT_QUERY;
-	tt_request->version = COMPAT_VERSION;
+	tt_request->header.packet_type = BAT_TT_QUERY;
+	tt_request->header.version = COMPAT_VERSION;
 	memcpy(tt_request->src, primary_if->net_dev->dev_addr, ETH_ALEN);
 	memcpy(tt_request->dst, dst_orig_node->orig, ETH_ALEN);
-	tt_request->ttl = TTL;
+	tt_request->header.ttl = TTL;
 	tt_request->ttvn = ttvn;
 	tt_request->tt_data = htons(tt_crc);
 	tt_request->flags = TT_REQUEST;
@@ -1361,8 +1351,9 @@ static int send_tt_request(struct bat_priv *bat_priv,
 	if (!neigh_node)
 		goto out;
 
-	bat_dbg(DBG_TT, bat_priv, "Sending TT_REQUEST to %pM via %pM "
-		"[%c]\n", dst_orig_node->orig, neigh_node->addr,
+	bat_dbg(DBG_TT, bat_priv,
+		"Sending TT_REQUEST to %pM via %pM [%c]\n",
+		dst_orig_node->orig, neigh_node->addr,
 		(full_table ? 'F' : '.'));
 
 	batadv_inc_counter(bat_priv, BAT_CNT_TT_REQUEST_TX);
@@ -1401,9 +1392,8 @@ static bool send_other_tt_response(struct bat_priv *bat_priv,
 	struct tt_query_packet *tt_response;
 
 	bat_dbg(DBG_TT, bat_priv,
-		"Received TT_REQUEST from %pM for "
-		"ttvn: %u (%pM) [%c]\n", tt_request->src,
-		tt_request->ttvn, tt_request->dst,
+		"Received TT_REQUEST from %pM for ttvn: %u (%pM) [%c]\n",
+		tt_request->src, tt_request->ttvn, tt_request->dst,
 		(tt_request->flags & TT_FULL_TABLE ? 'F' : '.'));
 
 	/* Let's get the orig node of the REAL destination */
@@ -1428,7 +1418,7 @@ static bool send_other_tt_response(struct bat_priv *bat_priv,
 
 	/* I don't have the requested data */
 	if (orig_ttvn != req_ttvn ||
-	    tt_request->tt_data != req_dst_orig_node->tt_crc)
+	    tt_request->tt_data != htons(req_dst_orig_node->tt_crc))
 		goto out;
 
 	/* If the full table has been explicitly requested */
@@ -1477,9 +1467,9 @@ static bool send_other_tt_response(struct bat_priv *bat_priv,
 		tt_response = (struct tt_query_packet *)skb->data;
 	}
 
-	tt_response->packet_type = BAT_TT_QUERY;
-	tt_response->version = COMPAT_VERSION;
-	tt_response->ttl = TTL;
+	tt_response->header.packet_type = BAT_TT_QUERY;
+	tt_response->header.version = COMPAT_VERSION;
+	tt_response->header.ttl = TTL;
 	memcpy(tt_response->src, req_dst_orig_node->orig, ETH_ALEN);
 	memcpy(tt_response->dst, tt_request->src, ETH_ALEN);
 	tt_response->flags = TT_RESPONSE;
@@ -1530,9 +1520,8 @@ static bool send_my_tt_response(struct bat_priv *bat_priv,
 	struct tt_query_packet *tt_response;
 
 	bat_dbg(DBG_TT, bat_priv,
-		"Received TT_REQUEST from %pM for "
-		"ttvn: %u (me) [%c]\n", tt_request->src,
-		tt_request->ttvn,
+		"Received TT_REQUEST from %pM for ttvn: %u (me) [%c]\n",
+		tt_request->src, tt_request->ttvn,
 		(tt_request->flags & TT_FULL_TABLE ? 'F' : '.'));
 
 
@@ -1596,9 +1585,9 @@ static bool send_my_tt_response(struct bat_priv *bat_priv,
 		tt_response = (struct tt_query_packet *)skb->data;
 	}
 
-	tt_response->packet_type = BAT_TT_QUERY;
-	tt_response->version = COMPAT_VERSION;
-	tt_response->ttl = TTL;
+	tt_response->header.packet_type = BAT_TT_QUERY;
+	tt_response->header.version = COMPAT_VERSION;
+	tt_response->header.ttl = TTL;
 	memcpy(tt_response->src, primary_if->net_dev->dev_addr, ETH_ALEN);
 	memcpy(tt_response->dst, tt_request->src, ETH_ALEN);
 	tt_response->flags = TT_RESPONSE;
@@ -1672,6 +1661,7 @@ static void _tt_update_changes(struct bat_priv *bat_priv,
 				 */
 				return;
 	}
+	orig_node->tt_initialised = true;
 }
 
 static void tt_fill_gtable(struct bat_priv *bat_priv,
@@ -1688,7 +1678,7 @@ static void tt_fill_gtable(struct bat_priv *bat_priv,
 
 	_tt_update_changes(bat_priv, orig_node,
 			   (struct tt_change *)(tt_response + 1),
-			   tt_response->tt_data, tt_response->ttvn);
+			   ntohs(tt_response->tt_data), tt_response->ttvn);
 
 	spin_lock_bh(&orig_node->tt_buff_lock);
 	kfree(orig_node->tt_buff);
@@ -1741,10 +1731,10 @@ void handle_tt_response(struct bat_priv *bat_priv,
 	struct tt_req_node *node, *safe;
 	struct orig_node *orig_node = NULL;
 
-	bat_dbg(DBG_TT, bat_priv, "Received TT_RESPONSE from %pM for "
-		"ttvn %d t_size: %d [%c]\n",
+	bat_dbg(DBG_TT, bat_priv,
+		"Received TT_RESPONSE from %pM for ttvn %d t_size: %d [%c]\n",
 		tt_response->src, tt_response->ttvn,
-		tt_response->tt_data,
+		ntohs(tt_response->tt_data),
 		(tt_response->flags & TT_FULL_TABLE ? 'F' : '.'));
 
 	/* we should have never asked a backbone gw */
@@ -1758,7 +1748,8 @@ void handle_tt_response(struct bat_priv *bat_priv,
 	if (tt_response->flags & TT_FULL_TABLE)
 		tt_fill_gtable(bat_priv, tt_response);
 	else
-		tt_update_changes(bat_priv, orig_node, tt_response->tt_data,
+		tt_update_changes(bat_priv, orig_node,
+				  ntohs(tt_response->tt_data),
 				  tt_response->ttvn,
 				  (struct tt_change *)(tt_response + 1));
 
@@ -1819,8 +1810,7 @@ static void tt_roam_purge(struct bat_priv *bat_priv)
 
 	spin_lock_bh(&bat_priv->tt_roam_list_lock);
 	list_for_each_entry_safe(node, safe, &bat_priv->tt_roam_list, list) {
-		if (!is_out_of_time(node->first_time,
-				    ROAMING_MAX_TIME * 1000))
+		if (!has_timed_out(node->first_time, ROAMING_MAX_TIME))
 			continue;
 
 		list_del(&node->list);
@@ -1847,8 +1837,7 @@ static bool tt_check_roam_count(struct bat_priv *bat_priv,
 		if (!compare_eth(tt_roam_node->addr, client))
 			continue;
 
-		if (is_out_of_time(tt_roam_node->first_time,
-				   ROAMING_MAX_TIME * 1000))
+		if (has_timed_out(tt_roam_node->first_time, ROAMING_MAX_TIME))
 			continue;
 
 		if (!atomic_dec_not_zero(&tt_roam_node->counter))
@@ -1899,9 +1888,9 @@ static void send_roam_adv(struct bat_priv *bat_priv, uint8_t *client,
 	roam_adv_packet = (struct roam_adv_packet *)skb_put(skb,
 					sizeof(struct roam_adv_packet));
 
-	roam_adv_packet->packet_type = BAT_ROAM_ADV;
-	roam_adv_packet->version = COMPAT_VERSION;
-	roam_adv_packet->ttl = TTL;
+	roam_adv_packet->header.packet_type = BAT_ROAM_ADV;
+	roam_adv_packet->header.version = COMPAT_VERSION;
+	roam_adv_packet->header.ttl = TTL;
 	primary_if = primary_if_get_selected(bat_priv);
 	if (!primary_if)
 		goto out;
@@ -2020,8 +2009,9 @@ static void tt_local_purge_pending_clients(struct bat_priv *bat_priv)
 			if (!(tt_common_entry->flags & TT_CLIENT_PENDING))
 				continue;
 
-			bat_dbg(DBG_TT, bat_priv, "Deleting local tt entry "
-				"(%pM): pending\n", tt_common_entry->addr);
+			bat_dbg(DBG_TT, bat_priv,
+				"Deleting local tt entry (%pM): pending\n",
+				tt_common_entry->addr);
 
 			atomic_dec(&bat_priv->num_local_tt);
 			hlist_del_rcu(node);
@@ -2133,12 +2123,10 @@ void tt_update_orig(struct bat_priv *bat_priv, struct orig_node *orig_node,
 		if (!orig_node->tt_initialised || ttvn != orig_ttvn ||
 		    orig_node->tt_crc != tt_crc) {
 request_table:
-			bat_dbg(DBG_TT, bat_priv, "TT inconsistency for %pM. "
-				"Need to retrieve the correct information "
-				"(ttvn: %u last_ttvn: %u crc: %u last_crc: "
-				"%u num_changes: %u)\n", orig_node->orig, ttvn,
-				orig_ttvn, tt_crc, orig_node->tt_crc,
-				tt_num_changes);
+			bat_dbg(DBG_TT, bat_priv,
+				"TT inconsistency for %pM. Need to retrieve the correct information (ttvn: %u last_ttvn: %u crc: %u last_crc: %u num_changes: %u)\n",
+				orig_node->orig, ttvn, orig_ttvn, tt_crc,
+				orig_node->tt_crc, tt_num_changes);
 			send_tt_request(bat_priv, orig_node, ttvn, tt_crc,
 					full_table);
 			return;
