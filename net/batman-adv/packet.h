@@ -113,7 +113,7 @@ struct batman_header {
 	uint8_t  version;  /* batman version field */
 	uint8_t  ttl;
 	uint8_t  flags;    /* 0x40: DIRECTLINK flag, 0x20 VIS_SERVER flag... */
-	uint32_t seqno;
+	__be32   seqno;
 	uint8_t  orig[ETH_ALEN];
 	uint8_t  prev_sender[ETH_ALEN];
 	uint8_t  gw_flags;  /* flags related to gateway class */
