@@ -852,7 +852,8 @@ static ssize_t do_tcp_sendpages(struct sock *sk, struct page *page, int offset,
 
 	while (size > 0) {
 		struct sk_buff *skb = tcp_write_queue_tail(sk);
-		int copy, i, can_coalesce;
+		int copy, i;
+		bool can_coalesce;
 
 		if (!tcp_send_head(sk) || (copy = size_goal - skb->len) <= 0) {
 new_segment:
