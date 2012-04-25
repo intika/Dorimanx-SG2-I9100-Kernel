@@ -1462,7 +1462,8 @@ static struct l2cap_chan *l2cap_global_chan_by_psm(int state, __le16 psm,
 	return c1;
 }
 
-int l2cap_chan_connect(struct l2cap_chan *chan, __le16 psm, u16 cid, bdaddr_t *dst)
+int l2cap_chan_connect(struct l2cap_chan *chan, __le16 psm, u16 cid,
+		       bdaddr_t *dst, u8 dst_type)
 {
 	struct sock *sk = chan->sk;
 	bdaddr_t *src = &bt_sk(sk)->src;
@@ -1472,8 +1473,8 @@ int l2cap_chan_connect(struct l2cap_chan *chan, __le16 psm, u16 cid, bdaddr_t *d
 	__u8 auth_type;
 	int err;
 
-	BT_DBG("%s -> %s psm 0x%2.2x", batostr(src), batostr(dst),
-	       __le16_to_cpu(chan->psm));
+	BT_DBG("%s -> %s (type %u) psm 0x%2.2x", batostr(src), batostr(dst),
+	       dst_type, __le16_to_cpu(chan->psm));
 
 	hdev = hci_get_route(dst, src);
 	if (!hdev)
@@ -1547,10 +1548,10 @@ int l2cap_chan_connect(struct l2cap_chan *chan, __le16 psm, u16 cid, bdaddr_t *d
 	auth_type = l2cap_get_auth_type(chan);
 
 	if (chan->dcid == L2CAP_CID_LE_DATA)
-		hcon = hci_connect(hdev, LE_LINK, 0, dst, BDADDR_LE_RANDOM,
+		hcon = hci_connect(hdev, LE_LINK, 0, dst, dst_type,
 				   chan->sec_level, auth_type);
 	else
-		hcon = hci_connect(hdev, ACL_LINK, 0, dst, BDADDR_BREDR,
+		hcon = hci_connect(hdev, ACL_LINK, 0, dst, dst_type,
 				   chan->sec_level, auth_type);
 
 	if (IS_ERR(hcon)) {
