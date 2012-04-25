@@ -202,7 +202,8 @@ static int sco_connect(struct sock *sk, __s8 is_wbs)
 
 	BT_DBG("type: %d, pkt_type: 0x%x", type, pkt_type);
 
-	hcon = hci_connect(hdev, type, pkt_type, dst, BT_SECURITY_LOW, HCI_AT_NO_BONDING);
+	hcon = hci_connect(hdev, type, pkt_type, dst, BDADDR_BREDR,
+			   BT_SECURITY_LOW, HCI_AT_NO_BONDING);
 	if (IS_ERR(hcon)) {
 		err = PTR_ERR(hcon);
 		goto done;

@@ -557,8 +557,8 @@ EXPORT_SYMBOL(hci_get_route);
 /* Create SCO, ACL or LE connection.
  * Device _must_ be locked */
 struct hci_conn *hci_connect(struct hci_dev *hdev, int type,
-					__u16 pkt_type, bdaddr_t *dst,
-					__u8 sec_level, __u8 auth_type)
+			     __u16 pkt_type, bdaddr_t *dst,
+			     __u8 dst_type, __u8 sec_level, __u8 auth_type)
 {
 	struct hci_conn *acl;
 	struct hci_conn *sco;
@@ -567,7 +567,6 @@ struct hci_conn *hci_connect(struct hci_dev *hdev, int type,
 	BT_DBG("%s dst %s", hdev->name, batostr(dst));
 
 	if (type == LE_LINK) {
-		struct adv_entry *entry;
 /* SSBT :: KJH + * to check le connection & stored key, if there is stored key, use addr_type. */
 		struct smp_ltk *ltk;
 
@@ -587,13 +586,10 @@ struct hci_conn *hci_connect(struct hci_dev *hdev, int type,
 				return ERR_PTR(-ENOMEM);
 			le->dst_type = ltk->bdaddr_type;
 		} else {
-			entry = hci_find_adv_entry(hdev, dst);
-			if (!entry)
-				return ERR_PTR(-EHOSTUNREACH);
-		le = hci_conn_add(hdev, LE_LINK, 0, dst);
-		if (!le)
-			return ERR_PTR(-ENOMEM);
-			le->dst_type = entry->bdaddr_type;
+			le = hci_conn_add(hdev, LE_LINK, 0, dst);
+			if (!le)
+				return ERR_PTR(-ENOMEM);
+			le->dst_type = bdaddr_to_le(dst_type);
 		}
 
 		BT_DBG("----- le->dst_type %x", le->dst_type);
