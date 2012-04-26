@@ -179,7 +179,6 @@ int tipc_net_start(u32 addr)
 		return -ENOPROTOOPT;
 
 	tipc_subscr_stop();
-	tipc_cfg_stop();
 
 	write_lock_bh(&tipc_net_lock);
 	tipc_own_addr = addr;
@@ -190,7 +189,7 @@ int tipc_net_start(u32 addr)
 	write_unlock_bh(&tipc_net_lock);
 
 	tipc_k_signal((Handler)tipc_subscr_start, 0);
-	tipc_k_signal((Handler)tipc_cfg_init, 0);
+	tipc_cfg_reinit();
 
 	info("Started in network mode\n");
 	info("Own node address %s, network identity %u\n",
