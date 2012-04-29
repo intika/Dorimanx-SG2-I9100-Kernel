@@ -11,6 +11,7 @@
 #ifdef __KERNEL__
 #include <linux/socket.h>
 #include <linux/in.h>
+#include <linux/in6.h>
 #else
 #include <netinet/in.h>
 #endif
@@ -36,6 +37,22 @@ struct sockaddr_l2tpip {
 	unsigned char	__pad[sizeof(struct sockaddr) - sizeof(sa_family_t) -
 			      sizeof(__be16) - sizeof(struct in_addr) -
 			      sizeof(__u32)];
+};
+
+/**
+ * struct sockaddr_l2tpip6 - the sockaddr structure for L2TP-over-IPv6 sockets
+ * @l2tp_family:  address family number AF_L2TPIP.
+ * @l2tp_addr:    protocol specific address information
+ * @l2tp_conn_id: connection id of tunnel
+ */
+struct sockaddr_l2tpip6 {
+	/* The first fields must match struct sockaddr_in6 */
+	__kernel_sa_family_t l2tp_family; /* AF_INET6 */
+	__be16		l2tp_unused;	/* INET port number (unused) */
+	__be32		l2tp_flowinfo;	/* IPv6 flow information */
+	struct in6_addr	l2tp_addr;	/* IPv6 address */
+	__u32		l2tp_scope_id;	/* scope id (new in RFC2553) */
+	__u32		l2tp_conn_id;	/* Connection ID of tunnel */
 };
 
 /*****************************************************************************
