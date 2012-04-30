@@ -820,6 +820,7 @@ struct mesh_config {
 	bool  dot11MeshGateAnnouncementProtocol;
 	bool dot11MeshForwarding;
 	s32 rssi_threshold;
+	u16 ht_opmode;
 };
 
 /**
