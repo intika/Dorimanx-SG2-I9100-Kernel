@@ -92,7 +92,7 @@ struct ipv6_params ipv6_defaults = {
 	.autoconf = 1,
 };
 
-static int disable_ipv6_mod = 0;
+static int disable_ipv6_mod;
 
 module_param_named(disable, disable_ipv6_mod, int, 0444);
 MODULE_PARM_DESC(disable, "Disable IPv6 module such that it is non-functional");
@@ -436,10 +436,12 @@ void inet6_destroy_sock(struct sock *sk)
 
 	/* Release rx options */
 
-	if ((skb = xchg(&np->pktoptions, NULL)) != NULL)
+	skb = xchg(&np->pktoptions, NULL);
+	if (skb != NULL)
 		kfree_skb(skb);
 
-	if ((skb = xchg(&np->rxpmtu, NULL)) != NULL)
+	skb = xchg(&np->rxpmtu, NULL);
+	if (skb != NULL)
 		kfree_skb(skb);
 
 	/* Free flowlabels */
@@ -447,7 +449,8 @@ void inet6_destroy_sock(struct sock *sk)
 
 	/* Free tx options */
 
-	if ((opt = xchg(&np->opt, NULL)) != NULL)
+	opt = xchg(&np->opt, NULL);
+	if (opt != NULL)
 		sock_kfree_s(sk, opt, opt->tot_len);
 }
 EXPORT_SYMBOL_GPL(inet6_destroy_sock);
