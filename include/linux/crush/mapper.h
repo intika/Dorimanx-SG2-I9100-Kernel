@@ -10,16 +10,11 @@
 
 #include "crush.h"
 
-extern int crush_find_rule(struct crush_map *map, int pool, int type, int size);
-extern int crush_do_rule(struct crush_map *map,
+extern int crush_find_rule(const struct crush_map *map, int ruleset, int type, int size);
+extern int crush_do_rule(const struct crush_map *map,
 			 int ruleno,
 			 int x, int *result, int result_max,
-<<<<<<< HEAD
 			 int forcefeed,    /* -1 for none */
-			 __u32 *weights);
-=======
-			 const __u32 *weights, int weight_max,
-			 int *scratch);
->>>>>>> d891ea2... Merge branch 'for-linus' of git://git.kernel.org/pub/scm/linux/kernel/git/sage/ceph-client
+			 const __u32 *weights);
 
 #endif
