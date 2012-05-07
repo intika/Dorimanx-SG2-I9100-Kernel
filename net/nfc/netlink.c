@@ -127,7 +127,7 @@ static int nfc_genl_dump_targets(struct sk_buff *skb,
 		cb->args[1] = (long) dev;
 	}
 
-	spin_lock_bh(&dev->targets_lock);
+	device_lock(&dev->dev);
 
 	cb->seq = dev->targets_generation;
 
@@ -140,7 +140,7 @@ static int nfc_genl_dump_targets(struct sk_buff *skb,
 		i++;
 	}
 
-	spin_unlock_bh(&dev->targets_lock);
+	device_unlock(&dev->dev);
 
 	cb->args[0] = i;
 
