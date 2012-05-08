@@ -76,7 +76,6 @@ bool mesh_matches_local(struct ieee80211_sub_if_data *sdata,
 	struct ieee80211_if_mesh *ifmsh = &sdata->u.mesh;
 	struct ieee80211_local *local = sdata->local;
 	u32 basic_rates = 0;
-	enum nl80211_channel_type sta_channel_type = NL80211_CHAN_NO_HT;
 
 	/*
 	 * As support for each feature is added, check for matching
@@ -103,15 +102,10 @@ bool mesh_matches_local(struct ieee80211_sub_if_data *sdata,
 	if (sdata->vif.bss_conf.basic_rates != basic_rates)
 		goto mismatch;
 
-	if (ie->ht_operation)
-		sta_channel_type =
-			ieee80211_ht_oper_to_channel_type(ie->ht_operation);
-
-	/* Disallow HT40+/- mismatch */
+	/* disallow peering with mismatched channel types for now */
 	if (ie->ht_operation &&
-	    local->_oper_channel_type > NL80211_CHAN_HT20 &&
-	    sta_channel_type > NL80211_CHAN_HT20 &&
-	    local->_oper_channel_type != sta_channel_type)
+	    (local->_oper_channel_type !=
+	     ieee80211_ht_oper_to_channel_type(ie->ht_operation)))
 		goto mismatch;
 
 	return true;
@@ -215,7 +209,7 @@ int mesh_rmc_check(u8 *sa, struct ieee80211s_hdr *mesh_hdr,
 			kmem_cache_free(rm_cache, p);
 			--entries;
 		} else if ((seqnum == p->seqnum) &&
-			   (memcmp(sa, p->sa, ETH_ALEN) == 0))
+			   (ether_addr_equal(sa, p->sa)))
 			return -1;
 	}
 
@@ -402,8 +396,7 @@ int mesh_add_ht_oper_ie(struct sk_buff *skb,
 		return -ENOMEM;
 
 	pos = skb_put(skb, 2 + sizeof(struct ieee80211_ht_operation));
-	ieee80211_ie_build_ht_oper(pos, ht_cap, channel, channel_type,
-				   sdata->vif.bss_conf.ht_operation_mode);
+	ieee80211_ie_build_ht_oper(pos, ht_cap, channel, channel_type);
 
 	return 0;
 }
@@ -595,15 +588,12 @@ void ieee80211_start_mesh(struct ieee80211_sub_if_data *sdata)
 	set_bit(MESH_WORK_HOUSEKEEPING, &ifmsh->wrkq_flags);
 	ieee80211_mesh_root_setup(ifmsh);
 	ieee80211_queue_work(&local->hw, &sdata->work);
-	sdata->vif.bss_conf.ht_operation_mode =
-				ifmsh->mshcfg.ht_opmode;
 	sdata->vif.bss_conf.beacon_int = MESH_DEFAULT_BEACON_INTERVAL;
 	sdata->vif.bss_conf.basic_rates =
 		ieee80211_mandatory_rates(sdata->local,
 					  sdata->local->hw.conf.channel->band);
 	ieee80211_bss_info_change_notify(sdata, BSS_CHANGED_BEACON |
 						BSS_CHANGED_BEACON_ENABLED |
-						BSS_CHANGED_HT |
 						BSS_CHANGED_BASIC_RATES |
 						BSS_CHANGED_BEACON_INT);
 }
@@ -649,7 +639,7 @@ static void ieee80211_mesh_rx_bcn_presp(struct ieee80211_sub_if_data *sdata,
 
 	/* ignore ProbeResp to foreign address */
 	if (stype == IEEE80211_STYPE_PROBE_RESP &&
-	    compare_ether_addr(mgmt->da, sdata->vif.addr))
+	    !ether_addr_equal(mgmt->da, sdata->vif.addr))
 		return;
 
 	baselen = (u8 *) mgmt->u.probe_resp.variable - (u8 *) mgmt;
