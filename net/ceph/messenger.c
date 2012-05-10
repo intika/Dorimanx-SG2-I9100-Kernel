@@ -699,7 +699,7 @@ static int prepare_write_connect(struct ceph_messenger *msgr,
 				 struct ceph_connection *con,
 				 int include_banner)
 {
-	unsigned int global_seq = get_global_seq(con->msgr, 0);
+	unsigned global_seq = get_global_seq(con->msgr, 0);
 	int proto;
 
 	switch (con->peer_name.type) {
@@ -816,7 +816,7 @@ static void iter_bio_next(struct bio **bio_iter, int *seg)
 static int write_partial_msg_pages(struct ceph_connection *con)
 {
 	struct ceph_msg *msg = con->out_msg;
-	unsigned int data_len = le32_to_cpu(msg->hdr.data_len);
+	unsigned data_len = le32_to_cpu(msg->hdr.data_len);
 	size_t len;
 	bool do_datacrc = !con->msgr->nocrc;
 	int ret;
@@ -1554,7 +1554,7 @@ static struct ceph_msg *ceph_alloc_msg(struct ceph_connection *con,
 
 static int read_partial_message_pages(struct ceph_connection *con,
 				      struct page **pages,
-				      unsigned int data_len, bool do_datacrc)
+				      unsigned data_len, bool do_datacrc)
 {
 	void *p;
 	int ret;
@@ -1587,7 +1587,7 @@ static int read_partial_message_pages(struct ceph_connection *con,
 #ifdef CONFIG_BLOCK
 static int read_partial_message_bio(struct ceph_connection *con,
 				    struct bio **bio_iter, int *bio_seg,
-				    unsigned int data_len, bool do_datacrc)
+				    unsigned data_len, bool do_datacrc)
 {
 	struct bio_vec *bv = bio_iovec_idx(*bio_iter, *bio_seg);
 	void *p;
@@ -1628,8 +1628,8 @@ static int read_partial_message(struct ceph_connection *con)
 {
 	struct ceph_msg *m = con->in_msg;
 	int ret;
-	int to, left;
-	unsigned int front_len, middle_len, data_len;
+	int to;
+	unsigned front_len, middle_len, data_len;
 	bool do_datacrc = !con->msgr->nocrc;
 	int skip;
 	u64 seq;
@@ -1638,15 +1638,10 @@ static int read_partial_message(struct ceph_connection *con)
 	dout("read_partial_message con %p msg %p\n", con, m);
 
 	/* header */
-	while (con->in_base_pos < sizeof(con->in_hdr)) {
-		left = sizeof(con->in_hdr) - con->in_base_pos;
-		ret = ceph_tcp_recvmsg(con->sock,
-				       (char *)&con->in_hdr + con->in_base_pos,
-				       left);
-		if (ret <= 0)
-			return ret;
-		con->in_base_pos += ret;
-	}
+	to = 0;
+	ret = read_partial(con, &to, sizeof (con->in_hdr), &con->in_hdr);
+	if (ret <= 0)
+		return ret;
 
 	crc = crc32c(0, &con->in_hdr, offsetof(struct ceph_msg_header, crc));
 	if (cpu_to_le32(crc) != con->in_hdr.crc) {
@@ -1759,16 +1754,11 @@ static int read_partial_message(struct ceph_connection *con)
 	}
 
 	/* footer */
-	to = sizeof(m->hdr) + sizeof(m->footer);
-	while (con->in_base_pos < to) {
-		left = to - con->in_base_pos;
-		ret = ceph_tcp_recvmsg(con->sock, (char *)&m->footer +
-				       (con->in_base_pos - sizeof(m->hdr)),
-				       left);
-		if (ret <= 0)
-			return ret;
-		con->in_base_pos += ret;
-	}
+	to = sizeof (m->hdr);
+	ret = read_partial(con, &to, sizeof (m->footer), &m->footer);
+	if (ret <= 0)
+		return ret;
+
 	dout("read_partial_message got msg %p %d (%u) + %d (%u) + %d (%u)\n",
 	     m, front_len, m->footer.front_crc, middle_len,
 	     m->footer.middle_crc, data_len, m->footer.data_crc);
@@ -2345,9 +2335,9 @@ void ceph_con_revoke_message(struct ceph_connection *con, struct ceph_msg *msg)
 {
 	mutex_lock(&con->mutex);
 	if (con->in_msg && con->in_msg == msg) {
-		unsigned int front_len = le32_to_cpu(con->in_hdr.front_len);
-		unsigned int middle_len = le32_to_cpu(con->in_hdr.middle_len);
-		unsigned int data_len = le32_to_cpu(con->in_hdr.data_len);
+		unsigned front_len = le32_to_cpu(con->in_hdr.front_len);
+		unsigned middle_len = le32_to_cpu(con->in_hdr.middle_len);
+		unsigned data_len = le32_to_cpu(con->in_hdr.data_len);
 
 		/* skip rest of message */
 		dout("con_revoke_pages %p msg %p revoked\n", con, msg);
