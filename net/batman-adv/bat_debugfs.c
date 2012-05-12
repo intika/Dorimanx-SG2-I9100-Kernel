@@ -225,7 +225,7 @@ static void debug_log_cleanup(struct bat_priv *bat_priv)
 static int originators_open(struct inode *inode, struct file *file)
 {
 	struct net_device *net_dev = (struct net_device *)inode->i_private;
-	return single_open(file, orig_seq_print_text, net_dev);
+	return single_open(file, batadv_orig_seq_print_text, net_dev);
 }
 
 static int gateways_open(struct inode *inode, struct file *file)
