@@ -460,7 +460,7 @@ static struct bat_attribute *mesh_attrs[] = {
 	NULL,
 };
 
-int sysfs_add_meshif(struct net_device *dev)
+int batadv_sysfs_add_meshif(struct net_device *dev)
 {
 	struct kobject *batif_kobject = &dev->dev.kobj;
 	struct bat_priv *bat_priv = netdev_priv(dev);
@@ -498,7 +498,7 @@ out:
 	return -ENOMEM;
 }
 
-void sysfs_del_meshif(struct net_device *dev)
+void batadv_sysfs_del_meshif(struct net_device *dev)
 {
 	struct bat_priv *bat_priv = netdev_priv(dev);
 	struct bat_attribute **bat_attr;
@@ -628,7 +628,7 @@ static struct bat_attribute *batman_attrs[] = {
 	NULL,
 };
 
-int sysfs_add_hardif(struct kobject **hardif_obj, struct net_device *dev)
+int batadv_sysfs_add_hardif(struct kobject **hardif_obj, struct net_device *dev)
 {
 	struct kobject *hardif_kobject = &dev->dev.kobj;
 	struct bat_attribute **bat_attr;
@@ -662,14 +662,14 @@ out:
 	return -ENOMEM;
 }
 
-void sysfs_del_hardif(struct kobject **hardif_obj)
+void batadv_sysfs_del_hardif(struct kobject **hardif_obj)
 {
 	kobject_put(*hardif_obj);
 	*hardif_obj = NULL;
 }
 
-int throw_uevent(struct bat_priv *bat_priv, enum uev_type type,
-		 enum uev_action action, const char *data)
+int batadv_throw_uevent(struct bat_priv *bat_priv, enum uev_type type,
+			enum uev_action action, const char *data)
 {
 	int ret = -ENOMEM;
 	struct hard_iface *primary_if = NULL;
