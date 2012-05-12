@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2011 B.A.T.M.A.N. contributors:
+ * Copyright (C) 2008-2012 B.A.T.M.A.N. contributors:
  *
  * Simon Wunderlich
  *
@@ -462,7 +462,7 @@ static struct vis_info *add_packet(struct bat_priv *bat_priv,
 
 	/* Make it a broadcast packet, if required */
 	if (make_broadcast)
-		memcpy(packet->target_orig, broadcast_addr, ETH_ALEN);
+		memcpy(packet->target_orig, batadv_broadcast_addr, ETH_ALEN);
 
 	/* repair if entries is longer than packet. */
 	if (packet->entries * sizeof(struct vis_info_entry) > vis_info_len)
@@ -524,7 +524,7 @@ void batadv_receive_client_update_packet(struct bat_priv *bat_priv,
 
 	/* Are we the target for this VIS packet? */
 	if (vis_server == VIS_TYPE_SERVER_SYNC	&&
-	    is_my_mac(vis_packet->target_orig))
+	    batadv_is_my_mac(vis_packet->target_orig))
 		are_target = 1;
 
 	spin_lock_bh(&bat_priv->vis_hash_lock);
@@ -543,7 +543,7 @@ void batadv_receive_client_update_packet(struct bat_priv *bat_priv,
 		send_list_add(bat_priv, info);
 
 		/* ... we're not the recipient (and thus need to forward). */
-	} else if (!is_my_mac(packet->target_orig)) {
+	} else if (!batadv_is_my_mac(packet->target_orig)) {
 		send_list_add(bat_priv, info);
 	}
 
@@ -623,8 +623,8 @@ static int generate_vis_packet(struct bat_priv *bat_priv)
 	info->first_seen = jiffies;
 	packet->vis_type = atomic_read(&bat_priv->vis_mode);
 
-	memcpy(packet->target_orig, broadcast_addr, ETH_ALEN);
-	packet->ttl = TTL;
+	memcpy(packet->target_orig, batadv_broadcast_addr, ETH_ALEN);
+	packet->header.ttl = TTL;
 	packet->seqno = htonl(ntohl(packet->seqno) + 1);
 	packet->entries = 0;
 	skb_trim(info->skb_packet, sizeof(*packet));
@@ -721,8 +721,7 @@ static void purge_vis_packets(struct bat_priv *bat_priv)
 			if (info == bat_priv->my_vis_info)
 				continue;
 
-			if (time_after(jiffies,
-				       info->first_seen + VIS_TIMEOUT * HZ)) {
+			if (has_timed_out(info->first_seen, VIS_TIMEOUT)) {
 				hlist_del(node);
 				send_list_del(info);
 				kref_put(&info->refcount, free_info);
@@ -826,19 +825,19 @@ static void send_vis_packet(struct bat_priv *bat_priv, struct vis_info *info)
 		goto out;
 
 	packet = (struct vis_packet *)info->skb_packet->data;
-	if (packet->ttl < 2) {
+	if (packet->header.ttl < 2) {
 		pr_debug("Error - can't send vis packet: ttl exceeded\n");
 		goto out;
 	}
 
 	memcpy(packet->sender_orig, primary_if->net_dev->dev_addr, ETH_ALEN);
-	packet->ttl--;
+	packet->header.ttl--;
 
 	if (is_broadcast_ether_addr(packet->target_orig))
 		broadcast_vis_packet(bat_priv, info);
 	else
 		unicast_vis_packet(bat_priv, info);
-	packet->ttl++; /* restore TTL */
+	packet->header.ttl++; /* restore TTL */
 
 out:
 	if (primary_if)
@@ -918,9 +917,9 @@ int batadv_vis_init(struct bat_priv *bat_priv)
 	INIT_LIST_HEAD(&bat_priv->my_vis_info->send_list);
 	kref_init(&bat_priv->my_vis_info->refcount);
 	bat_priv->my_vis_info->bat_priv = bat_priv;
-	packet->version = COMPAT_VERSION;
-	packet->packet_type = BAT_VIS;
-	packet->ttl = TTL;
+	packet->header.version = COMPAT_VERSION;
+	packet->header.packet_type = BAT_VIS;
+	packet->header.ttl = TTL;
 	packet->seqno = 0;
 	packet->entries = 0;
 
@@ -979,6 +978,6 @@ void batadv_vis_quit(struct bat_priv *bat_priv)
 static void start_vis_timer(struct bat_priv *bat_priv)
 {
 	INIT_DELAYED_WORK(&bat_priv->vis_work, send_vis_packets);
-	queue_delayed_work(bat_event_workqueue, &bat_priv->vis_work,
+	queue_delayed_work(batadv_event_workqueue, &bat_priv->vis_work,
 			   msecs_to_jiffies(VIS_INTERVAL));
 }
