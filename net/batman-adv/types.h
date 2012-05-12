@@ -1,5 +1,4 @@
-/*
- * Copyright (C) 2007-2011 B.A.T.M.A.N. contributors:
+/* Copyright (C) 2007-2012 B.A.T.M.A.N. contributors:
  *
  * Marek Lindner, Simon Wunderlich
  *
@@ -16,10 +15,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
  * 02110-1301, USA
- *
  */
-
-
 
 #ifndef _NET_BATMAN_ADV_TYPES_H_
 #define _NET_BATMAN_ADV_TYPES_H_
@@ -49,8 +45,7 @@ struct hard_iface {
 	struct rcu_head rcu;
 };
 
-/**
- *	orig_node - structure for orig_list maintaining nodes of mesh
+/*	orig_node - structure for orig_list maintaining nodes of mesh
  *	@primary_addr: hosts primary interface address
  *	@last_seen: when last packet from this node was received
  *	@bcast_seqno_reset: time when the broadcast seqno window was reset
@@ -81,11 +76,13 @@ struct orig_node {
 	int16_t tt_buff_len;
 	spinlock_t tt_buff_lock; /* protects tt_buff */
 	atomic_t tt_size;
+	bool tt_initialised;
 	/* The tt_poss_change flag is used to detect an ongoing roaming phase.
 	 * If true, then I sent a Roaming_adv to this orig_node and I have to
 	 * inspect every packet directed to it to check whether it is still
 	 * the true destination or not. This flag will be reset to false as
-	 * soon as I receive a new TTVN from this orig_node */
+	 * soon as I receive a new TTVN from this orig_node
+	 */
 	bool tt_poss_change;
 	uint32_t last_real_seqno;
 	uint8_t last_ttl;
@@ -100,7 +97,8 @@ struct orig_node {
 	struct bat_priv *bat_priv;
 	unsigned long last_frag_packet;
 	/* ogm_cnt_lock protects: bcast_own, bcast_own_sum,
-	 * neigh_node->real_bits, neigh_node->real_packet_count */
+	 * neigh_node->real_bits, neigh_node->real_packet_count
+	 */
 	spinlock_t ogm_cnt_lock;
 	/* bcast_seqno_lock protects bcast_bits, last_bcast_seqno */
 	spinlock_t bcast_seqno_lock;
@@ -117,8 +115,7 @@ struct gw_node {
 	struct rcu_head rcu;
 };
 
-/**
- *	neigh_node
+/*	neigh_node
  *	@last_seen: when last packet via this neighbor was received
  */
 struct neigh_node {
@@ -190,7 +187,8 @@ struct bat_priv {
 	 * If true, then I received a Roaming_adv and I have to inspect every
 	 * packet directed to me to check whether I am still the true
 	 * destination or not. This flag will be reset to false as soon as I
-	 * increase my TTVN */
+	 * increase my TTVN
+	 */
 	bool tt_poss_change;
 	char num_ifaces;
 	struct debug_log *debug_log;
@@ -238,6 +236,7 @@ struct bat_priv {
 	atomic_t gw_reselect;
 	struct hard_iface __rcu *primary_if;  /* rcu protected pointer */
 	struct vis_info *my_vis_info;
+	struct bat_algo_ops *bat_algo_ops;
 };
 
 struct socket_client {
@@ -324,8 +323,7 @@ struct tt_roam_node {
 	struct list_head list;
 };
 
-/**
- *	forw_packet - structure for forw_list maintaining packets to be
+/*	forw_packet - structure for forw_list maintaining packets to be
  *	              send/forwarded
  */
 struct forw_packet {
@@ -367,7 +365,8 @@ struct frag_packet_list_entry {
 struct vis_info {
 	unsigned long first_seen;
 	/* list of server-neighbors we received a vis-packet
-	 * from.  we should not reply to them. */
+	 * from.  we should not reply to them.
+	 */
 	struct list_head recv_list;
 	struct list_head send_list;
 	struct kref refcount;
@@ -375,7 +374,7 @@ struct vis_info {
 	struct bat_priv *bat_priv;
 	/* this packet might be part of the vis send queue. */
 	struct sk_buff *skb_packet;
-	/* vis_info may follow here*/
+	/* vis_info may follow here */
 } __packed;
 
 struct vis_info_entry {

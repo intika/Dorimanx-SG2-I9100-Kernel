@@ -1,5 +1,4 @@
-/*
- * Copyright (C) 2007-2011 B.A.T.M.A.N. contributors:
+/* Copyright (C) 2007-2012 B.A.T.M.A.N. contributors:
  *
  * Marek Lindner, Simon Wunderlich
  *
@@ -16,7 +15,6 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
  * 02110-1301, USA
- *
  */
 
 #ifndef _NET_BATMAN_ADV_PACKET_H_
@@ -81,7 +79,8 @@ enum tt_query_flags {
 
 /* TT_CLIENT flags.
  * Flags from 1 to 1 << 7 are sent on the wire, while flags from 1 << 8 to
- * 1 << 15 are used for local computation only */
+ * 1 << 15 are used for local computation only
+ */
 enum tt_client_flags {
 	TT_CLIENT_DEL     = 1 << 0,
 	TT_CLIENT_ROAM    = 1 << 1,
@@ -112,6 +111,10 @@ struct batman_header {
 	uint8_t  packet_type;
 	uint8_t  version;  /* batman version field */
 	uint8_t  ttl;
+} __packed;
+
+struct batman_ogm_packet {
+	struct batman_header header;
 	uint8_t  flags;    /* 0x40: DIRECTLINK flag, 0x20 VIS_SERVER flag... */
 	__be32   seqno;
 	uint8_t  orig[ETH_ALEN];
@@ -126,9 +129,7 @@ struct batman_header {
 #define BATMAN_OGM_HLEN sizeof(struct batman_ogm_packet)
 
 struct icmp_packet {
-	uint8_t  packet_type;
-	uint8_t  version;  /* batman version field */
-	uint8_t  ttl;
+	struct batman_header header;
 	uint8_t  msg_type; /* see ICMP message types above */
 	uint8_t  dst[ETH_ALEN];
 	uint8_t  orig[ETH_ALEN];
@@ -140,11 +141,10 @@ struct icmp_packet {
 #define BAT_RR_LEN 16
 
 /* icmp_packet_rr must start with all fields from imcp_packet
- * as this is assumed by code that handles ICMP packets */
+ * as this is assumed by code that handles ICMP packets
+ */
 struct icmp_packet_rr {
-	uint8_t  packet_type;
-	uint8_t  version;  /* batman version field */
-	uint8_t  ttl;
+	struct batman_header header;
 	uint8_t  msg_type; /* see ICMP message types above */
 	uint8_t  dst[ETH_ALEN];
 	uint8_t  orig[ETH_ALEN];
@@ -155,17 +155,13 @@ struct icmp_packet_rr {
 } __packed;
 
 struct unicast_packet {
-	uint8_t  packet_type;
-	uint8_t  version;  /* batman version field */
-	uint8_t  ttl;
+	struct batman_header header;
 	uint8_t  ttvn; /* destination translation table version number */
 	uint8_t  dest[ETH_ALEN];
 } __packed;
 
 struct unicast_frag_packet {
-	uint8_t  packet_type;
-	uint8_t  version;  /* batman version field */
-	uint8_t  ttl;
+	struct batman_header header;
 	uint8_t  ttvn; /* destination translation table version number */
 	uint8_t  dest[ETH_ALEN];
 	uint8_t  flags;
@@ -175,18 +171,14 @@ struct unicast_frag_packet {
 } __packed;
 
 struct bcast_packet {
-	uint8_t  packet_type;
-	uint8_t  version;  /* batman version field */
-	uint8_t  ttl;
+	struct batman_header header;
 	uint8_t  reserved;
 	__be32   seqno;
 	uint8_t  orig[ETH_ALEN];
 } __packed;
 
 struct vis_packet {
-	uint8_t  packet_type;
-	uint8_t  version;        /* batman version field */
-	uint8_t  ttl;		 /* TTL */
+	struct batman_header header;
 	uint8_t  vis_type;	 /* which type of vis-participant sent this? */
 	__be32   seqno;		 /* sequence number */
 	uint8_t  entries;	 /* number of entries behind this struct */
@@ -197,12 +189,11 @@ struct vis_packet {
 } __packed;
 
 struct tt_query_packet {
-	uint8_t  packet_type;
-	uint8_t  version;  /* batman version field */
-	uint8_t  ttl;
+	struct batman_header header;
 	/* the flag field is a combination of:
 	 * - TT_REQUEST or TT_RESPONSE
-	 * - TT_FULL_TABLE */
+	 * - TT_FULL_TABLE
+	 */
 	uint8_t  flags;
 	uint8_t  dst[ETH_ALEN];
 	uint8_t  src[ETH_ALEN];
@@ -210,19 +201,19 @@ struct tt_query_packet {
 	 * if TT_REQUEST: ttvn that triggered the
 	 *		  request
 	 * if TT_RESPONSE: new ttvn for the src
-	 *		   orig_node */
+	 *		   orig_node
+	 */
 	uint8_t  ttvn;
 	/* tt_data field is:
 	 * if TT_REQUEST: crc associated with the
 	 *		  ttvn
-	 * if TT_RESPONSE: table_size */
-	__be16   tt_data;
+	 * if TT_RESPONSE: table_size
+	 */
+	__be16 tt_data;
 } __packed;
 
 struct roam_adv_packet {
-	uint8_t  packet_type;
-	uint8_t  version;
-	uint8_t  ttl;
+	struct batman_header header;
 	uint8_t  reserved;
 	uint8_t  dst[ETH_ALEN];
 	uint8_t  src[ETH_ALEN];

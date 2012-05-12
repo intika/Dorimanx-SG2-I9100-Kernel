@@ -1,5 +1,4 @@
-/*
- * Copyright (C) 2007-2011 B.A.T.M.A.N. contributors:
+/* Copyright (C) 2007-2012 B.A.T.M.A.N. contributors:
  *
  * Marek Lindner
  *
@@ -16,7 +15,6 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
  * 02110-1301, USA
- *
  */
 
 #include "main.h"
@@ -59,8 +57,7 @@ static int bat_socket_open(struct inode *inode, struct file *file)
 	}
 
 	if (i == ARRAY_SIZE(socket_client_hash)) {
-		pr_err("Error - can't add another packet client: "
-		       "maximum number of clients reached\n");
+		pr_err("Error - can't add another packet client: maximum number of clients reached\n");
 		kfree(socket_client);
 		return -EXFULL;
 	}
@@ -162,8 +159,7 @@ static ssize_t bat_socket_write(struct file *file, const char __user *buff,
 
 	if (len < sizeof(struct icmp_packet)) {
 		bat_dbg(DBG_BATMAN, bat_priv,
-			"Error - can't send packet from char device: "
-			"invalid packet size\n");
+			"Error - can't send packet from char device: invalid packet size\n");
 		return -EINVAL;
 	}
 
@@ -191,27 +187,25 @@ static ssize_t bat_socket_write(struct file *file, const char __user *buff,
 		goto free_skb;
 	}
 
-	if (icmp_packet->packet_type != BAT_ICMP) {
+	if (icmp_packet->header.packet_type != BAT_ICMP) {
 		bat_dbg(DBG_BATMAN, bat_priv,
-			"Error - can't send packet from char device: "
-			"got bogus packet type (expected: BAT_ICMP)\n");
+			"Error - can't send packet from char device: got bogus packet type (expected: BAT_ICMP)\n");
 		len = -EINVAL;
 		goto free_skb;
 	}
 
 	if (icmp_packet->msg_type != ECHO_REQUEST) {
 		bat_dbg(DBG_BATMAN, bat_priv,
-			"Error - can't send packet from char device: "
-			"got bogus message type (expected: ECHO_REQUEST)\n");
+			"Error - can't send packet from char device: got bogus message type (expected: ECHO_REQUEST)\n");
 		len = -EINVAL;
 		goto free_skb;
 	}
 
 	icmp_packet->uid = socket_client->index;
 
-	if (icmp_packet->version != COMPAT_VERSION) {
+	if (icmp_packet->header.version != COMPAT_VERSION) {
 		icmp_packet->msg_type = PARAMETER_PROBLEM;
-		icmp_packet->version = COMPAT_VERSION;
+		icmp_packet->header.version = COMPAT_VERSION;
 		bat_socket_add_packet(socket_client, icmp_packet, packet_len);
 		goto free_skb;
 	}
@@ -316,7 +310,8 @@ static void bat_socket_add_packet(struct socket_client *socket_client,
 	spin_lock_bh(&socket_client->lock);
 
 	/* while waiting for the lock the socket_client could have been
-	 * deleted */
+	 * deleted
+	 */
 	if (!socket_client_hash[icmp_packet->uid]) {
 		spin_unlock_bh(&socket_client->lock);
 		kfree(socket_packet);

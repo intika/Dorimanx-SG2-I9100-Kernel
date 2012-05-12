@@ -1,5 +1,4 @@
-/*
- * Copyright (C) 2009-2011 B.A.T.M.A.N. contributors:
+/* Copyright (C) 2009-2012 B.A.T.M.A.N. contributors:
  *
  * Marek Lindner
  *
@@ -16,7 +15,6 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
  * 02110-1301, USA
- *
  */
 
 #include "main.h"
@@ -33,7 +31,8 @@
 #include <linux/if_vlan.h>
 
 /* This is the offset of the options field in a dhcp packet starting at
- * the beginning of the dhcp header */
+ * the beginning of the dhcp header
+ */
 #define DHCP_OPTIONS_OFFSET 240
 #define DHCP_REQUEST 3
 
@@ -151,14 +150,13 @@ static struct gw_node *gw_get_best_gw_node(struct bat_priv *bat_priv)
 			}
 			break;
 
-		default: /**
-			  * 2:  stable connection (use best statistic)
+		default: /* 2:  stable connection (use best statistic)
 			  * 3:  fast-switch (use best statistic but change as
 			  *     soon as a better gateway appears)
 			  * XX: late-switch (use best statistic but change as
 			  *     soon as a better gateway appears which has
 			  *     $routing_class more tq points)
-			  **/
+			  */
 			if (router->tq_avg > max_tq) {
 				if (curr_gw)
 					gw_node_free_ref(curr_gw);
@@ -190,12 +188,11 @@ void batadv_gw_election(struct bat_priv *bat_priv)
 	struct neigh_node *router = NULL;
 	char gw_addr[18] = { '\0' };
 
-	/**
-	 * The batman daemon checks here if we already passed a full originator
+	/* The batman daemon checks here if we already passed a full originator
 	 * cycle in order to make sure we don't choose the first gateway we
 	 * hear about. This check is based on the daemon's uptime which we
 	 * don't have.
-	 **/
+	 */
 	if (atomic_read(&bat_priv->gw_mode) != GW_MODE_CLIENT)
 		goto out;
 
@@ -226,16 +223,13 @@ void batadv_gw_election(struct bat_priv *bat_priv)
 	} else if ((!curr_gw) && (next_gw)) {
 		bat_dbg(DBG_BATMAN, bat_priv,
 			"Adding route to gateway %pM (gw_flags: %i, tq: %i)\n",
-			next_gw->orig_node->orig,
-			next_gw->orig_node->gw_flags,
+			next_gw->orig_node->orig, next_gw->orig_node->gw_flags,
 			router->tq_avg);
 		batadv_throw_uevent(bat_priv, UEV_GW, UEV_ADD, gw_addr);
 	} else {
 		bat_dbg(DBG_BATMAN, bat_priv,
-			"Changing route to gateway %pM "
-			"(gw_flags: %i, tq: %i)\n",
-			next_gw->orig_node->orig,
-			next_gw->orig_node->gw_flags,
+			"Changing route to gateway %pM (gw_flags: %i, tq: %i)\n",
+			next_gw->orig_node->orig, next_gw->orig_node->gw_flags,
 			router->tq_avg);
 		batadv_throw_uevent(bat_priv, UEV_GW, UEV_CHANGE, gw_addr);
 	}
@@ -281,17 +275,15 @@ void batadv_gw_check_election(struct bat_priv *bat_priv,
 	if (orig_tq_avg < gw_tq_avg)
 		goto out;
 
-	/**
-	 * if the routing class is greater than 3 the value tells us how much
+	/* if the routing class is greater than 3 the value tells us how much
 	 * greater the TQ value of the new gateway must be
-	 **/
+	 */
 	if ((atomic_read(&bat_priv->gw_sel_class) > 3) &&
 	    (orig_tq_avg - gw_tq_avg < atomic_read(&bat_priv->gw_sel_class)))
 		goto out;
 
 	bat_dbg(DBG_BATMAN, bat_priv,
-		"Restarting gateway selection: better gateway found (tq curr: "
-		"%i, tq new: %i)\n",
+		"Restarting gateway selection: better gateway found (tq curr: %i, tq new: %i)\n",
 		gw_tq_avg, orig_tq_avg);
 
 deselect:
@@ -341,8 +333,7 @@ void batadv_gw_node_update(struct bat_priv *bat_priv,
 	struct hlist_node *node;
 	struct gw_node *gw_node, *curr_gw;
 
-	/**
-	 * Note: We don't need a NULL check here, since curr_gw never gets
+	/* Note: We don't need a NULL check here, since curr_gw never gets
 	 * dereferenced. If curr_gw is NULL we also should not exit as we may
 	 * have this gateway in our list (duplication check!) even though we
 	 * have no currently selected gateway.
@@ -355,8 +346,7 @@ void batadv_gw_node_update(struct bat_priv *bat_priv,
 			continue;
 
 		bat_dbg(DBG_BATMAN, bat_priv,
-			"Gateway class of originator %pM changed from "
-			"%i to %i\n",
+			"Gateway class of originator %pM changed from %i to %i\n",
 			orig_node->orig, gw_node->orig_node->gw_flags,
 			new_gwflags);
 
@@ -400,7 +390,7 @@ void batadv_gw_node_purge(struct bat_priv *bat_priv)
 {
 	struct gw_node *gw_node, *curr_gw;
 	struct hlist_node *node, *node_tmp;
-	unsigned long timeout = 2 * PURGE_TIMEOUT * HZ;
+	unsigned long timeout = msecs_to_jiffies(2 * PURGE_TIMEOUT);
 	int do_deselect = 0;
 
 	curr_gw = gw_get_selected_gw_node(bat_priv);
@@ -431,9 +421,7 @@ void batadv_gw_node_purge(struct bat_priv *bat_priv)
 		gw_node_free_ref(curr_gw);
 }
 
-/**
- * fails if orig_node has no router
- */
+/* fails if orig_node has no router */
 static int _write_buffer_text(struct bat_priv *bat_priv, struct seq_file *seq,
 			      const struct gw_node *gw_node)
 {
@@ -478,23 +466,23 @@ int batadv_gw_client_seq_print_text(struct seq_file *seq, void *offset)
 
 	primary_if = primary_if_get_selected(bat_priv);
 	if (!primary_if) {
-		ret = seq_printf(seq, "BATMAN mesh %s disabled - please "
-				 "specify interfaces to enable it\n",
+		ret = seq_printf(seq,
+				 "BATMAN mesh %s disabled - please specify interfaces to enable it\n",
 				 net_dev->name);
 		goto out;
 	}
 
 	if (primary_if->if_status != IF_ACTIVE) {
-		ret = seq_printf(seq, "BATMAN mesh %s disabled - "
-				 "primary interface not active\n",
+		ret = seq_printf(seq,
+				 "BATMAN mesh %s disabled - primary interface not active\n",
 				 net_dev->name);
 		goto out;
 	}
 
-	seq_printf(seq, "      %-12s (%s/%i) %17s [%10s]: gw_class ... "
-		   "[B.A.T.M.A.N. adv %s, MainIF/MAC: %s/%pM (%s)]\n",
-		   "Gateway", "#", TQ_MAX_VALUE, "Nexthop",
-		   "outgoingIF", SOURCE_VERSION, primary_if->net_dev->name,
+	seq_printf(seq,
+		   "      %-12s (%s/%i) %17s [%10s]: gw_class ... [B.A.T.M.A.N. adv %s, MainIF/MAC: %s/%pM (%s)]\n",
+		   "Gateway", "#", TQ_MAX_VALUE, "Nexthop", "outgoingIF",
+		   SOURCE_VERSION, primary_if->net_dev->name,
 		   primary_if->net_dev->dev_addr, net_dev->name);
 
 	rcu_read_lock();
@@ -539,12 +527,14 @@ static bool is_type_dhcprequest(struct sk_buff *skb, int header_len)
 	/* Access the dhcp option lists. Each entry is made up by:
 	 * - octet 1: option type
 	 * - octet 2: option data len (only if type != 255 and 0)
-	 * - octet 3: option data */
+	 * - octet 3: option data
+	 */
 	while (*p != 255 && !ret) {
 		/* p now points to the first octet: option type */
 		if (*p == 53) {
 			/* type 53 is the message type option.
-			 * Jump the len octet and go to the data octet */
+			 * Jump the len octet and go to the data octet
+			 */
 			if (pkt_len < 2)
 				goto out;
 			p += 2;
@@ -633,7 +623,7 @@ bool batadv_gw_is_dhcp_target(struct sk_buff *skb, unsigned int *header_len)
 
 	/* check for bootp port */
 	if ((ntohs(ethhdr->h_proto) == ETH_P_IP) &&
-	     (ntohs(udphdr->dest) != 67))
+	    (ntohs(udphdr->dest) != 67))
 		return false;
 
 	if ((ntohs(ethhdr->h_proto) == ETH_P_IPV6) &&
@@ -672,7 +662,8 @@ bool batadv_gw_out_of_range(struct bat_priv *bat_priv,
 	switch (atomic_read(&bat_priv->gw_mode)) {
 	case GW_MODE_SERVER:
 		/* If we are a GW then we are our best GW. We can artificially
-		 * set the tq towards ourself as the maximum value */
+		 * set the tq towards ourself as the maximum value
+		 */
 		curr_tq_avg = TQ_MAX_VALUE;
 		break;
 	case GW_MODE_CLIENT:
@@ -686,7 +677,8 @@ bool batadv_gw_out_of_range(struct bat_priv *bat_priv,
 
 		/* If the dhcp packet has been sent to a different gw,
 		 * we have to evaluate whether the old gw is still
-		 * reliable enough */
+		 * reliable enough
+		 */
 		neigh_curr = batadv_find_router(bat_priv, curr_gw->orig_node,
 						NULL);
 		if (!neigh_curr)
