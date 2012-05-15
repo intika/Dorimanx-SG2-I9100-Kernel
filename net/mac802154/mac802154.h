@@ -58,60 +58,6 @@ struct mac802154_priv {
 #define	MAC802154_DEVICE_STOPPED	0x00
 #define MAC802154_DEVICE_RUN		0x01
 
-/* Slave interface definition.
- *
- * Slaves represent typical network interfaces available from userspace.
- * Each ieee802154 device/transceiver may have several slaves and able
- * to be associated with several networks at the same time.
- */
-struct mac802154_sub_if_data {
-	struct list_head list; /* the ieee802154_priv->slaves list */
-
-	struct mac802154_priv *hw;
-	struct net_device *dev;
-
-	int type;
-
-	spinlock_t mib_lock;
-
-	__le16 pan_id;
-	__le16 short_addr;
-
-	u8 chan;
-	u8 page;
-
-	/* MAC BSN field */
-	u8 bsn;
-	/* MAC DSN field */
-	u8 dsn;
-};
-
 #define mac802154_to_priv(_hw)	container_of(_hw, struct mac802154_priv, hw)
-
-#define MAC802154_CHAN_NONE		0xff /* No channel is assigned */
-
-extern struct ieee802154_reduced_mlme_ops mac802154_mlme_reduced;
-extern struct ieee802154_mlme_ops mac802154_mlme_wpan;
-
-int mac802154_slave_open(struct net_device *dev);
-int mac802154_slave_close(struct net_device *dev);
-
-void mac802154_monitors_rx(struct mac802154_priv *priv, struct sk_buff *skb);
-void mac802154_monitor_setup(struct net_device *dev);
-
-void mac802154_wpans_rx(struct mac802154_priv *priv, struct sk_buff *skb);
-void mac802154_wpan_setup(struct net_device *dev);
-
-netdev_tx_t mac802154_tx(struct mac802154_priv *priv, struct sk_buff *skb,
-			 u8 page, u8 chan);
-
-/* MIB callbacks */
-void mac802154_dev_set_short_addr(struct net_device *dev, u16 val);
-u16 mac802154_dev_get_short_addr(const struct net_device *dev);
-void mac802154_dev_set_ieee_addr(struct net_device *dev);
-u16 mac802154_dev_get_pan_id(const struct net_device *dev);
-void mac802154_dev_set_pan_id(struct net_device *dev, u16 val);
-void mac802154_dev_set_page_channel(struct net_device *dev, u8 page, u8 chan);
-u8 mac802154_dev_get_dsn(const struct net_device *dev);
 
 #endif /* MAC802154_H */
