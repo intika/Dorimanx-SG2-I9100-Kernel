@@ -951,7 +951,7 @@ void svc_close_all(struct svc_serv *serv)
 	}
 	/*
 	 * At this point the sp_sockets lists will stay empty, since
-	 * svc_enqueue will not add new entries without taking the
+	 * svc_xprt_enqueue will not add new entries without taking the
 	 * sp_lock and checking XPT_BUSY.
 	 */
 	list_for_each_entry_safe(xprt, tmp, &serv->sv_tempsocks, xpt_list)
