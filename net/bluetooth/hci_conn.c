@@ -195,7 +195,7 @@ void hci_setup_sync(struct hci_conn *conn, __u16 handle)
 }
 
 void hci_le_conn_update(struct hci_conn *conn, u16 min, u16 max,
-					u16 latency, u16 to_multiplier)
+			u16 latency, u16 to_multiplier)
 {
 	struct hci_cp_le_conn_update cp;
 	struct hci_dev *hdev = conn->hdev;
@@ -215,7 +215,7 @@ void hci_le_conn_update(struct hci_conn *conn, u16 min, u16 max,
 EXPORT_SYMBOL(hci_le_conn_update);
 
 void hci_le_start_enc(struct hci_conn *conn, __le16 ediv, __u8 rand[8],
-							__u8 ltk[16])
+		      __u8 ltk[16])
 {
 	struct hci_dev *hdev = conn->hdev;
 	struct hci_cp_le_start_enc cp;
@@ -271,7 +271,7 @@ void hci_sco_setup(struct hci_conn *conn, __u8 status)
 static void hci_conn_timeout(struct work_struct *work)
 {
 	struct hci_conn *conn = container_of(work, struct hci_conn,
-							disc_work.work);
+					     disc_work.work);
 	__u8 reason;
 
 	BT_DBG("conn %p state %s", conn, state_to_string(conn->state));
@@ -351,7 +351,7 @@ static void hci_conn_auto_accept(unsigned long arg)
 	struct hci_dev *hdev = conn->hdev;
 
 	hci_send_cmd(hdev, HCI_OP_USER_CONFIRM_REPLY, sizeof(conn->dst),
-								&conn->dst);
+		     &conn->dst);
 }
 
 static void hci_conn_encrypt_set(unsigned long arg)
@@ -425,9 +425,9 @@ struct hci_conn *hci_conn_add(struct hci_dev *hdev, int type,
 	INIT_DELAYED_WORK(&conn->disc_work, hci_conn_timeout);
 	setup_timer(&conn->idle_timer, hci_conn_idle, (unsigned long)conn);
 	setup_timer(&conn->auto_accept_timer, hci_conn_auto_accept,
-							(unsigned long) conn);
+		    (unsigned long) conn);
 	setup_timer(&conn->encrypt_timer, hci_conn_encrypt_set,
-							(unsigned long) conn);
+		    (unsigned long) conn);
 
 	atomic_set(&conn->refcnt, 0);
 
@@ -615,7 +615,7 @@ struct hci_conn *hci_connect(struct hci_dev *hdev, int type,
 	hci_conn_hold(sco);
 
 	if (acl->state == BT_CONNECTED &&
-			(sco->state == BT_OPEN || sco->state == BT_CLOSED)) {
+	    (sco->state == BT_OPEN || sco->state == BT_CLOSED)) {
 		set_bit(HCI_CONN_POWER_SAVE, &acl->flags);
 		hci_conn_enter_active_mode(acl, BT_POWER_FORCE_ACTIVE_ON);
 
@@ -670,7 +670,7 @@ static int hci_conn_auth(struct hci_conn *conn, __u8 sec_level, __u8 auth_type)
 
 		cp.handle = cpu_to_le16(conn->handle);
 		hci_send_cmd(conn->hdev, HCI_OP_AUTH_REQUESTED,
-							sizeof(cp), &cp);
+			     sizeof(cp), &cp);
 		if (conn->key_type != 0xff)
 			set_bit(HCI_CONN_REAUTH_PEND, &conn->flags);
 	}
@@ -688,7 +688,7 @@ static void hci_conn_encrypt(struct hci_conn *conn)
 		cp.handle  = cpu_to_le16(conn->handle);
 		cp.encrypt = 0x01;
 		hci_send_cmd(conn->hdev, HCI_OP_SET_CONN_ENCRYPT, sizeof(cp),
-									&cp);
+			     &cp);
 	}
 }
 
@@ -718,8 +718,7 @@ int hci_conn_security(struct hci_conn *conn, __u8 sec_level, __u8 auth_type)
 	/* An unauthenticated combination key has sufficient security for
 	   security level 1 and 2. */
 	if (conn->key_type == HCI_LK_UNAUTH_COMBINATION &&
-			(sec_level == BT_SECURITY_MEDIUM ||
-			sec_level == BT_SECURITY_LOW))
+	    (sec_level == BT_SECURITY_MEDIUM || sec_level == BT_SECURITY_LOW))
 		goto encrypt;
 
 	/* A combination key has always sufficient security for the security
@@ -729,8 +728,7 @@ int hci_conn_security(struct hci_conn *conn, __u8 sec_level, __u8 auth_type)
 	   High security level requires the combination key,
 	   maximum PIN code length (16) is recommended not mandatory */
 	if (conn->key_type == HCI_LK_COMBINATION &&
-			(sec_level > BT_SECURITY_LOW ||
-			conn->pin_length == 16))
+	    (sec_level > BT_SECURITY_LOW || conn->pin_length == 16))
 		goto encrypt;
 
 auth:
@@ -773,7 +771,7 @@ int hci_conn_change_link_key(struct hci_conn *conn)
 		struct hci_cp_change_conn_link_key cp;
 		cp.handle = cpu_to_le16(conn->handle);
 		hci_send_cmd(conn->hdev, HCI_OP_CHANGE_CONN_LINK_KEY,
-							sizeof(cp), &cp);
+			     sizeof(cp), &cp);
 	}
 
 	return 0;
@@ -851,7 +849,7 @@ void hci_conn_enter_active_mode(struct hci_conn *conn, __u8 force_active)
 timer:
 	if (hdev->idle_timeout > 0)
 		mod_timer(&conn->idle_timer,
-			jiffies + msecs_to_jiffies(hdev->idle_timeout));
+			  jiffies + msecs_to_jiffies(hdev->idle_timeout));
 }
 
 /* Drop all connection on the device */
