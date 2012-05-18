@@ -1199,7 +1199,6 @@ int ip6_append_data(struct sock *sk, int getfrag(void *from, char *to,
 	int copy;
 	int err;
 	int offset = 0;
-	int csummode = CHECKSUM_NONE;
 	__u8 tx_flags = 0;
 
 	if (flags&MSG_PROBE)
@@ -1409,7 +1408,7 @@ alloc_new_skb:
 			/*
 			 *	Fill in the control structures
 			 */
-			skb->ip_summed = csummode;
+			skb->ip_summed = CHECKSUM_NONE;
 			skb->csum = 0;
 			/* reserve for fragmentation and ipsec header */
 			skb_reserve(skb, hh_len + sizeof(struct frag_hdr) +
@@ -1452,7 +1451,6 @@ alloc_new_skb:
 			transhdrlen = 0;
 			exthdrlen = 0;
 			dst_exthdrlen = 0;
-			csummode = CHECKSUM_NONE;
 
 			/*
 			 * Put the packet on the pending queue
