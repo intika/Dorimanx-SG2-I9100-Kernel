@@ -260,9 +260,6 @@ config BQL
 	select DQL
 	default y
 
-config HAVE_BPF_JIT
-	bool
-
 config NET_LL_RX_POLL
 	bool "Low Latency Receive Poll"
 	depends on X86_TSC
@@ -367,3 +364,7 @@ source "net/nfc/Kconfig"
 
 
 endif   # if NET
+
+# Used by archs to tell that they support BPF_JIT
+config HAVE_BPF_JIT
+	bool
