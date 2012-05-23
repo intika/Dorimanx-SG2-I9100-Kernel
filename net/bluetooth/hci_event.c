@@ -421,7 +421,8 @@ static void hci_cc_read_voice_setting(struct hci_dev *hdev, struct sk_buff *skb)
 		hdev->notify(hdev, HCI_NOTIFY_VOICE_SETTING);
 }
 
-static void hci_cc_write_voice_setting(struct hci_dev *hdev, struct sk_buff *skb)
+static void hci_cc_write_voice_setting(struct hci_dev *hdev,
+				       struct sk_buff *skb)
 {
 	__u8 status = *((__u8 *) skb->data);
 	__u16 setting;
@@ -660,7 +661,8 @@ static void hci_setup_link_policy(struct hci_dev *hdev)
 	hci_send_cmd(hdev, HCI_OP_WRITE_DEF_LINK_POLICY, sizeof(cp), &cp);
 }
 
-static void hci_cc_read_local_commands(struct hci_dev *hdev, struct sk_buff *skb)
+static void hci_cc_read_local_commands(struct hci_dev *hdev,
+				       struct sk_buff *skb)
 {
 	struct hci_rp_read_local_commands *rp = (void *) skb->data;
 
@@ -678,7 +680,8 @@ done:
 	hci_req_complete(hdev, HCI_OP_READ_LOCAL_COMMANDS, rp->status);
 }
 
-static void hci_cc_read_local_features(struct hci_dev *hdev, struct sk_buff *skb)
+static void hci_cc_read_local_features(struct hci_dev *hdev,
+				       struct sk_buff *skb)
 {
 	struct hci_rp_read_local_features *rp = (void *) skb->data;
 
@@ -1888,7 +1891,8 @@ static void hci_conn_request_evt(struct hci_dev *hdev, struct sk_buff *skb)
 		if (ie)
 			memcpy(ie->data.dev_class, ev->dev_class, 3);
 
-		conn = hci_conn_hash_lookup_ba(hdev, ev->link_type, &ev->bdaddr);
+		conn = hci_conn_hash_lookup_ba(hdev, ev->link_type,
+					       &ev->bdaddr);
 		if (!conn) {
 			/* pkt_type not yet used for incoming connections */
 			conn = hci_conn_add(hdev, ev->link_type, 0, &ev->bdaddr);
@@ -2779,7 +2783,8 @@ static void hci_mode_change_evt(struct hci_dev *hdev, struct sk_buff *skb)
 		conn->mode = ev->mode;
 		conn->interval = __le16_to_cpu(ev->interval);
 
-		if (!test_and_clear_bit(HCI_CONN_MODE_CHANGE_PEND, &conn->flags)) {
+		if (!test_and_clear_bit(HCI_CONN_MODE_CHANGE_PEND,
+					&conn->flags)) {
 			if (conn->mode == HCI_CM_ACTIVE)
 				set_bit(HCI_CONN_POWER_SAVE, &conn->flags);
 			else
@@ -2867,6 +2872,7 @@ static void hci_link_key_request_evt(struct hci_dev *hdev, struct sk_buff *skb)
 			BT_DBG("%s ignoring unauthenticated key", hdev->name);
 			goto not_found;
 		}
+
 		/* - This is mgmt only. hciops doesn't checking like this. -
 		* If device is pre 2.1 & security level is high, combination key type is required.
 		* (core spec 4.0 GAP 1671p)
@@ -2881,11 +2887,12 @@ static void hci_link_key_request_evt(struct hci_dev *hdev, struct sk_buff *skb)
 		/*
 		*if (key->type == HCI_LK_COMBINATION && key->pin_len < 16 &&
 		*		conn->pending_sec_level == BT_SECURITY_HIGH) {
-		*	BT_DBG("%s ignoring key unauthenticated for high \
-		*	       security", hdev->name);
+		*	BT_DBG("%s ignoring key unauthenticated for high security",
+		*	       hdev->name);
 		*	goto not_found;
 		*}
 		*/
+
 		conn->key_type = key->type;
 		conn->pin_length = key->pin_len;
 	}
@@ -3271,8 +3278,8 @@ static void hci_io_capa_request_evt(struct hci_dev *hdev, struct sk_buff *skb)
 		conn->auth_type = hci_get_auth_req(conn);
 		cp.authentication = conn->auth_type;
 
-		if ((conn->out || test_bit(HCI_CONN_REMOTE_OOB, &conn->flags)) &&
-		    hci_find_remote_oob_data(hdev, &conn->dst))
+		if (hci_find_remote_oob_data(hdev, &conn->dst) &&
+		    (conn->out || test_bit(HCI_CONN_REMOTE_OOB, &conn->flags)))
 			cp.oob_data = 0x01;
 		else
 			cp.oob_data = 0x00;
