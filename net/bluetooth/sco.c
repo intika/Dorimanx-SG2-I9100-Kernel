@@ -940,7 +940,7 @@ done:
 /* ----- SCO interface with lower layer (HCI) ----- */
 int sco_connect_ind(struct hci_dev *hdev, bdaddr_t *bdaddr)
 {
-	register struct sock *sk;
+	struct sock *sk;
 	int lm = 0;
 
 	BT_DBG("hdev %s, bdaddr %s", hdev->name, batostr(bdaddr));
