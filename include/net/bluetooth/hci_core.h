@@ -108,7 +108,7 @@ struct link_key {
 	struct list_head list;
 	bdaddr_t bdaddr;
 	u8 type;
-	u8 val[16];
+	u8 val[HCI_LINK_KEY_SIZE];
 	u8 pin_len;
 };
 
