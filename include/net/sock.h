@@ -629,6 +629,15 @@ static inline struct user_namespace *sk_user_ns(struct sock *sk)
 	return sk->sk_socket->file->f_cred->user_ns;
 }
 
+static inline struct user_namespace *sk_user_ns(struct sock *sk)
+{
+	/* Careful only use this in a context where these parameters
+	 * can not change and must all be valid, such as recvmsg from
+	 * userspace.
+	 */
+	return sk->sk_socket->file->f_cred->user_ns;
+}
+
 /* Sock flags */
 enum sock_flags {
 	SOCK_DEAD,
