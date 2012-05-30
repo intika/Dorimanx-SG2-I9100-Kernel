@@ -554,6 +554,11 @@ struct hci_conn *hci_connect(struct hci_dev *hdev, int type,
 				return ERR_PTR(-ENOMEM);
 			le->dst_type = ltk->bdaddr_type;
 		} else {
+			le = hci_conn_hash_lookup_state(hdev, LE_LINK,
+							BT_CONNECT);
+			if (le)
+				return ERR_PTR(-EBUSY);
+
 			le = hci_conn_add(hdev, LE_LINK, 0, dst);
 			if (!le)
 				return ERR_PTR(-ENOMEM);
