@@ -580,6 +580,9 @@ void l2cap_chan_del(struct l2cap_chan *chan, int err)
 			/* Too long to disconnect incoming ACL from local device.(40sec) */
 			conn->hcon->out = 1;
 			hci_conn_put(conn->hcon);
+
+			if (chan->chan_type != L2CAP_CHAN_CONN_FIX_A2MP)
+				hci_conn_put(conn->hcon);
 		}
 	}
 
