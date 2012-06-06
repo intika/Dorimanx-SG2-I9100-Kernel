@@ -5092,113 +5092,6 @@ wl_cfg80211_change_bss(struct wiphy *wiphy,
 }
 
 static s32
-wl_cfg80211_set_channel(struct wiphy *wiphy, struct net_device *dev,
-	struct ieee80211_channel *chan,
-	enum nl80211_channel_type channel_type)
-{
-	s32 _chan;
-	chanspec_t chspec = 0;
-	chanspec_t fw_chspec = 0;
-	u32 bw = WL_CHANSPEC_BW_20;
-
-	s32 err = BCME_OK;
-	s32 bw_cap = 0;
-	struct {
-		u32 band;
-		u32 bw_cap;
-	} param = {0, 0};
-	struct wl_priv *wl = wiphy_priv(wiphy);
-
-	if (wl->p2p_net == dev) {
-		dev = wl_to_prmry_ndev(wl);
-	}
-	_chan = ieee80211_frequency_to_channel(chan->center_freq);
-	WL_ERR(("netdev_ifidx(%d), chan_type(%d) target channel(%d) \n",
-		dev->ifindex, channel_type, _chan));
-
-#ifdef NOT_YET
-	switch (channel_type) {
-		case NL80211_CHAN_HT40MINUS:
-			/* secondary channel is below the control channel */
-			chspec = CH40MHZ_CHSPEC(channel, WL_CHANSPEC_CTL_SB_UPPER);
-			break;
-		case NL80211_CHAN_HT40PLUS:
-			/* secondary channel is above the control channel */
-			chspec = CH40MHZ_CHSPEC(channel, WL_CHANSPEC_CTL_SB_LOWER);
-			break;
-		default:
-			chspec = CH20MHZ_CHSPEC(channel);
-
-	}
-#endif /* NOT_YET */
-
-	if (chan->band == IEEE80211_BAND_5GHZ) {
-		param.band = WLC_BAND_5G;
-		err = wldev_iovar_getbuf(dev, "bw_cap", &param, sizeof(param),
-			wl->ioctl_buf, WLC_IOCTL_SMLEN, &wl->ioctl_buf_sync);
-		if (err) {
-			if (err != BCME_UNSUPPORTED) {
-				WL_ERR(("bw_cap failed, %d\n", err));
-				return err;
-			} else {
-				err = wldev_iovar_getint(dev, "mimo_bw_cap", &bw_cap);
-				if (err) {
-					WL_ERR(("error get mimo_bw_cap (%d)\n", err));
-				}
-				if (bw_cap != WLC_N_BW_20ALL)
-					bw = WL_CHANSPEC_BW_40;
-			}
-		} else {
-			if (WL_BW_CAP_80MHZ(wl->ioctl_buf[0]))
-				bw = WL_CHANSPEC_BW_80;
-			else if (WL_BW_CAP_40MHZ(wl->ioctl_buf[0]))
-				bw = WL_CHANSPEC_BW_40;
-			else
-				bw = WL_CHANSPEC_BW_20;
-
-		}
-
-	} else if (chan->band == IEEE80211_BAND_2GHZ)
-		bw = WL_CHANSPEC_BW_20;
-set_channel:
-	chspec = wf_channel2chspec(_chan, bw);
-	if (wf_chspec_valid(chspec)) {
-		fw_chspec = wl_chspec_host_to_driver(chspec);
-		if (fw_chspec != INVCHANSPEC) {
-			if ((err = wldev_iovar_setint(dev, "chanspec",
-				fw_chspec)) == BCME_BADCHAN) {
-				if (bw == WL_CHANSPEC_BW_80)
-					goto change_bw;
-				err = wldev_ioctl(dev, WLC_SET_CHANNEL,
-					&_chan, sizeof(_chan), true);
-				if (err < 0) {
-					WL_ERR(("WLC_SET_CHANNEL error %d"
-					"chip may not be supporting this channel\n", err));
-				}
-			} else if (err) {
-				WL_ERR(("failed to set chanspec error %d\n", err));
-			}
-		} else {
-			WL_ERR(("failed to convert host chanspec to fw chanspec\n"));
-			err = BCME_ERROR;
-		}
-	} else {
-change_bw:
-		if (bw == WL_CHANSPEC_BW_80)
-			bw = WL_CHANSPEC_BW_40;
-		else if (bw == WL_CHANSPEC_BW_40)
-			bw = WL_CHANSPEC_BW_20;
-		else
-			bw = 0;
-		if (bw)
-			goto set_channel;
-		WL_ERR(("Invalid chanspec 0x%x\n", chspec));
-		err = BCME_ERROR;
-	}
-	return err;
-}
-
-static s32
 wl_validate_opensecurity(struct net_device *dev, s32 bssidx)
 {
 	s32 err = BCME_OK;
@@ -6431,7 +6324,6 @@ static struct cfg80211_ops wl_cfg80211_ops = {
 	.mgmt_tx = wl_cfg80211_mgmt_tx,
 	.mgmt_frame_register = wl_cfg80211_mgmt_frame_register,
 	.change_bss = wl_cfg80211_change_bss,
-	.set_channel = wl_cfg80211_set_channel,
 #if 0 //LINUX_VERSION_CODE < KERNEL_VERSION(3, 4, 0)
 	.set_beacon = wl_cfg80211_add_set_beacon,
 	.add_beacon = wl_cfg80211_add_set_beacon,

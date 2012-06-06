@@ -806,9 +806,7 @@ int cfg80211_wext_siwfreq(struct net_device *dev,
 		if (freq == 0)
 			return -EINVAL;
 		mutex_lock(&rdev->devlist_mtx);
-		wdev_lock(wdev);
-		err = cfg80211_set_freq(rdev, wdev, freq, NL80211_CHAN_NO_HT);
-		wdev_unlock(wdev);
+		err = cfg80211_set_monitor_channel(rdev, freq, NL80211_CHAN_NO_HT);
 		mutex_unlock(&rdev->devlist_mtx);
 		return err;
 	case NL80211_IFTYPE_MESH_POINT:
@@ -854,11 +852,7 @@ int cfg80211_wext_giwfreq(struct net_device *dev,
 		freq->e = 6;
 		return 0;
 	default:
-		if (!wdev->channel)
-			return -EINVAL;
-		freq->m = wdev->channel->center_freq;
-		freq->e = 6;
-		return 0;
+		return -EINVAL;
 	}
 }
 EXPORT_SYMBOL_GPL(cfg80211_wext_giwfreq);
