@@ -188,13 +188,6 @@ static void bredr_init(struct hci_dev *hdev)
 
 	/* Mandatory initialization */
 
-	/* Reset */
-	if (!test_bit(HCI_QUIRK_RESET_ON_CLOSE, &hdev->quirks)) {
-		set_bit(HCI_RESET, &hdev->flags);
-		hci_send_cmd(hdev, HCI_OP_RESET, 0, NULL);
-		memset(hdev->eir, 0, sizeof(hdev->eir));
-	}
-
 	/* Read Local Supported Features */
 	hci_send_cmd(hdev, HCI_OP_READ_LOCAL_FEATURES, 0, NULL);
 
@@ -235,9 +228,6 @@ static void amp_init(struct hci_dev *hdev)
 {
 	hdev->flow_ctl_mode = HCI_FLOW_CTL_MODE_BLOCK_BASED;
 
-	/* Reset */
-	hci_send_cmd(hdev, HCI_OP_RESET, 0, NULL);
-
 	/* Read Local Version */
 	hci_send_cmd(hdev, HCI_OP_READ_LOCAL_VERSION, 0, NULL);
 
@@ -262,6 +252,12 @@ static void hci_init_req(struct hci_dev *hdev, unsigned long opt)
 		queue_work(hdev->workqueue, &hdev->cmd_work);
 	}
 	skb_queue_purge(&hdev->driver_init);
+
+	/* Reset */
+	if (!test_bit(HCI_QUIRK_RESET_ON_CLOSE, &hdev->quirks)) {
+		hci_reset_req(hdev, 0);
+		memset(hdev->eir, 0, sizeof(hdev->eir));
+	}
 
 	switch (hdev->dev_type) {
 	case HCI_BREDR:
