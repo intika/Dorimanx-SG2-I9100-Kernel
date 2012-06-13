@@ -441,6 +441,8 @@ IEEE80211_IF_FILE(dot11MeshHWMPactivePathToRootTimeout,
 		  u.mesh.mshcfg.dot11MeshHWMPactivePathToRootTimeout, DEC);
 IEEE80211_IF_FILE(dot11MeshHWMProotInterval,
 		  u.mesh.mshcfg.dot11MeshHWMProotInterval, DEC);
+IEEE80211_IF_FILE(dot11MeshHWMPconfirmationInterval,
+		  u.mesh.mshcfg.dot11MeshHWMPconfirmationInterval, DEC);
 #endif
 
 #define DEBUGFS_ADD_MODE(name, mode) \
@@ -538,6 +540,7 @@ static void add_mesh_config(struct ieee80211_sub_if_data *sdata)
 	MESHPARAMS_ADD(ht_opmode);
 	MESHPARAMS_ADD(dot11MeshHWMPactivePathToRootTimeout);
 	MESHPARAMS_ADD(dot11MeshHWMProotInterval);
+	MESHPARAMS_ADD(dot11MeshHWMPconfirmationInterval);
 #undef MESHPARAMS_ADD
 }
 #endif
