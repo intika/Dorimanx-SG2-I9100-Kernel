@@ -797,7 +797,7 @@ void cfg80211_process_rdev_events(struct cfg80211_registered_device *rdev)
 
 	mutex_lock(&rdev->devlist_mtx);
 
-	list_for_each_entry(wdev, &rdev->netdev_list, list)
+	list_for_each_entry(wdev, &rdev->wdev_list, list)
 		cfg80211_process_wdev_events(wdev);
 
 	mutex_unlock(&rdev->devlist_mtx);
@@ -998,7 +998,7 @@ int cfg80211_validate_beacon_int(struct cfg80211_registered_device *rdev,
 
 	mutex_lock(&rdev->devlist_mtx);
 
-	list_for_each_entry(wdev, &rdev->netdev_list, list) {
+	list_for_each_entry(wdev, &rdev->wdev_list, list) {
 		if (!wdev->beacon_interval)
 			continue;
 		if (wdev->beacon_interval != beacon_int) {
@@ -1061,7 +1061,7 @@ int cfg80211_can_use_iftype_chan(struct cfg80211_registered_device *rdev,
 		break;
 	}
 
-	list_for_each_entry(wdev_iter, &rdev->netdev_list, list) {
+	list_for_each_entry(wdev_iter, &rdev->wdev_list, list) {
 		if (wdev_iter == wdev)
 			continue;
 		if (!netif_running(wdev_iter->netdev))
