@@ -998,7 +998,7 @@ struct cfg80211_ssid {
  * @ie_len: length of ie in octets
  * @rates: bitmap of rates to advertise for each band
  * @wiphy: the wiphy this was for
- * @dev: the interface
+ * @wdev: the wireless device to scan for
  * @aborted: (internal) scan request was notified as aborted
  * @no_cck: used to send probe requests at non CCK rate in 2GHz band
  */
@@ -1011,9 +1011,10 @@ struct cfg80211_scan_request {
 
 	u32 rates[IEEE80211_NUM_BANDS];
 
+	struct wireless_dev *wdev;
+
 	/* internal */
 	struct wiphy *wiphy;
-	struct net_device *dev;
 	bool aborted;
 	bool no_cck;
 
@@ -1699,7 +1700,7 @@ struct cfg80211_ops {
 				       struct ieee80211_channel *chan,
 				       enum nl80211_channel_type channel_type);
 
-	int	(*scan)(struct wiphy *wiphy, struct net_device *dev,
+	int	(*scan)(struct wiphy *wiphy,
 			struct cfg80211_scan_request *request);
 
 	int	(*auth)(struct wiphy *wiphy, struct net_device *dev,

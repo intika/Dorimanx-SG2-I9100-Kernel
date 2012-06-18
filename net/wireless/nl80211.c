@@ -4129,7 +4129,7 @@ static int validate_scan_freqs(struct nlattr *freqs)
 static int nl80211_trigger_scan(struct sk_buff *skb, struct genl_info *info)
 {
 	struct cfg80211_registered_device *rdev = info->user_ptr[0];
-	struct net_device *dev = info->user_ptr[1];
+	struct wireless_dev *wdev = info->user_ptr[1];
 	struct cfg80211_scan_request *request;
 	struct nlattr *attr;
 	struct wiphy *wiphy;
@@ -4334,17 +4334,18 @@ static int nl80211_trigger_scan(struct sk_buff *skb, struct genl_info *info)
 		}
 	}
 
-	request->dev = dev;
+	request->wdev = wdev;
 	request->wiphy = &rdev->wiphy;
 	request->no_cck =
 		nla_get_flag(info->attrs[NL80211_ATTR_TX_NO_CCK_RATE]);
 
 	rdev->scan_req = request;
-	err = rdev->ops->scan(&rdev->wiphy, dev, request);
+	err = rdev->ops->scan(&rdev->wiphy, request);
 
 	if (!err) {
-		nl80211_send_scan_start(rdev, dev);
-		dev_hold(dev);
+		nl80211_send_scan_start(rdev, wdev);
+		if (wdev->netdev)
+			dev_hold(wdev->netdev);
 	} else {
  out_free:
 		rdev->scan_req = NULL;
@@ -7114,7 +7115,7 @@ static struct genl_ops nl80211_ops[] = {
 		.doit = nl80211_trigger_scan,
 		.policy = nl80211_policy,
 		.flags = GENL_ADMIN_PERM,
-		.internal_flags = NL80211_FLAG_NEED_NETDEV_UP |
+		.internal_flags = NL80211_FLAG_NEED_WDEV_UP |
 				  NL80211_FLAG_NEED_RTNL,
 	},
 	{
@@ -7506,7 +7507,7 @@ static int nl80211_add_scan_req(struct sk_buff *msg,
 
 static int nl80211_send_scan_msg(struct sk_buff *msg,
 				 struct cfg80211_registered_device *rdev,
-				 struct net_device *netdev,
+				 struct wireless_dev *wdev,
 				 u32 pid, u32 seq, int flags,
 				 u32 cmd)
 {
@@ -7517,7 +7518,9 @@ static int nl80211_send_scan_msg(struct sk_buff *msg,
 		return -1;
 
 	if (nla_put_u32(msg, NL80211_ATTR_WIPHY, rdev->wiphy_idx) ||
-	    nla_put_u32(msg, NL80211_ATTR_IFINDEX, netdev->ifindex))
+	    (wdev->netdev && nla_put_u32(msg, NL80211_ATTR_IFINDEX,
+					 wdev->netdev->ifindex)) ||
+	    nla_put_u64(msg, NL80211_ATTR_WDEV, wdev_id(wdev)))
 		goto nla_put_failure;
 
 	/* ignore errors and send incomplete event anyway */
@@ -7554,7 +7557,7 @@ nl80211_send_sched_scan_msg(struct sk_buff *msg,
 }
 
 void nl80211_send_scan_start(struct cfg80211_registered_device *rdev,
-			     struct net_device *netdev)
+			     struct wireless_dev *wdev)
 {
 	struct sk_buff *msg;
 
@@ -7562,7 +7565,7 @@ void nl80211_send_scan_start(struct cfg80211_registered_device *rdev,
 	if (!msg)
 		return;
 
-	if (nl80211_send_scan_msg(msg, rdev, netdev, 0, 0, 0,
+	if (nl80211_send_scan_msg(msg, rdev, wdev, 0, 0, 0,
 				  NL80211_CMD_TRIGGER_SCAN) < 0) {
 		nlmsg_free(msg);
 		return;
@@ -7573,7 +7576,7 @@ void nl80211_send_scan_start(struct cfg80211_registered_device *rdev,
 }
 
 void nl80211_send_scan_done(struct cfg80211_registered_device *rdev,
-			    struct net_device *netdev)
+			    struct wireless_dev *wdev)
 {
 	struct sk_buff *msg;
 
@@ -7581,7 +7584,7 @@ void nl80211_send_scan_done(struct cfg80211_registered_device *rdev,
 	if (!msg)
 		return;
 
-	if (nl80211_send_scan_msg(msg, rdev, netdev, 0, 0, 0,
+	if (nl80211_send_scan_msg(msg, rdev, wdev, 0, 0, 0,
 				  NL80211_CMD_NEW_SCAN_RESULTS) < 0) {
 		nlmsg_free(msg);
 		return;
@@ -7592,7 +7595,7 @@ void nl80211_send_scan_done(struct cfg80211_registered_device *rdev,
 }
 
 void nl80211_send_scan_aborted(struct cfg80211_registered_device *rdev,
-			       struct net_device *netdev)
+			       struct wireless_dev *wdev)
 {
 	struct sk_buff *msg;
 
@@ -7600,7 +7603,7 @@ void nl80211_send_scan_aborted(struct cfg80211_registered_device *rdev,
 	if (!msg)
 		return;
 
-	if (nl80211_send_scan_msg(msg, rdev, netdev, 0, 0, 0,
+	if (nl80211_send_scan_msg(msg, rdev, wdev, 0, 0, 0,
 				  NL80211_CMD_SCAN_ABORTED) < 0) {
 		nlmsg_free(msg);
 		return;
