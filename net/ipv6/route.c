@@ -2940,11 +2940,6 @@ static struct pernet_operations ip6_route_net_ops = {
 	.exit = ip6_route_net_exit,
 };
 
-static struct pernet_operations ip6_route_net_late_ops = {
-	.init = ip6_route_net_init_late,
-	.exit = ip6_route_net_exit_late,
-};
-
 static int __net_init ipv6_inetpeer_init(struct net *net)
 {
 	struct inet_peer_base *bp = kmalloc(sizeof(*bp), GFP_KERNEL);
@@ -2968,6 +2963,11 @@ static void __net_exit ipv6_inetpeer_exit(struct net *net)
 static struct pernet_operations ipv6_inetpeer_ops = {
 	.init	=	ipv6_inetpeer_init,
 	.exit	=	ipv6_inetpeer_exit,
+};
+
+static struct pernet_operations ip6_route_net_late_ops = {
+	.init = ip6_route_net_init_late,
+	.exit = ip6_route_net_exit_late,
 };
 
 static struct notifier_block ip6_route_dev_notifier = {
