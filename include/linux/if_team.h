@@ -61,6 +61,7 @@ struct team_port {
 	} orig;
 
 	struct rcu_head rcu;
+	long mode_priv[0];
 };
 
 static inline bool team_port_enabled(struct team_port *port)
@@ -107,6 +108,7 @@ struct team_mode {
 	const char *kind;
 	struct module *owner;
 	size_t priv_size;
+	size_t port_priv_size;
 	const struct team_mode_ops *ops;
 };
 
