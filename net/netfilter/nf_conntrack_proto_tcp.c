@@ -1584,7 +1584,7 @@ static int tcp_kmemdup_compat_sysctl_table(struct nf_proto_net *pn)
 	return 0;
 }
 
-static int tcpv4_init_net(struct net *net)
+static int tcpv4_init_net(struct net *net, u_int16_t proto)
 {
 	int i;
 	int ret = 0;
@@ -1622,7 +1622,7 @@ static int tcpv4_init_net(struct net *net)
 	return ret;
 }
 
-static int tcpv6_init_net(struct net *net)
+static int tcpv6_init_net(struct net *net, u_int16_t proto)
 {
 	int i;
 	struct nf_tcp_net *tn = tcp_pernet(net);
