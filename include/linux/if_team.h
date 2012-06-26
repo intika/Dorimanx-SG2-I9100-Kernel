@@ -49,6 +49,8 @@ struct team_port {
 	struct rcu_head rcu;
 };
 
+extern bool team_port_enabled(struct team_port *port);
+
 struct team_mode_ops {
 	int (*init)(struct team *team);
 	void (*exit)(struct team *team);
