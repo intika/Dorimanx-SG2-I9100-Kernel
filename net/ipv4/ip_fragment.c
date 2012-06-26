@@ -258,7 +258,7 @@ static void ip_expire(unsigned long arg)
 		/* skb has no dst, perform route lookup again */
 		iph = ip_hdr(head);
 		err = ip_route_input_noref(head, iph->daddr, iph->saddr,
-					   iph->tos, head->dev);
+					   iph->tos, head->dev, false);
 		if (err)
 			goto out_rcu_unlock;
 

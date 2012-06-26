@@ -1675,7 +1675,7 @@ csum_err:
 }
 EXPORT_SYMBOL(tcp_v4_do_rcv);
 
-int tcp_v4_early_demux(struct sk_buff *skb)
+int tcp_v4_early_demux(struct sk_buff *skb, bool *no_dst_cache)
 {
 	struct net *net = dev_net(skb->dev);
 	const struct iphdr *iph;
@@ -1721,6 +1721,8 @@ int tcp_v4_early_demux(struct sk_buff *skb)
 				}
 			}
 		}
+	} else {
+		*no_dst_cache = true;
 	}
 
 out_err:
