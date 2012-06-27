@@ -106,9 +106,9 @@
 #include <net/route.h>
 #include <net/checksum.h>
 #include <net/xfrm.h>
-#include <trace/events/skb.h>
 #include <trace/events/udp.h>
 #include <linux/static_key.h>
+#include <trace/events/skb.h>
 #include <net/busy_poll.h>
 #include "udp_impl.h"
 
