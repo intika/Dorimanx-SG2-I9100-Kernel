@@ -1068,7 +1068,7 @@ static int get_serial_info(struct async_struct * info,
 	if (!retinfo)
 		return -EFAULT;
 	memset(&tmp, 0, sizeof(tmp));
-	tty_lock();
+	tty_lock(tty);
 	tmp.type = state->type;
 	tmp.line = state->line;
 	tmp.port = state->port;
@@ -1079,7 +1079,7 @@ static int get_serial_info(struct async_struct * info,
 	tmp.close_delay = state->close_delay;
 	tmp.closing_wait = state->closing_wait;
 	tmp.custom_divisor = state->custom_divisor;
-	tty_unlock();
+	tty_unlock(tty);
 	if (copy_to_user(retinfo,&tmp,sizeof(*retinfo)))
 		return -EFAULT;
 	return 0;
@@ -1096,14 +1096,14 @@ static int set_serial_info(struct async_struct * info,
 	if (copy_from_user(&new_serial,new_info,sizeof(new_serial)))
 		return -EFAULT;
 
-	tty_lock();
+	tty_lock(tty);
 	state = info->state;
 	old_state = *state;
   
 	change_irq = new_serial.irq != state->irq;
 	change_port = (new_serial.port != state->port);
 	if(change_irq || change_port || (new_serial.xmit_fifo_size != state->xmit_fifo_size)) {
-	  tty_unlock();
+	  tty_unlock(tty);
 	  return -EINVAL;
 	}
   
@@ -1113,7 +1113,7 @@ static int set_serial_info(struct async_struct * info,
 		    (new_serial.xmit_fifo_size != state->xmit_fifo_size) ||
 		    ((new_serial.flags & ~ASYNC_USR_MASK) !=
 		     (state->flags & ~ASYNC_USR_MASK))) {
-			tty_unlock();
+			tty_unlock(tty);
 			return -EPERM;
 		}
 		state->flags = ((state->flags & ~ASYNC_USR_MASK) |
@@ -1125,7 +1125,7 @@ static int set_serial_info(struct async_struct * info,
 	}
 
 	if (new_serial.baud_base < 9600) {
-		tty_unlock();
+		tty_unlock(tty);
 		return -EINVAL;
 	}
 
@@ -1160,8 +1160,8 @@ check_and_exit:
 			change_speed(info, NULL);
 		}
 	} else
-		retval = startup(info);
-	tty_unlock();
+		retval = startup(tty, info);
+	tty_unlock(tty);
 	return retval;
 }
 
