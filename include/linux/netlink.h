@@ -185,6 +185,7 @@ struct netlink_kernel_cfg {
 	unsigned int	groups;
 	void		(*input)(struct sk_buff *skb);
 	struct mutex	*cb_mutex;
+	void		(*bind)(int group);
 	unsigned int	flags;
 };
 
