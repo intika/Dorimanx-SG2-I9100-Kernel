@@ -157,6 +157,7 @@ int __cfg80211_join_mesh(struct cfg80211_registered_device *rdev,
 	if (!err) {
 		memcpy(wdev->ssid, setup->mesh_id, setup->mesh_id_len);
 		wdev->mesh_id_len = setup->mesh_id_len;
+		wdev->channel = setup->channel;
 	}
 
 	return err;
@@ -182,6 +183,7 @@ int cfg80211_set_mesh_freq(struct cfg80211_registered_device *rdev,
 			   enum nl80211_channel_type channel_type)
 {
 	struct ieee80211_channel *channel;
+	int err;
 
 	/*
 	 * Workaround for libertas (only!), it puts the interface
@@ -198,6 +200,9 @@ int cfg80211_set_mesh_freq(struct cfg80211_registered_device *rdev,
 		wdev_lock(wdev);
 		err = cfg80211_set_freq(rdev, wdev, freq, channel_type);
 		wdev_unlock(wdev);
+
+		if (!err)
+			wdev->channel = channel;
 
 		return err;
 	}
@@ -247,8 +252,11 @@ static int __cfg80211_leave_mesh(struct cfg80211_registered_device *rdev,
 		return -ENOTCONN;
 
 	err = rdev->ops->leave_mesh(&rdev->wiphy, dev);
-	if (!err)
+	if (!err) {
 		wdev->mesh_id_len = 0;
+		wdev->channel = NULL;
+	}
+
 	return err;
 }
 
