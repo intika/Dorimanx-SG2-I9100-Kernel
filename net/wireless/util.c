@@ -962,6 +962,7 @@ int cfg80211_can_use_iftype_chan(struct cfg80211_registered_device *rdev,
 	int i, j;
 
 	ASSERT_RTNL();
+	lockdep_assert_held(&rdev->devlist_mtx);
 
 	/* Always allow software iftypes */
 	if (rdev->wiphy.software_iftypes & BIT(iftype))
@@ -992,7 +993,6 @@ int cfg80211_can_use_iftype_chan(struct cfg80211_registered_device *rdev,
 		break;
 	}
 
-	mutex_lock(&rdev->devlist_mtx);
 	list_for_each_entry(wdev_iter, &rdev->netdev_list, list) {
 		if (wdev_iter == wdev)
 			continue;
@@ -1012,10 +1012,8 @@ int cfg80211_can_use_iftype_chan(struct cfg80211_registered_device *rdev,
 				if (!used_channels[i] || used_channels[i] == ch)
 					break;
 
-			if (i == CFG80211_MAX_NUM_DIFFERENT_CHANNELS) {
-				mutex_unlock(&rdev->devlist_mtx);
+			if (i == CFG80211_MAX_NUM_DIFFERENT_CHANNELS)
 				return -EBUSY;
-			}
 
 			if (used_channels[i] == NULL) {
 				used_channels[i] = ch;
@@ -1031,7 +1029,6 @@ int cfg80211_can_use_iftype_chan(struct cfg80211_registered_device *rdev,
 		total++;
 		used_iftypes |= BIT(wdev_iter->iftype);
 	}
-	mutex_unlock(&rdev->devlist_mtx);
 
 	if (total == 1)
 		return 0;
