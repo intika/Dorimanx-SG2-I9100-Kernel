@@ -435,7 +435,7 @@ static void cfg_named_msg_event(void *userdata,
 	if ((size < sizeof(*req_hdr)) ||
 	    (size != TCM_ALIGN(ntohl(req_hdr->tcm_len))) ||
 	    (ntohs(req_hdr->tcm_flags) != TCM_F_REQUEST)) {
-		warn("Invalid configuration message discarded\n");
+		pr_warn("Invalid configuration message discarded\n");
 		return;
 	}
 
@@ -481,7 +481,7 @@ int tipc_cfg_init(void)
 	return 0;
 
 failed:
-	err("Unable to create configuration service\n");
+	pr_err("Unable to create configuration service\n");
 	return res;
 }
 
@@ -497,7 +497,7 @@ void tipc_cfg_reinit(void)
 	seq.lower = seq.upper = tipc_own_addr;
 	res = tipc_publish(config_port_ref, TIPC_ZONE_SCOPE, &seq);
 	if (res)
-		err("Unable to reinitialize configuration service\n");
+		pr_err("Unable to reinitialize configuration service\n");
 }
 
 void tipc_cfg_stop(void)
