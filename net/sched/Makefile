@@ -55,6 +55,7 @@ obj-$(CONFIG_NET_EMATCH_NBYTE)	+= em_nbyte.o
 obj-$(CONFIG_NET_EMATCH_U32)	+= em_u32.o
 obj-$(CONFIG_NET_EMATCH_META)	+= em_meta.o
 obj-$(CONFIG_NET_EMATCH_TEXT)	+= em_text.o
+obj-$(CONFIG_NET_EMATCH_CANID)	+= em_canid.o
 
 # gcc 4.6 compiler bug: https://lkml.org/lkml/2011/7/25/344
 ccflags-y += -Wno-address
