@@ -173,9 +173,15 @@ static struct device_attribute power_supply_attrs[] = {
 #ifdef CONFIG_SLP
 	POWER_SUPPLY_ATTR(capacity_raw),
 #endif
+	POWER_SUPPLY_ATTR(capacity_alert_min),
+	POWER_SUPPLY_ATTR(capacity_alert_max),
 	POWER_SUPPLY_ATTR(capacity_level),
 	POWER_SUPPLY_ATTR(temp),
+	POWER_SUPPLY_ATTR(temp_alert_min),
+	POWER_SUPPLY_ATTR(temp_alert_max),
 	POWER_SUPPLY_ATTR(temp_ambient),
+	POWER_SUPPLY_ATTR(temp_ambient_alert_min),
+	POWER_SUPPLY_ATTR(temp_ambient_alert_max),
 	POWER_SUPPLY_ATTR(time_to_empty_now),
 	POWER_SUPPLY_ATTR(time_to_empty_avg),
 	POWER_SUPPLY_ATTR(time_to_full_now),
