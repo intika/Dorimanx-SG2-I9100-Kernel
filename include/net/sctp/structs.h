@@ -205,6 +205,11 @@ extern struct sctp_globals {
 	 * It is a list of sctp_sockaddr_entry.
 	 */
 	struct list_head local_addr_list;
+	int default_auto_asconf;
+	struct list_head addr_waitq;
+	struct timer_list addr_wq_timer;
+	struct list_head auto_asconf_splist;
+	spinlock_t addr_wq_lock;
 
 	/* Lock that protects the local_addr_list writers */
 	spinlock_t addr_list_lock;
@@ -267,6 +272,11 @@ extern struct sctp_globals {
 #define sctp_port_hashtable		(sctp_globals.port_hashtable)
 #define sctp_local_addr_list		(sctp_globals.local_addr_list)
 #define sctp_local_addr_lock		(sctp_globals.addr_list_lock)
+#define sctp_auto_asconf_splist		(sctp_globals.auto_asconf_splist)
+#define sctp_addr_waitq			(sctp_globals.addr_waitq)
+#define sctp_addr_wq_timer		(sctp_globals.addr_wq_timer)
+#define sctp_addr_wq_lock		(sctp_globals.addr_wq_lock)
+#define sctp_default_auto_asconf	(sctp_globals.default_auto_asconf)
 #define sctp_scope_policy		(sctp_globals.ipv4_scope_policy)
 #define sctp_addip_enable		(sctp_globals.addip_enable)
 #define sctp_addip_noauth		(sctp_globals.addip_noauth_enable)
@@ -345,6 +355,8 @@ struct sctp_sock {
 	atomic_t pd_mode;
 	/* Receive to here while partial delivery is in effect. */
 	struct sk_buff_head pd_lobby;
+	struct list_head auto_asconf_list;
+	int do_auto_asconf;
 };
 
 static inline struct sctp_sock *sctp_sk(const struct sock *sk)
@@ -753,7 +765,6 @@ struct sctp_chunk {
 #define SCTP_NEED_FRTX 0x1
 #define SCTP_DONT_FRTX 0x2
 	__u16	rtt_in_progress:1,	/* This chunk used for RTT calc? */
-		resent:1,		/* Has this chunk ever been resent. */
 		has_tsn:1,		/* Does this chunk have a TSN yet? */
 		has_ssn:1,		/* Does this chunk have a SSN yet? */
 		singleton:1,		/* Only chunk in the packet? */
@@ -796,6 +807,8 @@ struct sctp_sockaddr_entry {
 	__u8 state;
 	__u8 valid;
 };
+
+#define SCTP_ADDRESS_TICK_DELAY	500
 
 typedef struct sctp_chunk *(sctp_packet_phandler_t)(struct sctp_association *);
 
@@ -1078,7 +1091,8 @@ void sctp_transport_burst_limited(struct sctp_transport *);
 void sctp_transport_burst_reset(struct sctp_transport *);
 unsigned long sctp_transport_timeout(struct sctp_transport *);
 void sctp_transport_reset(struct sctp_transport *);
-void sctp_transport_update_pmtu(struct sctp_transport *, u32);
+void sctp_transport_update_pmtu(struct sock *, struct sctp_transport *, u32);
+void sctp_transport_immediate_rtx(struct sctp_transport *);
 
 
 /* This is the structure we use to queue packets as they come into
@@ -1244,6 +1258,7 @@ sctp_scope_t sctp_scope(const union sctp_addr *);
 int sctp_in_scope(const union sctp_addr *addr, const sctp_scope_t scope);
 int sctp_is_any(struct sock *sk, const union sctp_addr *addr);
 int sctp_addr_is_valid(const union sctp_addr *addr);
+int sctp_is_ep_boundall(struct sock *sk);
 
 
 /* What type of endpoint?  */
@@ -1814,6 +1829,12 @@ struct sctp_association {
 	/* How many duplicated TSNs have we seen?  */
 	int numduptsns;
 
+	/* Number of seconds of idle time before an association is closed.
+	 * In the association context, this is really used as a boolean
+	 * since the real timeout is stored in the timeouts array
+	 */
+	__u32 autoclose;
+
 	/* These are to support
 	 * "SCTP Extensions for Dynamic Reconfiguration of IP Addresses
 	 *  and Enforcement of Flow and Message Limits"
@@ -1901,6 +1922,9 @@ struct sctp_association {
 	 * after reaching 4294967295.
 	 */
 	__u32 addip_serial;
+	union sctp_addr *asconf_addr_del_pending;
+	int src_out_of_asoc_ok;
+	struct sctp_transport *new_transport;
 
 	/* SCTP AUTH: list of the endpoint shared keys.  These
 	 * keys are provided out of band by the user applicaton
@@ -1979,7 +2003,7 @@ void sctp_assoc_update(struct sctp_association *old,
 
 __u32 sctp_association_get_next_tsn(struct sctp_association *);
 
-void sctp_assoc_sync_pmtu(struct sctp_association *);
+void sctp_assoc_sync_pmtu(struct sock *, struct sctp_association *);
 void sctp_assoc_rwnd_increase(struct sctp_association *, unsigned int);
 void sctp_assoc_rwnd_decrease(struct sctp_association *, unsigned int);
 void sctp_assoc_set_primary(struct sctp_association *,
