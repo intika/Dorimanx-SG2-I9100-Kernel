@@ -194,6 +194,11 @@ static u8 mgmt_status_table[] = {
 	MGMT_STATUS_CONNECT_FAILED,	/* MAC Connection Failed */
 };
 
+bool mgmt_valid_hdev(struct hci_dev *hdev)
+{
+	return hdev->dev_type == HCI_BREDR;
+}
+
 static u8 mgmt_status(u8 hci_status)
 {
 	/* bluetoothd is still checking hci status. so no need to check mgmt status
@@ -324,7 +329,6 @@ static int read_index_list(struct sock *sk, struct hci_dev *hdev, void *data,
 			   u16 data_len)
 {
 	struct mgmt_rp_read_index_list *rp;
-	struct list_head *p;
 	struct hci_dev *d;
 	size_t rp_len;
 	u16 count;
@@ -335,7 +339,10 @@ static int read_index_list(struct sock *sk, struct hci_dev *hdev, void *data,
 	read_lock(&hci_dev_list_lock);
 
 	count = 0;
-	list_for_each(p, &hci_dev_list) {
+	list_for_each_entry(d, &hci_dev_list, list) {
+		if (!mgmt_valid_hdev(d))
+			continue;
+
 		count++;
 	}
 
@@ -351,6 +358,9 @@ static int read_index_list(struct sock *sk, struct hci_dev *hdev, void *data,
 	i = 0;
 	list_for_each_entry(d, &hci_dev_list, list) {
 		if (test_bit(HCI_SETUP, &d->dev_flags))
+			continue;
+
+		if (!mgmt_valid_hdev(d))
 			continue;
 
 		rp->index[i++] = cpu_to_le16(d->id);
@@ -3007,12 +3017,18 @@ static void cmd_status_rsp(struct pending_cmd *cmd, void *data)
 
 int mgmt_index_added(struct hci_dev *hdev)
 {
+	if (!mgmt_valid_hdev(hdev))
+		return -ENOTSUPP;
+
 	return mgmt_event(MGMT_EV_INDEX_ADDED, hdev, NULL, 0, NULL);
 }
 
 int mgmt_index_removed(struct hci_dev *hdev)
 {
 	u8 status = MGMT_STATUS_INVALID_INDEX;
+
+	if (!mgmt_valid_hdev(hdev))
+		return -ENOTSUPP;
 
 	mgmt_pending_foreach(0, hdev, cmd_status_rsp, &status);
 
