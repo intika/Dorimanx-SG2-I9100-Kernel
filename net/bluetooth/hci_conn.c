@@ -523,6 +523,46 @@ struct hci_dev *hci_get_route(bdaddr_t *dst, bdaddr_t *src)
 }
 EXPORT_SYMBOL(hci_get_route);
 
+static struct hci_conn *hci_connect_le(struct hci_dev *hdev, bdaddr_t *dst,
+				    u8 dst_type, u8 sec_level, u8 auth_type)
+{
+	struct hci_conn *le;
+/* SSBT :: KJH + * to check le connection & stored key, if there is stored key, use addr_type. */
+	struct smp_ltk *ltk;
+
+	le = hci_conn_hash_lookup_ba(hdev, LE_LINK, dst);
+	if (!le) {
+		ltk = hci_find_ltk_by_addr(hdev, dst, 100);
+		if (ltk) {
+			BT_DBG("There is stored LTK");
+			le = hci_conn_add(hdev, LE_LINK, 0, dst);
+			if (!le)
+				return ERR_PTR(-ENOMEM);
+			le->dst_type = ltk->bdaddr_type;
+		} else {
+			le = hci_conn_hash_lookup_state(hdev, LE_LINK,
+							BT_CONNECT);
+			if (le)
+				return ERR_PTR(-EBUSY);
+
+			le = hci_conn_add(hdev, LE_LINK, 0, dst);
+			if (!le)
+				return ERR_PTR(-ENOMEM);
+
+			le->dst_type = bdaddr_to_le(dst_type);
+		}
+
+		hci_le_create_connection(le);
+	}
+
+	le->pending_sec_level = sec_level;
+	le->auth_type = auth_type;
+
+	hci_conn_hold(le);
+
+	return le;
+}
+
 /* Create SCO, ACL or LE connection.
  * Device _must_ be locked */
 struct hci_conn *hci_connect(struct hci_dev *hdev, int type,
@@ -531,45 +571,11 @@ struct hci_conn *hci_connect(struct hci_dev *hdev, int type,
 {
 	struct hci_conn *acl;
 	struct hci_conn *sco;
-	struct hci_conn *le;
 
 	BT_DBG("%s dst %s", hdev->name, batostr(dst));
 
-	if (type == LE_LINK) {
-/* SSBT :: KJH + * to check le connection & stored key, if there is stored key, use addr_type. */
-		struct smp_ltk *ltk;
-
-		le = hci_conn_hash_lookup_ba(hdev, LE_LINK, dst);
-		if (!le) {
-			ltk = hci_find_ltk_by_addr(hdev, dst, 100);
-			if (ltk) {
-				BT_DBG("There is stored LTK");
-				le = hci_conn_add(hdev, LE_LINK, 0, dst);
-				if (!le)
-					return ERR_PTR(-ENOMEM);
-				le->dst_type = ltk->bdaddr_type;
-			} else {
-				le = hci_conn_hash_lookup_state(hdev, LE_LINK,
-								BT_CONNECT);
-				if (le)
-					return ERR_PTR(-EBUSY);
-
-				le = hci_conn_add(hdev, LE_LINK, 0, dst);
-				if (!le)
-					return ERR_PTR(-ENOMEM);
-				le->dst_type = bdaddr_to_le(dst_type);
-			}
-
-			hci_le_create_connection(le);
-		}
-
-		le->pending_sec_level = sec_level;
-		le->auth_type = auth_type;
-
-		hci_conn_hold(le);
-
-		return le;
-	}
+	if (type == LE_LINK)
+		return hci_connect_le(hdev, dst, dst_type, sec_level, auth_type);
 
 	acl = hci_conn_hash_lookup_ba(hdev, ACL_LINK, dst);
 	if (!acl) {
