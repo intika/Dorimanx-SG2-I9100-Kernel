@@ -3528,18 +3528,6 @@ static void hci_le_conn_complete_evt(struct hci_dev *hdev, struct sk_buff *skb)
 
 	conn = hci_conn_hash_lookup_state(hdev, LE_LINK, BT_CONNECT);
 
-	if (ev->status) {
-		if (!conn)
-			goto unlock;
-
-		mgmt_connect_failed(hdev, &conn->dst, conn->type,
-				    conn->dst_type, ev->status);
-		hci_proto_connect_cfm(conn, ev->status);
-		conn->state = BT_CLOSED;
-		hci_conn_del(conn);
-		goto unlock;
-	}
-
 	/* after connection canceled,
 	* use the addr as conn->dst instead of ev->bdaddr (00:00:00:00:00:00) */
 	if (ev->status == 0x02 && !conn) {
@@ -3560,6 +3548,15 @@ static void hci_le_conn_complete_evt(struct hci_dev *hdev, struct sk_buff *skb)
 			conn->out = true;
 			conn->link_mode |= HCI_LM_MASTER;
 		}
+	}
+
+	if (ev->status) {
+		mgmt_connect_failed(hdev, &conn->dst, conn->type,
+				    conn->dst_type, ev->status);
+		hci_proto_connect_cfm(conn, ev->status);
+		conn->state = BT_CLOSED;
+		hci_conn_del(conn);
+		goto unlock;
 	}
 
 	if (!test_and_set_bit(HCI_CONN_MGMT_CONNECTED, &conn->flags))
