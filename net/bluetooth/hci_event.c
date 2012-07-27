@@ -3526,8 +3526,9 @@ static void hci_le_conn_complete_evt(struct hci_dev *hdev, struct sk_buff *skb)
 
 	hci_dev_lock(hdev);
 
+	conn = hci_conn_hash_lookup_state(hdev, LE_LINK, BT_CONNECT);
+
 	if (ev->status) {
-		conn = hci_conn_hash_lookup_state(hdev, LE_LINK, BT_CONNECT);
 		if (!conn)
 			goto unlock;
 
@@ -3538,8 +3539,6 @@ static void hci_le_conn_complete_evt(struct hci_dev *hdev, struct sk_buff *skb)
 		hci_conn_del(conn);
 		goto unlock;
 	}
-
-	conn = hci_conn_hash_lookup_ba(hdev, LE_LINK, &ev->bdaddr);
 
 	/* after connection canceled,
 	* use the addr as conn->dst instead of ev->bdaddr (00:00:00:00:00:00) */
