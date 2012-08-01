@@ -1699,7 +1699,6 @@ static void __ieee80211_connection_loss(struct ieee80211_sub_if_data *sdata)
 {
 	struct ieee80211_if_managed *ifmgd = &sdata->u.mgd;
 	struct ieee80211_local *local = sdata->local;
-	u8 bssid[ETH_ALEN];
 	u8 frame_buf[DEAUTH_DISASSOC_LEN];
 
 	mutex_lock(&ifmgd->mtx);
@@ -1708,9 +1707,8 @@ static void __ieee80211_connection_loss(struct ieee80211_sub_if_data *sdata)
 		return;
 	}
 
-	memcpy(bssid, ifmgd->associated->bssid, ETH_ALEN);
-
-	sdata_info(sdata, "Connection to AP %pM lost\n", bssid);
+	sdata_info(sdata, "Connection to AP %pM lost\n",
+		   ifmgd->associated->bssid);
 
 	ieee80211_set_disassoc(sdata, IEEE80211_STYPE_DEAUTH,
 			       WLAN_REASON_DISASSOC_DUE_TO_INACTIVITY,
