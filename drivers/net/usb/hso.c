@@ -2279,6 +2279,8 @@ static int hso_serial_common_create(struct hso_serial *serial, int num_urbs,
 	if (minor < 0)
 		goto exit;
 
+	tty_port_init(&serial->port);
+
 	/* register our minor number */
 	serial->parent->dev = tty_port_register_device(&serial->port, tty_drv,
 			minor, &serial->parent->interface->dev);

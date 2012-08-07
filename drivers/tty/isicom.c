@@ -1613,7 +1613,8 @@ static int __devinit isicom_probe(struct pci_dev *pdev,
 		goto errunri;
 
 	for (index = 0; index < board->port_count; index++)
-		tty_register_device(isicom_normal, board->index * 16 + index,
+		tty_port_register_device(&board->ports[index].port,
+				isicom_normal, board->index * 16 + index,
 				&pdev->dev);
 
 	return 0;
