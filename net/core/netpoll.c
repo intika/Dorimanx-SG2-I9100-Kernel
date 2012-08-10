@@ -716,7 +716,7 @@ int netpoll_parse_options(struct netpoll *np, char *opt)
 }
 EXPORT_SYMBOL(netpoll_parse_options);
 
-int __netpoll_setup(struct netpoll *np, struct net_device *ndev)
+int __netpoll_setup(struct netpoll *np, struct net_device *ndev, gfp_t gfp)
 {
 	struct netpoll_info *npinfo;
 	const struct net_device_ops *ops;
@@ -735,7 +735,7 @@ int __netpoll_setup(struct netpoll *np, struct net_device *ndev)
 	}
 
 	if (!ndev->npinfo) {
-		npinfo = kmalloc(sizeof(*npinfo), GFP_KERNEL);
+		npinfo = kmalloc(sizeof(*npinfo), gfp);
 		if (!npinfo) {
 			err = -ENOMEM;
 			goto out;
@@ -753,7 +753,7 @@ int __netpoll_setup(struct netpoll *np, struct net_device *ndev)
 
 		ops = np->dev->netdev_ops;
 		if (ops->ndo_netpoll_setup) {
-			err = ops->ndo_netpoll_setup(ndev, npinfo);
+			err = ops->ndo_netpoll_setup(ndev, npinfo, gfp);
 			if (err)
 				goto free_npinfo;
 		}
@@ -858,7 +858,7 @@ int netpoll_setup(struct netpoll *np)
 	refill_skbs();
 
 	rtnl_lock();
-	err = __netpoll_setup(np, ndev);
+	err = __netpoll_setup(np, ndev, GFP_KERNEL);
 	rtnl_unlock();
 
 	if (err)
