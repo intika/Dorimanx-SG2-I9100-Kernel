@@ -45,6 +45,7 @@ header-y += if_vlan.h
 header-y += in.h
 header-y += in6.h
 header-y += inet_diag.h
+header-y += packet_diag.h
 header-y += input.h
 header-y += ipmi.h
 header-y += ipv6.h
