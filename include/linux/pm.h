@@ -56,12 +56,8 @@ struct device;
 
 #ifdef CONFIG_PM
 extern const char power_group_name[];		/* = "power" */
-
-extern void dev_pm_syscore_device(struct device *dev, bool val);
 #else
 #define power_group_name	NULL
-
-static inline void dev_pm_syscore_device(struct device *dev, bool val) {}
 #endif
 
 typedef struct pm_message {
