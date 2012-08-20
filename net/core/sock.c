@@ -1231,7 +1231,7 @@ void sock_update_classid(struct sock *sk, struct task_struct *task)
 	rcu_read_lock();  /* doing current task, which cannot vanish. */
 	classid = task_cls_classid(task);
 	rcu_read_unlock();
-	if (classid && classid != sk->sk_classid)
+	if (classid != sk->sk_classid)
 		sk->sk_classid = classid;
 }
 EXPORT_SYMBOL(sock_update_classid);
