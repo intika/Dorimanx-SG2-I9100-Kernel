@@ -106,6 +106,7 @@ header-y += sound.h
 header-y += soundcard.h
 header-y += string.h
 header-y += tcp.h
+header-y += tcp_metrics.h
 header-y += time.h
 header-y += timex.h
 header-y += tty.h
