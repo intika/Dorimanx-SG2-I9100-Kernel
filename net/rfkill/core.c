@@ -317,10 +317,10 @@ static void rfkill_set_block(struct rfkill *rfkill, bool blocked)
 	rfkill->state &= ~RFKILL_BLOCK_SW_SETCALL;
 	rfkill->state &= ~RFKILL_BLOCK_SW_PREV;
 	curr = rfkill->state & RFKILL_BLOCK_SW;
-
 	spin_unlock_irqrestore(&rfkill->lock, flags);
 
 	rfkill_led_trigger_event(rfkill);
+
 	if (prev != curr)
 		rfkill_event(rfkill);
 }
