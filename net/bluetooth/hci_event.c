@@ -3376,21 +3376,6 @@ unlock:
 	hci_dev_unlock(hdev);
 }
 
-static void hci_user_passkey_notification_evt(struct hci_dev *hdev,
-					      struct sk_buff *skb)
-{
-	struct hci_ev_user_passkey_notification *ev = (void *) skb->data;
-
-	BT_DBG("%s", hdev->name);
-
-	hci_dev_lock(hdev);
-
-	if (test_bit(HCI_MGMT, &hdev->dev_flags))
-		mgmt_user_passkey_notification(hdev, &ev->bdaddr, ev->passkey);
-
-	hci_dev_unlock(hdev);
-}
-
 static void hci_user_confirm_request_evt(struct hci_dev *hdev,
 					 struct sk_buff *skb)
 {
@@ -3467,6 +3452,65 @@ static void hci_user_passkey_request_evt(struct hci_dev *hdev,
 
 	if (test_bit(HCI_MGMT, &hdev->dev_flags))
 		mgmt_user_passkey_request(hdev, &ev->bdaddr, ACL_LINK, 0);
+}
+
+static void hci_user_passkey_notify_evt(struct hci_dev *hdev,
+					struct sk_buff *skb)
+{
+	struct hci_ev_user_passkey_notify *ev = (void *) skb->data;
+	struct hci_conn *conn;
+
+	BT_DBG("%s", hdev->name);
+
+	conn = hci_conn_hash_lookup_ba(hdev, ACL_LINK, &ev->bdaddr);
+	if (!conn)
+		return;
+
+	conn->passkey_notify = __le32_to_cpu(ev->passkey);
+	conn->passkey_entered = 0;
+
+	if (test_bit(HCI_MGMT, &hdev->dev_flags))
+		mgmt_user_passkey_notify(hdev, &conn->dst, conn->type,
+					 conn->dst_type, conn->passkey_notify,
+					 conn->passkey_entered);
+}
+
+static void hci_keypress_notify_evt(struct hci_dev *hdev, struct sk_buff *skb)
+{
+	struct hci_ev_keypress_notify *ev = (void *) skb->data;
+	struct hci_conn *conn;
+
+	BT_DBG("%s", hdev->name);
+
+	conn = hci_conn_hash_lookup_ba(hdev, ACL_LINK, &ev->bdaddr);
+	if (!conn)
+		return;
+
+	switch (ev->type) {
+	case HCI_KEYPRESS_STARTED:
+		conn->passkey_entered = 0;
+		return;
+
+	case HCI_KEYPRESS_ENTERED:
+		conn->passkey_entered++;
+		break;
+
+	case HCI_KEYPRESS_ERASED:
+		conn->passkey_entered--;
+		break;
+
+	case HCI_KEYPRESS_CLEARED:
+		conn->passkey_entered = 0;
+		break;
+
+	case HCI_KEYPRESS_COMPLETED:
+		return;
+	}
+
+	if (test_bit(HCI_MGMT, &hdev->dev_flags))
+		mgmt_user_passkey_notify(hdev, &conn->dst, conn->type,
+					 conn->dst_type, conn->passkey_notify,
+					 conn->passkey_entered);
 }
 
 static void hci_simple_pair_complete_evt(struct hci_dev *hdev,
@@ -3836,16 +3880,20 @@ void hci_event_packet(struct hci_dev *hdev, struct sk_buff *skb)
 		hci_io_capa_reply_evt(hdev, skb);
 		break;
 
-	case HCI_EV_USER_PASSKEY_NOTIFICATION:
-		hci_user_passkey_notification_evt(hdev, skb);
-		break;
-
 	case HCI_EV_USER_CONFIRM_REQUEST:
 		hci_user_confirm_request_evt(hdev, skb);
 		break;
 
 	case HCI_EV_USER_PASSKEY_REQUEST:
 		hci_user_passkey_request_evt(hdev, skb);
+		break;
+
+	case HCI_EV_USER_PASSKEY_NOTIFY:
+		hci_user_passkey_notify_evt(hdev, skb);
+		break;
+
+	case HCI_EV_KEYPRESS_NOTIFY:
+		hci_keypress_notify_evt(hdev, skb);
 		break;
 
 	case HCI_EV_SIMPLE_PAIR_COMPLETE:

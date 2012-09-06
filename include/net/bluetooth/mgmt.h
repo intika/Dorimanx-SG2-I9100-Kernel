@@ -508,20 +508,19 @@ struct mgmt_ev_device_unpaired {
 	struct mgmt_addr_info addr;
 } __packed;
 
+#define MGMT_EV_PASSKEY_NOTIFY		0x0017
+struct mgmt_ev_passkey_notify {
+	struct mgmt_addr_info addr;
+	__le32	passkey;
+	__u8	entered;
+} __packed;
+
 /* SSBT :: KJH + to check encryption changed status */
 #define MGMT_EV_ENCRYPT_CHANGE		0x0101
 struct mgmt_ev_encrypt_change {
 	bdaddr_t	bdaddr;
 	__u8		status;
 } __packed;
-
-/* SSBT :: LJH(bluez0220) + passkey notification */
-#define MGMT_EV_USER_PASSKEY_NOTIFICATION	0x0102
-struct mgmt_ev_user_passkey_notificaion {
-	bdaddr_t	bdaddr;
-	uint32_t	value;
-} __packed;
-/* SSBT :: LJH(bluez0220) + passkey notification end */
 
 #define MGMT_WRITE_LE_HOST_SUPPORTED	0x0103
 struct write_le_host_supported {
