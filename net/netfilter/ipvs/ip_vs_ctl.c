@@ -2943,7 +2943,7 @@ static int ip_vs_genl_dump_service(struct sk_buff *skb,
 {
 	void *hdr;
 
-	hdr = genlmsg_put(skb, NETLINK_CB(cb->skb).pid, cb->nlh->nlmsg_seq,
+	hdr = genlmsg_put(skb, NETLINK_CB(cb->skb).portid, cb->nlh->nlmsg_seq,
 			  &ip_vs_genl_family, NLM_F_MULTI,
 			  IPVS_CMD_NEW_SERVICE);
 	if (!hdr)
@@ -3131,7 +3131,7 @@ static int ip_vs_genl_dump_dest(struct sk_buff *skb, struct ip_vs_dest *dest,
 {
 	void *hdr;
 
-	hdr = genlmsg_put(skb, NETLINK_CB(cb->skb).pid, cb->nlh->nlmsg_seq,
+	hdr = genlmsg_put(skb, NETLINK_CB(cb->skb).portid, cb->nlh->nlmsg_seq,
 			  &ip_vs_genl_family, NLM_F_MULTI,
 			  IPVS_CMD_NEW_DEST);
 	if (!hdr)
@@ -3260,7 +3260,7 @@ static int ip_vs_genl_dump_daemon(struct sk_buff *skb, __be32 state,
 				  struct netlink_callback *cb)
 {
 	void *hdr;
-	hdr = genlmsg_put(skb, NETLINK_CB(cb->skb).pid, cb->nlh->nlmsg_seq,
+	hdr = genlmsg_put(skb, NETLINK_CB(cb->skb).portid, cb->nlh->nlmsg_seq,
 			  &ip_vs_genl_family, NLM_F_MULTI,
 			  IPVS_CMD_NEW_DAEMON);
 	if (!hdr)
