@@ -120,7 +120,7 @@ struct netlink_table {
 	struct nl_pid_hash hash;
 	struct hlist_head mc_list;
 	struct listeners __rcu *listeners;
-	unsigned int nl_nonroot;
+	unsigned int flags;
 	unsigned int groups;
 	struct mutex *cb_mutex;
 	struct module *module;
@@ -529,6 +529,7 @@ static int netlink_release(struct socket *sock)
 			RCU_INIT_POINTER(nl_table[sk->sk_protocol].listeners, NULL);
 			kfree_rcu(old, rcu);
 			nl_table[sk->sk_protocol].module = NULL;
+			nl_table[sk->sk_protocol].flags = 0;
 			nl_table[sk->sk_protocol].registered = 0;
 		}
 	} else if (nlk->subscriptions)
@@ -587,7 +588,7 @@ retry:
 
 static inline int netlink_capable(struct socket *sock, unsigned int flag)
 {
-	return (nl_table[sock->sk->sk_protocol].nl_nonroot & flag) ||
+	return (nl_table[sock->sk->sk_protocol].flags & flag) ||
 	       capable(CAP_NET_ADMIN);
 }
 
@@ -650,7 +651,7 @@ static int netlink_bind(struct socket *sock, struct sockaddr *addr,
 
 	/* Only superuser is allowed to listen multicasts */
 	if (nladdr->nl_groups) {
-		if (!netlink_capable(sock, NL_NONROOT_RECV))
+		if (!netlink_capable(sock, NL_CFG_F_NONROOT_RECV))
 			return -EPERM;
 		err = netlink_realloc_groups(sk);
 		if (err)
@@ -703,7 +704,7 @@ static int netlink_connect(struct socket *sock, struct sockaddr *addr,
 		return -EINVAL;
 
 	/* Only superuser is allowed to send multicasts */
-	if (nladdr->nl_groups && !netlink_capable(sock, NL_NONROOT_SEND))
+	if (nladdr->nl_groups && !netlink_capable(sock, NL_CFG_F_NONROOT_SEND))
 		return -EPERM;
 
 	if (!nlk->pid)
@@ -1223,7 +1224,7 @@ static int netlink_setsockopt(struct socket *sock, int level, int optname,
 		break;
 	case NETLINK_ADD_MEMBERSHIP:
 	case NETLINK_DROP_MEMBERSHIP: {
-		if (!netlink_capable(sock, NL_NONROOT_RECV))
+		if (!netlink_capable(sock, NL_CFG_F_NONROOT_RECV))
 			return -EPERM;
 		err = netlink_realloc_groups(sk);
 		if (err)
@@ -1350,7 +1351,7 @@ static int netlink_sendmsg(struct kiocb *kiocb, struct socket *sock,
 		dst_group = ffs(addr->nl_groups);
 		err =  -EPERM;
 		if ((dst_group || dst_pid) &&
-		    !netlink_capable(sock, NL_NONROOT_SEND))
+		    !netlink_capable(sock, NL_CFG_F_NONROOT_SEND))
 			goto out;
 	} else {
 		dst_pid = nlk->dst_pid;
@@ -1553,6 +1554,9 @@ __netlink_kernel_create(struct net *net, int unit, struct module *module,
 		rcu_assign_pointer(nl_table[unit].listeners, listeners);
 		nl_table[unit].cb_mutex = cb_mutex;
 		nl_table[unit].module = module;
+		if (cfg) {
+			nl_table[unit].flags = cfg->flags;
+		}
 		nl_table[unit].registered = 1;
 	} else {
 		kfree(listeners);
@@ -1648,13 +1652,6 @@ void netlink_clear_multicast_users(struct sock *ksk, unsigned int group)
 	__netlink_clear_multicast_users(ksk, group);
 	netlink_table_ungrab();
 }
-
-void netlink_set_nonroot(int protocol, unsigned int flags)
-{
-	if ((unsigned int)protocol < MAX_LINKS)
-		nl_table[protocol].nl_nonroot = flags;
-}
-EXPORT_SYMBOL(netlink_set_nonroot);
 
 static void netlink_destroy_callback(struct netlink_callback *cb)
 {
@@ -2124,7 +2121,7 @@ static void __init netlink_add_usersock_entry(void)
 	rcu_assign_pointer(nl_table[NETLINK_USERSOCK].listeners, listeners);
 	nl_table[NETLINK_USERSOCK].module = THIS_MODULE;
 	nl_table[NETLINK_USERSOCK].registered = 1;
-	nl_table[NETLINK_USERSOCK].nl_nonroot = NL_NONROOT_SEND;
+	nl_table[NETLINK_USERSOCK].flags = NL_CFG_F_NONROOT_SEND;
 
 	netlink_table_ungrab();
 }
