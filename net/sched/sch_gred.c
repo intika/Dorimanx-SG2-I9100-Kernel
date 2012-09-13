@@ -534,6 +534,7 @@ static int gred_dump(struct Qdisc *sch, struct sk_buff *skb)
 	for (i = 0; i < MAX_DPs; i++) {
 		struct gred_sched_data *q = table->tab[i];
 		struct tc_gred_qopt opt;
+		unsigned long qavg;
 
 		memset(&opt, 0, sizeof(opt));
 
@@ -568,7 +569,9 @@ static int gred_dump(struct Qdisc *sch, struct sk_buff *skb)
 			q->vars.qavg = table->tab[table->def]->vars.qavg;
 		}
 
-		opt.qave = red_calc_qavg(&q->parms, &q->vars, q->vars.qavg);
+		qavg = red_calc_qavg(&q->parms, &q->vars,
+				     q->vars.qavg >> q->parms.Wlog);
+		opt.qave = qavg >> q->parms.Wlog;
 
 append_opt:
 		if (nla_append(skb, sizeof(opt), &opt) < 0)
