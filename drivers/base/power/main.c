@@ -813,6 +813,8 @@ static void device_complete(struct device *dev, pm_message_t state)
 	}
 
 	device_unlock(dev);
+
+	pm_runtime_put(dev);
 }
 
 /**
@@ -1150,6 +1152,20 @@ static int __device_suspend(struct device *dev, pm_message_t state, bool async)
 	if (async_error)
 		goto Complete;
 
+	/*
+	 * If a device configured to wake up the system from sleep states
+	 * has been suspended at run time and there's a resume request pending
+	 * for it, this is equivalent to the device signaling wakeup, so the
+	 * system suspend operation should be aborted.
+	 */
+	if (pm_runtime_barrier(dev) && device_may_wakeup(dev))
+		pm_wakeup_event(dev, 0);
+
+	if (pm_wakeup_pending()) {
+		async_error = -EBUSY;
+		goto Complete;
+	}
+
 	if (dev->power.syscore)
 		goto Complete;
 
@@ -1322,6 +1338,14 @@ static int device_prepare(struct device *dev, pm_message_t state)
 
 	if (dev->power.syscore)
 		return 0;
+
+	/*
+	 * If a device's parent goes into runtime suspend at the wrong time,
+	 * it won't be possible to resume the device.  To prevent this we
+	 * block runtime suspend here, during the prepare phase, and allow
+	 * it again during the complete phase.
+	 */
+	pm_runtime_get_noresume(dev);
 
 	device_lock(dev);
 
