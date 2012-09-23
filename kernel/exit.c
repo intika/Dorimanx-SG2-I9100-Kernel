@@ -842,6 +842,9 @@ void do_exit(long code)
 	if (tsk->task_frag.page)
 		put_page(tsk->task_frag.page);
 
+	if (tsk->task_frag.page)
+		put_page(tsk->task_frag.page);
+
 	validate_creds_for_do_exit(tsk);
 
 	preempt_disable();
