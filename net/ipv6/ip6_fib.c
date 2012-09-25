@@ -512,7 +512,7 @@ static struct fib6_node * fib6_add_1(struct fib6_node *root, void *addr,
 	ln = node_alloc();
 
 	if (!ln)
-		return NULL;
+		return ERR_PTR(-ENOMEM);
 	ln->fn_bit = plen;
 
 	ln->parent = pn;
@@ -559,7 +559,7 @@ insert_above:
 				node_free(in);
 			if (ln)
 				node_free(ln);
-			return NULL;
+			return ERR_PTR(-ENOMEM);
 		}
 
 		/*
@@ -609,7 +609,7 @@ insert_above:
 		ln = node_alloc();
 
 		if (!ln)
-			return NULL;
+			return ERR_PTR(-ENOMEM);
 
 		ln->fn_bit = plen;
 
@@ -775,11 +775,8 @@ int fib6_add(struct fib6_node *root, struct rt6_info *rt, struct nl_info *info)
 
 	if (IS_ERR(fn)) {
 		err = PTR_ERR(fn);
-		fn = NULL;
-	}
-
-	if (!fn)
 		goto out;
+	}
 
 	pn = fn;
 
@@ -818,15 +815,12 @@ int fib6_add(struct fib6_node *root, struct rt6_info *rt, struct nl_info *info)
 					allow_create, replace_required);
 
 			if (IS_ERR(sn)) {
-				err = PTR_ERR(sn);
-				sn = NULL;
-			}
-			if (!sn) {
 				/* If it is failed, discard just allocated
 				   root, and then (in st_failure) stale node
 				   in main tree.
 				 */
 				node_free(sfn);
+				err = PTR_ERR(sn);
 				goto st_failure;
 			}
 
@@ -841,10 +835,8 @@ int fib6_add(struct fib6_node *root, struct rt6_info *rt, struct nl_info *info)
 
 			if (IS_ERR(sn)) {
 				err = PTR_ERR(sn);
-				sn = NULL;
-			}
-			if (!sn)
 				goto st_failure;
+			}
 		}
 
 		if (!fn->leaf) {
