@@ -609,8 +609,7 @@ void l2cap_chan_del(struct l2cap_chan *chan, int err)
 		}
 	}
 
-	if (chan->ops->teardown)
-		chan->ops->teardown(chan, err);
+	chan->ops->teardown(chan, err);
 
 	if (test_bit(CONF_NOT_COMPLETE, &chan->conf_state))
 		return;
@@ -651,8 +650,7 @@ void l2cap_chan_close(struct l2cap_chan *chan, int reason)
 
 	switch (chan->state) {
 	case BT_LISTEN:
-		if (chan->ops->teardown)
-			chan->ops->teardown(chan, 0);
+		chan->ops->teardown(chan, 0);
 		break;
 
 	case BT_CONNECTED:
@@ -694,8 +692,7 @@ void l2cap_chan_close(struct l2cap_chan *chan, int reason)
 		break;
 
 	default:
-		if (chan->ops->teardown)
-			chan->ops->teardown(chan, 0);
+		chan->ops->teardown(chan, 0);
 		break;
 	}
 }
