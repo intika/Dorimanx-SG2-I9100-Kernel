@@ -295,6 +295,8 @@ struct hci_dev {
 	void (*wake_peer)(struct hci_dev *);
 };
 
+#define HCI_PHY_HANDLE(handle)	(handle & 0xff)
+
 struct hci_conn {
 	struct list_head list;
 
