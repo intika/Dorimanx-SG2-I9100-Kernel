@@ -186,7 +186,7 @@ static void cpufreq_stats_free_sysfs(unsigned int cpu)
 	if (!cpufreq_frequency_get_table(cpu))
 		goto put_ref;
 
-	if (cpumask_weight(policy->cpus) == 1) {
+	if (!policy_is_shared(policy)) {
 		pr_debug("%s: Free sysfs stat\n", __func__);
 		sysfs_remove_group(&policy->kobj, &stats_attr_group);
 	}
@@ -203,10 +203,8 @@ static int cpufreq_stats_create_table(struct cpufreq_policy *policy,
 	struct cpufreq_policy *data;
 	unsigned int alloc_size;
 	unsigned int cpu = policy->cpu;
-
 	if (per_cpu(cpufreq_stats_table, cpu))
-		return 0;
-
+		return -EBUSY;
 	stat = kzalloc(sizeof(struct cpufreq_stats), GFP_KERNEL);
 	if ((stat) == NULL)
 		return -ENOMEM;
@@ -303,7 +301,7 @@ static int cpufreq_stat_notifier_policy(struct notifier_block *nb,
 		return 0;
 	ret = cpufreq_stats_create_table(policy, table);
 	if (ret)
-		pr_debug("%s: create table failed, ret=%d\n", __func__, ret);
+		return ret;
 	return 0;
 }
 
