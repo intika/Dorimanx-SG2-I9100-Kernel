@@ -22,6 +22,7 @@
 #include <linux/vmalloc.h>
 #include <linux/export.h>
 #include <net/wext.h>
+#include <linux/pm_runtime.h>
 
 #include "net-sysfs.h"
 
@@ -1285,6 +1286,8 @@ void netdev_unregister_kobject(struct net_device * net)
 
 	remove_queue_kobjects(net);
 
+	pm_runtime_set_memalloc_noio(dev, false);
+
 	device_del(dev);
 }
 
@@ -1327,6 +1330,8 @@ int netdev_register_kobject(struct net_device *net)
 		device_del(dev);
 		return error;
 	}
+
+	pm_runtime_set_memalloc_noio(dev, true);
 
 	return error;
 }
