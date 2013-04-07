@@ -401,8 +401,6 @@ static u32 get_current_settings(struct hci_dev *hdev)
 {
 	u32 settings = 0;
 
-	BT_DBG("hdev->flags %lx", hdev->flags);
-
 	if (hdev_is_powered(hdev))
 		settings |= MGMT_SETTING_POWERED;
 
@@ -847,8 +845,6 @@ static int mgmt_event(u16 event, struct hci_dev *hdev, void *data, u16 data_len,
 	hci_send_to_control(skb, skip_sk);
 	kfree_skb(skb);
 
-	BT_DBG("-----> evt: %x", event);
-
 	return 0;
 }
 
@@ -942,9 +938,8 @@ static int set_discoverable(struct sock *sk, struct hci_dev *hdev, void *data,
 
 	if (cp->val)
 		scan |= SCAN_INQUIRY;
-	else {
+	else
 		cancel_delayed_work(&hdev->discov_off);
-	}
 
 	err = hci_send_cmd(hdev, HCI_OP_WRITE_SCAN_ENABLE, 1, &scan);
 	if (err < 0)
@@ -1226,7 +1221,6 @@ static int set_le(struct sock *sk, struct hci_dev *hdev, void *data, u16 len)
 
 		if (val != test_bit(HCI_LE_ENABLED, &hdev->dev_flags)) {
 			change_bit(HCI_LE_ENABLED, &hdev->dev_flags);
-			BT_DBG("HCI_LE_ENABLED changed %d", changed);
 			changed = true;
 		}
 
@@ -3056,8 +3050,6 @@ int mgmt_powered(struct hci_dev *hdev, u8 powered)
 	struct cmd_lookup match = { NULL, hdev };
 	int err;
 
-	BT_DBG("powered %u", powered);
-
 	if (!test_bit(HCI_MGMT, &hdev->dev_flags))
 		return 0;
 
@@ -3215,7 +3207,6 @@ int mgmt_device_connected(struct hci_dev *hdev, bdaddr_t *bdaddr, u8 link_type,
 					  name, name_len);
 
 	if (dev_class && memcmp(dev_class, "\0\0\0", 3) != 0)
-		/* fixed class append */
 		eir_len = eir_append_data(ev->eir, eir_len,
 					  EIR_CLASS_OF_DEV, dev_class, 3);
 
@@ -3712,17 +3703,11 @@ int mgmt_le_enable_complete(struct hci_dev *hdev, u8 enable, u8 status)
 	}
 
 	if (enable) {
-		if (!test_and_set_bit(HCI_LE_ENABLED, &hdev->dev_flags)) {
+		if (!test_and_set_bit(HCI_LE_ENABLED, &hdev->dev_flags))
 			changed = true;
-			BT_DBG(" %s set HCI_LE_ENABLED  enable %d",
-					hdev->name, enable);
-			}
 	} else {
-		if (test_and_clear_bit(HCI_LE_ENABLED, &hdev->dev_flags)) {
+		if (test_and_clear_bit(HCI_LE_ENABLED, &hdev->dev_flags))
 			changed = true;
-			BT_DBG("%s clear HCI_LE_ENABLED  enable %d",
-					hdev->name, enable);
-			}
 	}
 
 	mgmt_pending_foreach(MGMT_OP_SET_LE, hdev, settings_rsp, &match);
@@ -3796,8 +3781,6 @@ int mgmt_remote_name(struct hci_dev *hdev, bdaddr_t *bdaddr, u8 link_type,
 	eir_len = eir_append_data(ev->eir, 0, EIR_NAME_COMPLETE, name,
 				  name_len);
 
-	BT_DBG("[NEO] mgmt_remote_name, name = %s", name);
-
 	ev->eir_len = cpu_to_le16(eir_len);
 
 	return mgmt_event(MGMT_EV_DEVICE_FOUND, hdev, ev,
@@ -3854,7 +3837,6 @@ int mgmt_discovering(struct hci_dev *hdev, u8 discovering)
 		cmd = mgmt_pending_find(MGMT_OP_STOP_DISCOVERY, hdev);
 
 	if (cmd != NULL) {
-		BT_DBG("cmd is not NULL !!!!!");
 		u8 type = hdev->discovery.type;
 
 		cmd_complete(cmd->sk, hdev->id, cmd->opcode, 0, &type,

@@ -455,7 +455,6 @@ static int hci_sock_release(struct socket *sock)
 	return 0;
 }
 
-/* sync from bluez git */
 static int hci_sock_blacklist_add(struct hci_dev *hdev, void __user *arg)
 {
 	bdaddr_t bdaddr;
@@ -473,7 +472,6 @@ static int hci_sock_blacklist_add(struct hci_dev *hdev, void __user *arg)
 	return err;
 }
 
-/* sync from bluez git */
 static int hci_sock_blacklist_del(struct hci_dev *hdev, void __user *arg)
 {
 	bdaddr_t bdaddr;

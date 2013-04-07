@@ -218,6 +218,7 @@ static void build_pairing_cmd(struct l2cap_conn *conn,
 				__u8 authreq)
 {
 	u8 dist_keys = 0;
+
 	if (test_bit(HCI_PAIRABLE, &conn->hcon->hdev->dev_flags)) {
 		dist_keys = SMP_DIST_ENC_KEY;
 		authreq |= SMP_AUTH_BONDING;
@@ -331,10 +332,6 @@ static int tk_request(struct l2cap_conn *conn, u8 remote_oob, u8 auth,
 	/* If not bonding, don't ask user to confirm a Zero TK */
 	if (!(auth & SMP_AUTH_BONDING) && method == JUST_CFM)
 		method = JUST_WORKS;
-
-	BT_DBG("********************");
-	BT_DBG("method = %x", method);
-	BT_DBG("********************");
 
 	/* If Just Works, Continue with Zero TK */
 	if (method == JUST_WORKS) {
@@ -728,8 +725,6 @@ static u8 smp_ltk_encrypt(struct l2cap_conn *conn)
 	struct smp_ltk *key;
 	struct hci_conn *hcon = conn->hcon;
 
-	BT_DBG("");
-
 	key = hci_find_ltk_by_addr(hcon->hdev, conn->dst, hcon->dst_type);
 	if (!key)
 		return 0;
@@ -757,7 +752,6 @@ static u8 smp_cmd_security_req(struct l2cap_conn *conn, struct sk_buff *skb)
 	if (smp_ltk_encrypt(conn))
 		return 0;
 
-	BT_DBG("There is no stored key !!!");
 	if (test_and_set_bit(HCI_CONN_LE_SMP_PEND, &hcon->flags))
 		return 0;
 
@@ -890,8 +884,6 @@ int smp_sig_channel(struct l2cap_conn *conn, struct sk_buff *skb)
 
 	skb_pull(skb, sizeof(code));
 
-	BT_DBG("----->> code %x", code);
-
 	switch (code) {
 	case SMP_CMD_PAIRING_REQ:
 		reason = smp_cmd_pairing_req(conn, skb);
@@ -945,8 +937,6 @@ int smp_sig_channel(struct l2cap_conn *conn, struct sk_buff *skb)
 done:
 	if (reason)
 		smp_failure(conn, reason, 1);
-
-	BT_DBG("----- err %d", err);
 
 	kfree_skb(skb);
 	return err;

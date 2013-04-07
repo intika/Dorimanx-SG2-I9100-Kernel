@@ -671,7 +671,7 @@ int hci_dev_open(__u16 dev)
 
 	hci_req_lock(hdev);
 
-	if (test_bit(HCI_UNREGISTER, &hdev->flags)) {
+	if (test_bit(HCI_UNREGISTER, &hdev->dev_flags)) {
 		ret = -ENODEV;
 		goto done;
 	}
@@ -1263,8 +1263,6 @@ struct smp_ltk *hci_find_ltk_by_addr(struct hci_dev *hdev, bdaddr_t *bdaddr,
 {
 	struct smp_ltk *k;
 
-	BT_DBG("");
-
 	list_for_each_entry(k, &hdev->long_term_keys, list)
 		if ((addr_type == k->bdaddr_type &&
 					bacmp(bdaddr, &k->bdaddr) == 0) ||
@@ -1598,21 +1596,20 @@ static int hci_do_le_scan(struct hci_dev *hdev, u8 type, u16 interval,
 
 int hci_cancel_le_scan(struct hci_dev *hdev)
 {
-	struct hci_cp_le_set_scan_enable cp;
-
 	BT_DBG("%s", hdev->name);
 
 	if (!test_bit(HCI_LE_SCAN, &hdev->dev_flags))
-		return -EPERM;
+		return -EALREADY;
 
-	/* to do : if use cancel_delayed_work_sync, then error will occur.
-	* cancel_delayed_work_sync(&hdev->le_scan_disable);
-	*/
-	cancel_delayed_work(&hdev->le_scan_disable);
+	if (cancel_delayed_work(&hdev->le_scan_disable)) {
+		struct hci_cp_le_set_scan_enable cp;
 
-	memset(&cp, 0, sizeof(cp));
+		/* Send HCI command to disable LE Scan */
+		memset(&cp, 0, sizeof(cp));
+		hci_send_cmd(hdev, HCI_OP_LE_SET_SCAN_ENABLE, sizeof(cp), &cp);
+	}
 
-	return hci_send_cmd(hdev, HCI_OP_LE_SET_SCAN_ENABLE, sizeof(cp), &cp);
+	return 0;
 }
 
 static void le_scan_disable_work(struct work_struct *work)
@@ -1778,6 +1775,7 @@ int hci_register_dev(struct hci_dev *hdev)
 			hdev->rfkill = NULL;
 		}
 	}
+
 	set_bit(HCI_AUTO_OFF, &hdev->dev_flags);
 	set_bit(HCI_SETUP, &hdev->dev_flags);
 	schedule_work(&hdev->power_on);
@@ -1805,7 +1803,7 @@ void hci_unregister_dev(struct hci_dev *hdev)
 
 	BT_DBG("%p name %s bus %d", hdev, hdev->name, hdev->bus);
 
-	set_bit(HCI_UNREGISTER, &hdev->flags);
+	set_bit(HCI_UNREGISTER, &hdev->dev_flags);
 
 	write_lock(&hci_dev_list_lock);
 	list_del(&hdev->list);

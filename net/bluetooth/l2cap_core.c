@@ -1016,7 +1016,7 @@ static void l2cap_do_start(struct l2cap_chan *chan)
 		if (!(conn->info_state & L2CAP_INFO_FEAT_MASK_REQ_DONE))
 			return;
 
- 		if (l2cap_chan_check_security(chan) &&
+		if (l2cap_chan_check_security(chan) &&
 				__l2cap_no_conn_pending(chan))
 			l2cap_send_conn_req(chan);
 	} else {
@@ -1886,7 +1886,6 @@ static void __l2cap_send_ack(struct l2cap_chan *chan)
 
 static void l2cap_send_ack(struct l2cap_chan *chan)
 {
-	BT_DBG("l2cap_send_ack");
 	__clear_ack_timer(chan);
 	__l2cap_send_ack(chan);
 }
@@ -4484,12 +4483,10 @@ expected:
 	}
 
 	chan->num_acked = (chan->num_acked + 1) % num_to_ack;
-	if (chan->num_acked == num_to_ack - 1) {
+	if (chan->num_acked == num_to_ack - 1)
 		l2cap_send_ack(chan);
-	} else {
-		BT_DBG("__set_ack_timer");
+	else
 		__set_ack_timer(chan);
-	}
 
 	return 0;
 

@@ -1402,7 +1402,6 @@ static bool hci_resolve_next_name(struct hci_dev *hdev)
 		return false;
 
 	e = hci_inquiry_cache_lookup_resolve(hdev, BDADDR_ANY, NAME_NEEDED);
-
 	if (e != NULL && hci_resolve_name(hdev, e) == 0) {
 		e->name_state = NAME_PENDING;
 		return true;
@@ -1419,8 +1418,8 @@ static void hci_check_pending_name(struct hci_dev *hdev, struct hci_conn *conn,
 
 	/* this event is for remote name & class update.actual connected event is sent from hci_conn_complete_evt */
 	if (conn /*&& !test_and_set_bit(HCI_CONN_MGMT_CONNECTED, &conn->flags)*/)
-		mgmt_device_connected(hdev, bdaddr, ACL_LINK, 0x00, 0,
-				      name, name_len, conn->dev_class);
+		mgmt_device_connected(hdev, bdaddr, ACL_LINK, 0x00, 0, name,
+				      name_len, conn->dev_class);
 
 	if (discov->state == DISCOVERY_STOPPED)
 		return;
@@ -1726,7 +1725,6 @@ static inline void hci_inquiry_complete_evt(struct hci_dev *hdev, struct sk_buff
 	}
 
 	e = hci_inquiry_cache_lookup_resolve(hdev, BDADDR_ANY, NAME_NEEDED);
-
 	if (e != NULL && hci_resolve_name(hdev, e) == 0) {
 		e->name_state = NAME_PENDING;
 		hci_discovery_set_state(hdev, DISCOVERY_RESOLVING);
@@ -3132,7 +3130,7 @@ static inline void hci_sync_conn_complete_evt(struct hci_dev *hdev, struct sk_bu
 	case 0x1a:	/* Unsupported Remote Feature */
 	case 0x1f:	/* Unspecified error */
 		if (conn->out && conn->attempt < 2 && !conn->hdev->is_wbs) {
-				conn->pkt_type = (hdev->esco_type & SCO_ESCO_MASK) |
+			conn->pkt_type = (hdev->esco_type & SCO_ESCO_MASK) |
 					(hdev->esco_type & EDR_ESCO_MASK);
 			hci_setup_sync(conn, conn->link->handle);
 			goto unlock;
@@ -3196,7 +3194,7 @@ static inline void hci_extended_inquiry_result_evt(struct hci_dev *hdev, struct 
 
 		/*__u8 eir[sizeof(info->data) + 1];
 		*size_t eir_len; */
-		eir_len = eir_length(info->data, sizeof(info->data));
+		eir_len = eir_get_length(info->data, sizeof(info->data));
 
 		memset(eir, 0, sizeof(eir));
 		memcpy(eir, info->data, eir_len);
@@ -3211,9 +3209,8 @@ static inline void hci_extended_inquiry_result_evt(struct hci_dev *hdev, struct 
 		name_known = hci_inquiry_cache_update(hdev, &data, name_known,
 						      &ssp);
 		mgmt_device_found(hdev, &info->bdaddr, ACL_LINK, 0x00,
-				  info->dev_class, info->rssi,
-				  !name_known, ssp, eir,
-				  eir_len);
+				  info->dev_class, info->rssi, !name_known,
+				  ssp, eir, eir_len);
 	}
 
 	hci_dev_unlock(hdev);
@@ -3252,19 +3249,19 @@ static inline void hci_io_capa_request_evt(struct hci_dev *hdev, struct sk_buff 
 		goto unlock;
 
 	hci_conn_hold(conn);
+
 	if (!test_bit(HCI_MGMT, &hdev->dev_flags))
 		goto unlock;
+
 	if (test_bit(HCI_PAIRABLE, &hdev->dev_flags) ||
 			(conn->remote_auth & ~0x01) == HCI_AT_NO_BONDING) {
 		struct hci_cp_io_capability_reply cp;
 
 		bacpy(&cp.bdaddr, &ev->bdaddr);
-
 		/* Change the IO capability from KeyboardDisplay
 		 * to DisplayYesNo as it is not supported by BT spec. */
 		cp.capability = (conn->io_capability == 0x04) ?
 						0x01 : conn->io_capability;
-
 		conn->auth_type = hci_get_auth_req(conn);
 		cp.authentication = conn->auth_type;
 
@@ -3465,6 +3462,7 @@ static inline void hci_remote_oob_data_request_evt(struct hci_dev *hdev,
 	BT_DBG("%s", hdev->name);
 
 	hci_dev_lock(hdev);
+
 	if (!test_bit(HCI_MGMT, &hdev->dev_flags))
 		goto unlock;
 
@@ -3558,7 +3556,6 @@ static inline void hci_le_adv_report_evt(struct hci_dev *hdev,
 		struct hci_ev_le_advertising_info *ev = ptr;
 
 		rssi = ev->data[ev->length];
-
 		mgmt_device_found(hdev, &ev->bdaddr, LE_LINK, ev->bdaddr_type,
 				  NULL, rssi, 0, 1, ev->data, ev->length);
 

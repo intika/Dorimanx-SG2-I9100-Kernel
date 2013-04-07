@@ -200,8 +200,6 @@ static int sco_connect(struct sock *sk, __s8 is_wbs)
 		pkt_type &= SCO_ESCO_MASK;
 	}
 
-	BT_DBG("type: %d, pkt_type: 0x%x", type, pkt_type);
-
 	hcon = hci_connect(hdev, type, pkt_type, dst, BDADDR_BREDR,
 			   BT_SECURITY_LOW, HCI_AT_NO_BONDING);
 	if (IS_ERR(hcon)) {

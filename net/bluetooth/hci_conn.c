@@ -48,21 +48,19 @@ static void hci_le_connect(struct hci_conn *conn)
 	struct hci_dev *hdev = conn->hdev;
 	struct hci_cp_le_create_conn cp;
 
-	BT_DBG("");
-
 	conn->state = BT_CONNECT;
 	conn->out = true;
 	conn->link_mode |= HCI_LM_MASTER;
 	conn->sec_level = BT_SECURITY_LOW;
 
 	memset(&cp, 0, sizeof(cp));
-	cp.scan_interval = cpu_to_le16(0x0060); /* 60ms (N*0.625ms) */
-	cp.scan_window = cpu_to_le16(0x0030); /* 30ms (N*0.625ms) */
+	cp.scan_interval = cpu_to_le16(0x0060);
+	cp.scan_window = cpu_to_le16(0x0030);
 	bacpy(&cp.peer_addr, &conn->dst);
 	cp.peer_addr_type = conn->dst_type;
-	cp.conn_interval_min = cpu_to_le16(0x0028); /* 50ms (N*1.25ms) */
-	cp.conn_interval_max = cpu_to_le16(0x0038); /* 70ms (N*1.25ms) */
-	cp.supervision_timeout = cpu_to_le16(0x002a); /* 420ms (N*10ms) */
+	cp.conn_interval_min = cpu_to_le16(0x0028);
+	cp.conn_interval_max = cpu_to_le16(0x0038);
+	cp.supervision_timeout = cpu_to_le16(0x002a);
 	cp.min_ce_len = cpu_to_le16(0x0000);
 	cp.max_ce_len = cpu_to_le16(0x0000);
 
@@ -71,7 +69,6 @@ static void hci_le_connect(struct hci_conn *conn)
 
 static void hci_le_connect_cancel(struct hci_conn *conn)
 {
-	BT_DBG("");
 	hci_send_cmd(conn->hdev, HCI_OP_LE_CREATE_CONN_CANCEL, 0, NULL);
 }
 
