@@ -1,4 +1,5 @@
-/* Copyright (C) 2010-2012 ARM Limited. All rights reserved.
+/*
+ * Copyright (C) 2010-2012 ARM Limited. All rights reserved.
  *
  * This program is free software and is provided to you under the terms of the GNU General Public License version 2
  * as published by the Free Software Foundation, and any use by you of this program is subject to the terms of such GNU licence.
@@ -87,7 +88,7 @@ static _mali_osk_atomic_t voltage_lock_status;
 static mali_bool mali_vol_lock_flag = 0;
 #endif
 
-int  gpu_power_state;
+int gpu_power_state;
 static int bPoweroff;
 
 #ifdef CONFIG_REGULATOR
@@ -416,13 +417,11 @@ static mali_bool init_mali_clock(void)
 	}
 
 	regulator_enable(g3d_regulator);
-
 	MALI_DEBUG_PRINT(1, ("= regulator_enable -> use cnt: %d \n",mali_regulator_get_usecount()));
 	mali_regulator_set_voltage(mali_gpu_vol, mali_gpu_vol);
 #endif
 
 	MALI_DEBUG_PRINT(2, ("MALI Clock is set at mali driver\n"));
-
 	MALI_DEBUG_PRINT(3,("::clk_put:: %s mali_parent_clock - normal\n", __FUNCTION__));
 	MALI_DEBUG_PRINT(3,("::clk_put:: %s mpll_clock  - normal\n", __FUNCTION__));
 

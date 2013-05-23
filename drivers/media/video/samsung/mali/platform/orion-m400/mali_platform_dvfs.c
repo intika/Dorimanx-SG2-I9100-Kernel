@@ -1,6 +1,4 @@
-/*
- * Copyright (C) 2010 ARM Limited. All rights reserved.
- *
+/* Copyright (C) 2010-2012 ARM Limited. All rights reserved. * 
  * This program is free software and is provided to you under the terms of the GNU General Public License version 2
  * as published by the Free Software Foundation, and any use by you of this program is subject to the terms of such GNU licence.
  *
@@ -118,7 +116,7 @@ int step1_down = 50;
 int step2_clk = 200;
 int step2_vol = 1000000;
 int step1_up = 60;
-int step2_down = 50;;
+int step2_down = 50;
 #if (MALI_DVFS_STEPS > 3)
 int step3_clk = 267;
 int step3_vol = 1050000;

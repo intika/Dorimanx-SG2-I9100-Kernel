@@ -51,7 +51,7 @@
 #define CLK_DIV_STAT_G3D 	0x1003C62C
 #define CLK_DESC 			"clk-divider-status"
 
-#define MALI_BOTTOMLOCK_VOL	850000
+#define MALI_BOTTOMLOCK_VOL	900000
 
 typedef struct mali_runtime_resumeTag{
 	int clk;
@@ -124,7 +124,7 @@ extern struct platform_device exynos4_device_pd[];
 
 mali_io_address clk_register_map = 0;
 
-_mali_osk_lock_t *mali_dvfs_lock;
+_mali_osk_lock_t *mali_dvfs_lock = 0;
 
 #ifdef CONFIG_REGULATOR
 int mali_regulator_get_usecount(void)
@@ -548,7 +548,7 @@ _mali_osk_errcode_t g3d_power_domain_control(int bpower_on)
 			timeout--;
 			_mali_osk_time_ubusydelay(100);
 		}
-		MALI_PRINTF(("MALI Power domain enabled"));		
+		MALI_PRINTF(("MALI Power domain enabled"));
 #endif //MALI_PMM_RUNTIME_JOB_CONTROL_ON
 	} else {
 #if MALI_PMM_RUNTIME_JOB_CONTROL_ON
