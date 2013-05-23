@@ -41,7 +41,7 @@ ifeq ($(CONFIG_PM),y)
 USING_PMM=1
 endif
 
-ifeq ($(CONFIG_PM_RUNTIME),y)  
+ifeq ($(CONFIG_PM_RUNTIME),y)
 USING_MALI_RUN_TIME_PM=1
 endif
 
@@ -144,10 +144,10 @@ INCLUDES = \
 		-I$(MALI_FILE_PREFIX)\
 		-I$(MALI_FILE_PREFIX)/platform\
 		-I$(MALI_FILE_PREFIX)/common \
-		-I$(MALI_FILE_PREFIX)/linux 
+		-I$(MALI_FILE_PREFIX)/linux
 
 EXTRA_CFLAGS += $(INCLUDES)\
-		$(DEFINES) 
+		$(DEFINES)
 
 
 EXTRA_CFLAGS += -I$(MALI_FILE_PREFIX)/linux/license/gpl
@@ -200,7 +200,7 @@ mali-y := \
     $(KBUILDROOT)linux/mali_kernel_sysfs.o \
 	$(KBUILDROOT)$(MALI_PLATFORM_FILE) \
 	$(KBUILDROOT)$(OSKFILES) \
-	$(KBUILDROOT)$(UKKFILES) 
+	$(KBUILDROOT)$(UKKFILES)
 	#__malidrv_build_info.o
 
 ifeq ($(USING_PROFILING),1)

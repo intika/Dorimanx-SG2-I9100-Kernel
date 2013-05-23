@@ -905,6 +905,17 @@ static int do_spi_entry(const char *filename, void *symval,
 }
 ADD_TO_DEVTABLE("spi", spi_device_id, do_spi_entry);
 
+/* Looks like: mcp:S */
+static int do_mcp_entry(const char *filename, void *symval,
+			char *alias)
+{
+	DEF_FIELD_ADDR(symval, mcp_device_id, name);
+	sprintf(alias, MCP_MODULE_PREFIX "%s", *name);
+
+	return 1;
+}
+ADD_TO_DEVTABLE("mcp", mcp_device_id, do_mcp_entry);
+
 static const struct dmifield {
 	const char *prefix;
 	int field;

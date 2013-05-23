@@ -398,7 +398,7 @@ static ssize_t change_homekey(struct device *dev,
 {
 	struct gpio_keys_drvdata *ddata = dev_get_drvdata(dev);
 	int i = 0;
-	
+
 	struct gpio_button_data *button = &ddata->data[3];
 	sscanf(buf, "%d", &i);
 	if(i != 102 && i != 172) i = 172;

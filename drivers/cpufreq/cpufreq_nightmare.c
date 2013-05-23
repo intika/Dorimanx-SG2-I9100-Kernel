@@ -1,4 +1,5 @@
-vers/cpufreq/cpufreq_nightmare.c
+/*
+ *  drivers/cpufreq/cpufreq_nightmare.c
  *
  *  Copyright (C)  2011 Samsung Electronics co. ltd
  *    ByungChang Cha <bc.cha@samsung.com>
