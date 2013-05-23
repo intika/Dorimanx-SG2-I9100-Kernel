@@ -169,7 +169,7 @@ static mali_physical_memory_allocation_result os_allocator_allocate(void* ctx, m
 			if (left) result = MALI_MEM_ALLOC_PARTIAL;
 			else result = MALI_MEM_ALLOC_FINISHED;
 
-		       /* Some OS do not perform a full cache flush (including all outer caches) for uncached mapped memory.
+		   /* Some OS do not perform a full cache flush (including all outer caches) for uncached mapped memory.
 			* They zero the memory through a cached mapping, then flush the inner caches but not the outer caches.
 			* This is required for MALI to have the correct view of the memory.
 			*/
