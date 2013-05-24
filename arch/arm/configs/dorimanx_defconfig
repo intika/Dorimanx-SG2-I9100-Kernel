@@ -1,6 +1,6 @@
 #
 # Automatically generated file; DO NOT EDIT.
-# Linux/arm 3.1.0-R77 Kernel Configuration
+# Linux/arm 3.1.0-R78 Kernel Configuration
 #
 CONFIG_ARM=y
 CONFIG_HAVE_PWM=y
@@ -2891,7 +2891,6 @@ CONFIG_IOMMU_SUPPORT=y
 #
 # File systems
 #
-CONFIG_DCACHE_WORD_ACCESS=y
 # CONFIG_EXT2_FS is not set
 # CONFIG_EXT3_FS is not set
 CONFIG_EXT4_FS=y
