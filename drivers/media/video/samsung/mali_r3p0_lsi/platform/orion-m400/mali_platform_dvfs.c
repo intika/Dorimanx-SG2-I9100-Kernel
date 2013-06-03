@@ -67,7 +67,7 @@ typedef struct mali_dvfs_stepTag{
 }mali_dvfs_step;
 
 mali_dvfs_step step[MALI_DVFS_STEPS]={
-	/*step 0 clk*/ {108,   950000},
+	/*step 0 clk*/ {108,   900000},
 #if (MALI_DVFS_STEPS > 1)
 	/*step 1 clk*/ {160,   950000},
 #if (MALI_DVFS_STEPS > 2)
@@ -628,12 +628,11 @@ mali_bool init_mali_dvfs_status(int step)
 
 void deinit_mali_dvfs_status(void)
 {
+	if (mali_dvfs_wq)
+		destroy_workqueue(mali_dvfs_wq);
 
 	_mali_osk_atomic_term(&bottomlock_status);
 
-
-	if (mali_dvfs_wq)
-		destroy_workqueue(mali_dvfs_wq);
 	mali_dvfs_wq = NULL;
 }
 
