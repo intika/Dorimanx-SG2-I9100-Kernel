@@ -67,7 +67,7 @@ typedef struct mali_dvfs_stepTag{
 }mali_dvfs_step;
 
 mali_dvfs_step step[MALI_DVFS_STEPS]={
-	/*step 0 clk*/ {66,   900000},
+	/*step 0 clk*/ {108,   900000},
 #if (MALI_DVFS_STEPS > 1)
 	/*step 1 clk*/ {160,   950000},
 #if (MALI_DVFS_STEPS > 2)

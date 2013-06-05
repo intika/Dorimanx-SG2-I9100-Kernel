@@ -174,7 +174,6 @@ MODULE_PARM_DESC(step4_vol, "Mali Current step4	_vol");
 #endif
 #endif
 
-#if 0
 extern int mali_gpu_clk;
 module_param(mali_gpu_clk, int, S_IRUSR | S_IRGRP | S_IROTH); /* r--r--r-- */
 MODULE_PARM_DESC(mali_gpu_clk, "Mali Current Clock");
@@ -196,8 +195,6 @@ extern int gpu_power_state;
 module_param(gpu_power_state, int, S_IRUSR | S_IRGRP | S_IROTH); /* r--r--r-- */
 MODULE_PARM_DESC(gpu_power_state, "Mali Power State");
 extern _mali_device_power_states mali_dvfs_device_state;
-
-#endif
 
 #ifdef CONFIG_CPU_EXYNOS4210
 int mali_use_vpll = 0;
