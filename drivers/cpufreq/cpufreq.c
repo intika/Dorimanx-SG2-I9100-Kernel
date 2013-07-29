@@ -848,7 +848,7 @@ err_out_kobj_put:
 
 #ifdef CONFIG_HOTPLUG_CPU
 static int cpufreq_add_policy_cpu(unsigned int cpu, unsigned int sibling,
-				  struct device *dev)
+				  struct device *dev, bool frozen)
 {
 	struct cpufreq_policy *policy;
 	int ret = 0, has_target = !!cpufreq_driver->target;
@@ -880,26 +880,23 @@ static int cpufreq_add_policy_cpu(unsigned int cpu, unsigned int sibling,
 	}
 #endif
 
-	ret = sysfs_create_link(&dev->kobj, &policy->kobj, "cpufreq");
-	if (ret) {
+	/* Don't touch sysfs links during light-weight init */
+	if (frozen) {
+		/* Drop the extra refcount that we took above */
 		cpufreq_cpu_put(policy);
-		return ret;
+		return 0;
 	}
 
-	return 0;
+	ret = sysfs_create_link(&dev->kobj, &policy->kobj, "cpufreq");
+	if (ret)
+		cpufreq_cpu_put(policy);
+
+	return ret;
 }
 #endif
 
-/**
- * cpufreq_add_dev - add a CPU device
- *
- * Adds the cpufreq interface for a CPU device.
- *
- * The Oracle says: try running cpufreq registration/unregistration concurrently
- * with with cpu hotplugging and all hell will break loose. Tried to clean this
- * mess up, but more thorough testing is needed. - Mathieu
- */
-static int cpufreq_add_dev(struct device *dev, struct subsys_interface *sif)
+static int __cpufreq_add_dev(struct device *dev, struct subsys_interface *sif,
+			     bool frozen)
 {
 	unsigned int j, cpu = dev->id;
 	int ret = -ENOMEM;
@@ -931,7 +928,8 @@ static int cpufreq_add_dev(struct device *dev, struct subsys_interface *sif)
 		struct cpufreq_policy *cp = per_cpu(cpufreq_cpu_data, sibling);
 		if (cp && cpumask_test_cpu(cpu, cp->related_cpus)) {
 			read_unlock_irqrestore(&cpufreq_driver_lock, flags);
-			return cpufreq_add_policy_cpu(cpu, sibling, dev);
+			return cpufreq_add_policy_cpu(cpu, sibling, dev,
+						      frozen);
 		}
 	}
 	read_unlock_irqrestore(&cpufreq_driver_lock, flags);
@@ -998,9 +996,11 @@ static int cpufreq_add_dev(struct device *dev, struct subsys_interface *sif)
 	}
 #endif
 
-	ret = cpufreq_add_dev_interface(cpu, policy, dev);
-	if (ret)
-		goto err_out_unregister;
+	if (!frozen) {
+		ret = cpufreq_add_dev_interface(cpu, policy, dev);
+		if (ret)
+			goto err_out_unregister;
+	}
 
 	kobject_uevent(&policy->kobj, KOBJ_ADD);
 	module_put(cpufreq_driver->owner);
@@ -1030,6 +1030,20 @@ module_out:
 	return ret;
 }
 
+/**
+ * cpufreq_add_dev - add a CPU device
+ *
+ * Adds the cpufreq interface for a CPU device.
+ *
+ * The Oracle says: try running cpufreq registration/unregistration concurrently
+ * with with cpu hotplugging and all hell will break loose. Tried to clean this
+ * mess up, but more thorough testing is needed. - Mathieu
+ */
+static int cpufreq_add_dev(struct device *dev, struct subsys_interface *sif)
+{
+	return __cpufreq_add_dev(dev, sif, false);
+}
+
 static void update_policy_cpu(struct cpufreq_policy *policy, unsigned int cpu)
 {
 	int j;
@@ -1057,7 +1071,8 @@ static void update_policy_cpu(struct cpufreq_policy *policy, unsigned int cpu)
  * Caller should already have policy_rwsem in write mode for this CPU.
  * This routine frees the rwsem before returning.
  */
-static int __cpufreq_remove_dev(struct device *dev, struct subsys_interface *sif)
+static int __cpufreq_remove_dev(struct device *dev,
+				struct subsys_interface *sif, bool frozen)
 {
 	unsigned int cpu = dev->id, ret, cpus;
 	unsigned long flags;
@@ -1098,7 +1113,7 @@ static int __cpufreq_remove_dev(struct device *dev, struct subsys_interface *sif
 		cpumask_clear_cpu(cpu, data->cpus);
 	unlock_policy_rwsem_write(cpu);
 
-	if (cpu != data->cpu) {
+	if (cpu != data->cpu && !frozen) {
 		sysfs_remove_link(&dev->kobj, "cpufreq");
 	} else if (cpus > 1) {
 		/* first sibling now owns the new sysfs dir */
@@ -1125,8 +1140,10 @@ static int __cpufreq_remove_dev(struct device *dev, struct subsys_interface *sif
 		WARN_ON(lock_policy_rwsem_write(cpu));
 		update_policy_cpu(data, cpu_dev->id);
 		unlock_policy_rwsem_write(cpu);
-		pr_debug("%s: policy Kobject moved to cpu: %d from: %d\n",
-				__func__, cpu_dev->id, cpu);
+		if (!frozen) {
+			pr_debug("%s: policy Kobject moved to cpu: %d "
+					"from: %d\n",__func__, cpu_dev->id, cpu);
+		}
 	}
 
 #if 0 // will kill nightmare gov
@@ -1179,7 +1196,7 @@ static int cpufreq_remove_dev(struct device *dev, struct subsys_interface *sif)
 	if (cpu_is_offline(cpu))
 		return 0;
 
-	retval = __cpufreq_remove_dev(dev, sif);
+	retval = __cpufreq_remove_dev(dev, sif, false);
 	return retval;
 }
 
@@ -1892,7 +1909,7 @@ static int cpufreq_cpu_callback(struct notifier_block *nfb,
 			break;
 		case CPU_DOWN_PREPARE:
 		case CPU_DOWN_PREPARE_FROZEN:
-			__cpufreq_remove_dev(dev, NULL);
+			__cpufreq_remove_dev(dev, NULL, false);
 			break;
 		case CPU_DOWN_FAILED:
 		case CPU_DOWN_FAILED_FROZEN:
