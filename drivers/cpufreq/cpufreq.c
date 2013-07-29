@@ -786,11 +786,8 @@ static int cpufreq_add_dev_symlink(struct cpufreq_policy *policy)
 static int cpufreq_add_dev_interface(struct cpufreq_policy *policy,
 				     struct device *dev)
 {
-	struct cpufreq_policy new_policy;
 	struct freq_attr **drv_attr;
-	unsigned long flags;
 	int ret = 0;
-	unsigned int j;
 
 	/* prepare interface data */
 	ret = kobject_init_and_add(&policy->kobj, &ktype_cpufreq,
@@ -822,15 +819,21 @@ static int cpufreq_add_dev_interface(struct cpufreq_policy *policy,
 			goto err_out_kobj_put;
 	}
 
-	write_lock_irqsave(&cpufreq_driver_lock, flags);
-	for_each_cpu(j, policy->cpus) {
-		per_cpu(cpufreq_cpu_data, j) = policy;
-	}
-	write_unlock_irqrestore(&cpufreq_driver_lock, flags);
-
-	ret = cpufreq_add_dev_symlink(policy);
 	if (ret)
 		goto err_out_kobj_put;
+
+	return ret;
+
+err_out_kobj_put:
+	kobject_put(&policy->kobj);
+	wait_for_completion(&policy->kobj_unregister);
+	return ret;
+}
+
+static void cpufreq_init_policy(struct cpufreq_policy *policy)
+{
+	struct cpufreq_policy new_policy;
+	int ret = 0;
 
 	memcpy(&new_policy, policy, sizeof(struct cpufreq_policy));
 	/* assure that the starting sequence is run in __cpufreq_set_policy */
@@ -846,12 +849,6 @@ static int cpufreq_add_dev_interface(struct cpufreq_policy *policy,
 		if (cpufreq_driver->exit)
 			cpufreq_driver->exit(policy);
 	}
-	return ret;
-
-err_out_kobj_put:
-	kobject_put(&policy->kobj);
-	wait_for_completion(&policy->kobj_unregister);
-	return ret;
 }
 
 #ifdef CONFIG_HOTPLUG_CPU
@@ -1042,13 +1039,11 @@ static int __cpufreq_add_dev(struct device *dev, struct subsys_interface *sif,
 	}
 #endif
 
-#if 0 //need to check
 	write_lock_irqsave(&cpufreq_driver_lock, flags);
 	for_each_cpu(j, policy->cpus)
 		per_cpu(cpufreq_cpu_data, j) = policy;
 	write_unlock_irqrestore(&cpufreq_driver_lock, flags);
 
-#endif
 	if (!frozen) {
 		ret = cpufreq_add_dev_interface(policy, dev);
 		if (ret)
@@ -1058,6 +1053,8 @@ static int __cpufreq_add_dev(struct device *dev, struct subsys_interface *sif,
 	write_lock_irqsave(&cpufreq_driver_lock, flags);
 	list_add(&policy->policy_list, &cpufreq_policy_list);
 	write_unlock_irqrestore(&cpufreq_driver_lock, flags);
+
+	cpufreq_init_policy(policy);
 
 	kobject_uevent(&policy->kobj, KOBJ_ADD);
 	up_read(&cpufreq_rwsem);
@@ -1126,7 +1123,6 @@ static int cpufreq_nominate_new_policy_cpu(struct cpufreq_policy *data,
 
 		WARN_ON(lock_policy_rwsem_write(old_cpu));
 		cpumask_set_cpu(old_cpu, data->cpus);
-
 		unlock_policy_rwsem_write(old_cpu);
 
 		ret = sysfs_create_link(&cpu_dev->kobj, &data->kobj,
