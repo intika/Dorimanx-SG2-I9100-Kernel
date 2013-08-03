@@ -841,16 +841,12 @@ err_out_kobj_put:
 }
 
 #ifdef CONFIG_HOTPLUG_CPU
-static int cpufreq_add_policy_cpu(unsigned int cpu, unsigned int sibling,
-				  struct device *dev, bool frozen)
+static int cpufreq_add_policy_cpu(struct cpufreq_policy *policy,
+				  unsigned int cpu, struct device *dev,
+				  bool frozen)
 {
-	struct cpufreq_policy *policy;
 	int ret = 0, has_target = !!cpufreq_driver->target;
 	unsigned long flags;
-
-	policy = cpufreq_cpu_get(sibling);
-	if (WARN_ON_ONCE(!policy))
-		return -ENODATA;
 
 #if 0 // will kill nightmare gov
 	if (has_target) {
@@ -862,7 +858,7 @@ static int cpufreq_add_policy_cpu(unsigned int cpu, unsigned int sibling,
 	}
 #endif
 
-	lock_policy_rwsem_write(sibling);
+	lock_policy_rwsem_write(policy->cpu);
 
 	write_lock_irqsave(&cpufreq_driver_lock, flags);
 
@@ -871,7 +867,7 @@ static int cpufreq_add_policy_cpu(unsigned int cpu, unsigned int sibling,
 	per_cpu(cpufreq_cpu_data, cpu) = policy;
 	write_unlock_irqrestore(&cpufreq_driver_lock, flags);
 
-	unlock_policy_rwsem_write(sibling);
+	unlock_policy_rwsem_write(policy->cpu);
 
 #if 0 // will kill nightmare gov
 	if (has_target) {
@@ -880,13 +876,13 @@ static int cpufreq_add_policy_cpu(unsigned int cpu, unsigned int sibling,
 			pr_err("%s: Failed to start governor\n", __func__);
 			return ret;
 		}
+	}
 #endif
 
 	/* Don't touch sysfs links during light-weight init */
 	if (!frozen)
 		ret = sysfs_create_link(&dev->kobj, &policy->kobj, "cpufreq");
 
-	cpufreq_cpu_put(policy);
 	return ret;
 }
 #endif
@@ -970,8 +966,7 @@ static int __cpufreq_add_dev(struct device *dev, struct subsys_interface *sif,
 		struct cpufreq_policy *cp = per_cpu(cpufreq_cpu_data, sibling);
 		if (cp && cpumask_test_cpu(cpu, cp->related_cpus)) {
 			read_unlock_irqrestore(&cpufreq_driver_lock, flags);
-			return cpufreq_add_policy_cpu(cpu, sibling, dev,
-						      frozen);
+			return cpufreq_add_policy_cpu(cp, cpu, dev, frozen);
 		}
 	}
 	read_unlock_irqrestore(&cpufreq_driver_lock, flags);
