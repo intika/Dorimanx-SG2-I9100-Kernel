@@ -757,14 +757,11 @@ static int cpufreq_add_dev_symlink(struct cpufreq_policy *policy)
 			continue;
 
 		pr_debug("Adding link for CPU: %u\n", j);
-		cpufreq_cpu_get(policy->cpu);
 		cpu_dev = get_cpu_device(j);
 		ret = sysfs_create_link(&cpu_dev->kobj, &policy->kobj,
 					"cpufreq");
-		if (ret) {
-			cpufreq_cpu_put(policy);
-			return ret;
-		}
+		if (ret)
+			break;
 	}
 	return ret;
 }
@@ -852,7 +849,8 @@ static int cpufreq_add_policy_cpu(unsigned int cpu, unsigned int sibling,
 	unsigned long flags;
 
 	policy = cpufreq_cpu_get(sibling);
-	WARN_ON(!policy);
+	if (WARN_ON_ONCE(!policy))
+		return -ENODATA;
 
 #if 0 // will kill nightmare gov
 	if (has_target) {
@@ -885,16 +883,10 @@ static int cpufreq_add_policy_cpu(unsigned int cpu, unsigned int sibling,
 #endif
 
 	/* Don't touch sysfs links during light-weight init */
-	if (frozen) {
-		/* Drop the extra refcount that we took above */
-		cpufreq_cpu_put(policy);
-		return 0;
-	}
+	if (!frozen)
+		ret = sysfs_create_link(&dev->kobj, &policy->kobj, "cpufreq");
 
-	ret = sysfs_create_link(&dev->kobj, &policy->kobj, "cpufreq");
-	if (ret)
-		cpufreq_cpu_put(policy);
-
+	cpufreq_cpu_put(policy);
 	return ret;
 }
 #endif
