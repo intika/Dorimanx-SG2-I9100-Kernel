@@ -19,16 +19,11 @@
  *
  */
 
-#include <linux/cpu.h>
+#include "cpufreq_governor.h"
+
 #include <linux/cpumask.h>
-#include <linux/cpufreq.h>
-#include <linux/module.h>
-#include <linux/mutex.h>
-#include <linux/sched.h>
 #include <linux/sched/rt.h>
-#include <linux/tick.h>
 #include <linux/timer.h>
-#include <linux/workqueue.h>
 #include <linux/kthread.h>
 #include <linux/earlysuspend.h>
 #include <asm/cputime.h>

@@ -8,11 +8,11 @@
  * published by the Free Software Foundation.
  */
 
-#include <asm/cputime.h>
-#include <linux/export.h>
-#include <linux/kernel_stat.h>
+#include <linux/slab.h>
 #include <linux/tick.h>
-#include <linux/types.h>
+
+#include "cpufreq_governor.h"
+
 /*
  * Code picked from earlier governer implementations
  */

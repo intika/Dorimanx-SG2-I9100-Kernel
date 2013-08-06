@@ -13,18 +13,14 @@
 
 #define pr_fmt(fmt) KBUILD_MODNAME ": " fmt
 
-#include <linux/kernel.h>
-#include <linux/module.h>
+#include "cpufreq_governor.h"
+
 #include <linux/smp.h>
-#include <linux/init.h>
 #include <linux/spinlock.h>
 #include <linux/interrupt.h>
-#include <linux/cpufreq.h>
-#include <linux/cpu.h>
 #include <linux/types.h>
 #include <linux/fs.h>
 #include <linux/sysfs.h>
-#include <linux/mutex.h>
 
 /**
  * A few values needed by the userspace governor
