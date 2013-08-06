@@ -1127,7 +1127,7 @@ static int __cpufreq_remove_dev(struct device *dev,
 				struct subsys_interface *sif, bool frozen)
 {
 	unsigned int cpu = dev->id, cpus;
-	int new_cpu;
+	int new_cpu, ret;
 	unsigned long flags;
 	struct cpufreq_policy *data;
 	struct kobject *kobj;
@@ -1191,16 +1191,23 @@ static int __cpufreq_remove_dev(struct device *dev,
 		}
 	}
 
-#if 0 // will kill nightmare gov
-	if ((cpus == 1) && (cpufreq_driver->target))
-		__cpufreq_governor(data, CPUFREQ_GOV_POLICY_EXIT);
-#endif
 
 	pr_debug("%s: removing link, cpu: %d\n", __func__, cpu);
 	cpufreq_cpu_put(data);
 
 	/* If cpu is last user of policy, free policy */
 	if (cpus == 1) {
+#if 0 // will kill nightmare gov
+		if (cpufreq_driver->target) {
+			ret = __cpufreq_governor(data,
+					CPUFREQ_GOV_POLICY_EXIT);
+			if (ret) {
+				pr_err("%s: Failed to exit governor\n",
+						__func__);
+				return ret;
+			}
+		}
+#endif
 		if (!frozen) {
 			lock_policy_rwsem_read(cpu);
 			kobj = &data->kobj;
@@ -1877,7 +1884,7 @@ static int __cpufreq_set_policy(struct cpufreq_policy *data,
 			/* might be a policy change, too, so fall through */
 		}
 		pr_debug("governor: change or update limits\n");
-		__cpufreq_governor(data, CPUFREQ_GOV_LIMITS);
+		ret = __cpufreq_governor(data, CPUFREQ_GOV_LIMITS);
 	}
 
 error_out:
