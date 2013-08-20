@@ -890,12 +890,6 @@ err_free_policy:
 
 static void cpufreq_policy_free(struct cpufreq_policy *policy)
 {
-	unsigned long flags;
-
-	write_lock_irqsave(&cpufreq_driver_lock, flags);
-	list_del(&policy->policy_list);
-	write_unlock_irqrestore(&cpufreq_driver_lock, flags);
-
 	free_cpumask_var(policy->related_cpus);
 	free_cpumask_var(policy->cpus);
 	kfree(policy);
@@ -1018,11 +1012,11 @@ static int __cpufreq_add_dev(struct device *dev, struct subsys_interface *sif,
 		ret = cpufreq_add_dev_interface(policy, dev);
 		if (ret)
 			goto err_out_unregister;
-
-		write_lock_irqsave(&cpufreq_driver_lock, flags);
-		list_add(&policy->policy_list, &cpufreq_policy_list);
-		write_unlock_irqrestore(&cpufreq_driver_lock, flags);
 	}
+
+	write_lock_irqsave(&cpufreq_driver_lock, flags);
+	list_add(&policy->policy_list, &cpufreq_policy_list);
+	write_unlock_irqrestore(&cpufreq_driver_lock, flags);
 
 	kobject_uevent(&policy->kobj, KOBJ_ADD);
 	up_read(&cpufreq_rwsem);
@@ -1233,6 +1227,11 @@ static int __cpufreq_remove_dev(struct device *dev,
 		 */
 		if (cpufreq_driver->exit)
 			cpufreq_driver->exit(data);
+
+		/* Remove policy from list of active policies */
+		write_lock_irqsave(&cpufreq_driver_lock, flags);
+		list_del(&data->policy_list);
+		write_unlock_irqrestore(&cpufreq_driver_lock, flags);
 
 		if (!frozen)
 			cpufreq_policy_free(data);
