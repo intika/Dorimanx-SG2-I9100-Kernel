@@ -3,7 +3,6 @@
 
 #include "mdnie.h"
 
-
 static const unsigned short tune_dynamic_gallery[] = {
 	/*start U1 dynamic gallery */
 	0x0001, 0x0041, /*SCR + PCC */
