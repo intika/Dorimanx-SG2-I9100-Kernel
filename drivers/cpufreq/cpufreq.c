@@ -952,6 +952,9 @@ static struct cpufreq_policy *cpufreq_policy_restore(unsigned int cpu)
 
 static void update_policy_cpu(struct cpufreq_policy *policy, unsigned int cpu)
 {
+	if (cpu == policy->cpu)
+		return;
+
 	policy->last_cpu = policy->cpu;
 	policy->cpu = cpu;
 
