@@ -904,6 +904,20 @@ static int cpufreq_add_policy_cpu(struct cpufreq_policy *policy,
 }
 #endif
 
+static struct cpufreq_policy *cpufreq_policy_restore(unsigned int cpu)
+{
+	struct cpufreq_policy *policy;
+	unsigned long flags;
+
+	read_lock_irqsave(&cpufreq_driver_lock, flags);
+
+	policy = per_cpu(cpufreq_cpu_data_fallback, cpu);
+
+	read_unlock_irqrestore(&cpufreq_driver_lock, flags);
+
+	return policy;
+}
+
 static struct cpufreq_policy *cpufreq_policy_alloc(void)
 {
 	struct cpufreq_policy *policy;
@@ -934,20 +948,6 @@ static void cpufreq_policy_free(struct cpufreq_policy *policy)
 	free_cpumask_var(policy->related_cpus);
 	free_cpumask_var(policy->cpus);
 	kfree(policy);
-}
-
-static struct cpufreq_policy *cpufreq_policy_restore(unsigned int cpu)
-{
-	struct cpufreq_policy *policy;
-	unsigned long flags;
-
-	write_lock_irqsave(&cpufreq_driver_lock, flags);
-
-	policy = per_cpu(cpufreq_cpu_data_fallback, cpu);
-
-	write_unlock_irqrestore(&cpufreq_driver_lock, flags);
-
-	return policy;
 }
 
 static void update_policy_cpu(struct cpufreq_policy *policy, unsigned int cpu)
