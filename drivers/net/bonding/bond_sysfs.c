@@ -150,8 +150,14 @@ err_no_cmd:
 }
 
 /* class attribute for bond_masters file.  This ends up in /sys/class/net */
-static CLASS_ATTR(bonding_masters,  S_IWUSR | S_IRUGO,
-		  bonding_show_bonds, bonding_store_bonds);
+static const struct class_attribute class_attr_bonding_masters = {
+	.attr = {
+		.name = "bonding_masters",
+		.mode = S_IWUSR | S_IRUGO,
+	},
+	.show = bonding_show_bonds,
+	.store = bonding_store_bonds,
+};
 
 int bond_create_slave_symlinks(struct net_device *master,
 			       struct net_device *slave)
@@ -1626,7 +1632,11 @@ int bond_create_sysfs(void)
 {
 	int ret;
 
-	ret = netdev_class_create_file(&class_attr_bonding_masters);
+	bn->class_attr_bonding_masters = class_attr_bonding_masters;
+	sysfs_attr_init(&bn->class_attr_bonding_masters.attr);
+
+	ret = netdev_class_create_file_ns(&bn->class_attr_bonding_masters,
+					  bn->net);
 	/*
 	 * Permit multiple loads of the module by ignoring failures to
 	 * create the bonding_masters sysfs file.  Bonding devices
@@ -1656,7 +1666,7 @@ int bond_create_sysfs(void)
  */
 void bond_destroy_sysfs(void)
 {
-	netdev_class_remove_file(&class_attr_bonding_masters);
+	netdev_class_remove_file_ns(&bn->class_attr_bonding_masters, bn->net);
 }
 
 /*
