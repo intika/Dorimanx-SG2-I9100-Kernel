@@ -1,6 +1,6 @@
 #
 # Automatically generated file; DO NOT EDIT.
-# Linux/arm 3.13.0-rc6 Kernel Configuration
+# Linux/arm 3.13.0-rc7 Kernel Configuration
 #
 CONFIG_ARM=y
 CONFIG_GENERIC_GPIO=y
@@ -3296,6 +3296,7 @@ CONFIG_CRYPTO_WORKQUEUE=y
 CONFIG_CRYPTO_CRYPTD=y
 CONFIG_CRYPTO_AUTHENC=y
 # CONFIG_CRYPTO_TEST is not set
+CONFIG_CRYPTO_ABLK_HELPER=y
 
 #
 # Authenticated Encryption with Associated Data
@@ -3347,6 +3348,7 @@ CONFIG_CRYPTO_SHA256=y
 #
 CONFIG_CRYPTO_AES=y
 CONFIG_CRYPTO_AES_ARM=y
+CONFIG_CRYPTO_AES_ARM_BS=y
 # CONFIG_CRYPTO_ANUBIS is not set
 CONFIG_CRYPTO_ARC4=y
 # CONFIG_CRYPTO_BLOWFISH is not set
