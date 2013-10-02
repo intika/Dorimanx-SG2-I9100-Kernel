@@ -411,7 +411,7 @@ show_one(scaling_max_suspend_freq, max_suspend);
 show_one(scaling_cur_freq, cur);
 show_one(cpu_utilization, util);
 
-static int __cpufreq_set_policy(struct cpufreq_policy *data,
+static int cpufreq_set_policy(struct cpufreq_policy *data,
 				struct cpufreq_policy *policy);
 
 /**
@@ -432,7 +432,7 @@ static ssize_t store_##file_name					\
 	if (ret != 1)							\
 		return -EINVAL;						\
 									\
-	ret = __cpufreq_set_policy(policy, &new_policy);		\
+	ret = cpufreq_set_policy(policy, &new_policy);		\
 	policy->user_policy.object = policy->object;			\
 									\
 	return ret ? ret : count;					\
@@ -495,11 +495,7 @@ static ssize_t store_scaling_governor(struct cpufreq_policy *policy,
 						&new_policy.governor))
 		return -EINVAL;
 
-	/*
-	 * Do not use cpufreq_set_policy here or the user_policy.max
-	 * will be wrongly overridden
-	 */
-	ret = __cpufreq_set_policy(policy, &new_policy);
+	ret = cpufreq_set_policy(policy, &new_policy);
 
 	policy->user_policy.policy = policy->policy;
 	policy->user_policy.governor = policy->governor;
@@ -826,7 +822,7 @@ static void cpufreq_init_policy(struct cpufreq_policy *policy)
 	policy->governor = NULL;
 
 	/* set default policy */
-	ret = __cpufreq_set_policy(policy, &new_policy);
+	ret = cpufreq_set_policy(policy, &new_policy);
 	policy->user_policy.policy = policy->policy;
 	policy->user_policy.governor = policy->governor;
 
@@ -1862,10 +1858,10 @@ int cpufreq_get_policy(struct cpufreq_policy *policy, unsigned int cpu)
 EXPORT_SYMBOL(cpufreq_get_policy);
 
 /*
- * data   : current policy.
- * policy : policy to be set.
+ * data : current policy.
+ * policy: policy to be set.
  */
-static int __cpufreq_set_policy(struct cpufreq_policy *data,
+static int cpufreq_set_policy(struct cpufreq_policy *data,
 				struct cpufreq_policy *policy)
 {
 	int ret = 0, failed = 1;
@@ -2017,7 +2013,7 @@ int cpufreq_update_policy(unsigned int cpu)
 		}
 	}
 
-	ret = __cpufreq_set_policy(data, &policy);
+	ret = cpufreq_set_policy(data, &policy);
 
 	up_write(&data->rwsem);
 
