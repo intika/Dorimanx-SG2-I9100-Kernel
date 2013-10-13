@@ -85,11 +85,14 @@ fi;
 
 # dorimanx detection ;)
 if [ $HOST == "dorimanx-virtual-machine" ] || [ $HOST == "dorimanx" ]; then
-	NAMBEROFCPUS=16;
+	NR_CPUS=16;
 	echo "Dori power detected!";
 else
-	NAMBEROFCPUS=$(expr `grep processor /proc/cpuinfo | wc -l` + 1);
-	echo "not dorimanx system detected, setting $NAMBEROFCPUS build treads"
+	NR_CPUS=$(expr `grep processor /proc/cpuinfo | wc -l`);
+	if [ "$NR_CPUS" -lt 2 ]; then
+		(( NR_CPUS=2 ))
+	fi;
+	echo "not dorimanx system detected, setting $NR_CPUS build threads"
 fi;
 
 # copy config
@@ -145,7 +148,7 @@ echo "0" > $TMPFILE;
 
 # make modules
 mkdir -p $INITRAMFS_TMP/lib/modules;
-make -j${NAMBEROFCPUS} KALLSYMS_EXTRA_PASS=1 modules || exit 1;
+make -j${NR_CPUS} KALLSYMS_EXTRA_PASS=1 modules || exit 1;
 
 # clear git repository from tmp-initramfs
 if [ -d $INITRAMFS_TMP/.git ]; then
@@ -190,7 +193,7 @@ while [ $(cat ${TMPFILE}) == 0 ]; do
 done;
 
 # make kernel!!!
-time make -j $NAMBEROFCPUS KALLSYMS_EXTRA_PASS=1 zImage CONFIG_INITRAMFS_SOURCE="$INITRAMFS_TMP";
+time make -j $NR_CPUS KALLSYMS_EXTRA_PASS=1 zImage CONFIG_INITRAMFS_SOURCE="$INITRAMFS_TMP";
 
 # restore clean arch/arm/boot/compressed/Makefile_clean till next time
 cp $KERNELDIR/arch/arm/boot/compressed/Makefile_clean $KERNELDIR/arch/arm/boot/compressed/Makefile;
