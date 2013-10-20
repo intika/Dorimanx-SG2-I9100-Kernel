@@ -133,7 +133,7 @@ for i in `find $KERNELDIR/ -name "*.ko"`; do
 done;
 
 # copy initramfs files to tmp directory
-cp -ax $INITRAMFS_SOURCE $INITRAMFS_TMP;
+cp -dxPR $INITRAMFS_SOURCE $INITRAMFS_TMP;
 
 # create new image with version & date
 #read -t 3 -p "create new kernel Image LOGO with version & date, 3sec timeout (y/n)?";
