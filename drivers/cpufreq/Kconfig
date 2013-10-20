@@ -153,6 +153,10 @@ config CPU_FREQ_DEFAULT_GOV_DARKNESS
 	bool "darkness"
 	select CPU_FREQ_GOV_DARKNESS
 
+config CPU_FREQ_DEFAULT_GOV_NEOX
+	bool "NeoX"
+	select CPU_FREQ_GOV_NeoX
+
 endchoice
 
 config CPU_FREQ_GOV_PERFORMANCE
@@ -256,6 +260,14 @@ config CPU_FREQ_GOV_ZZMOOVE
 	  % frequency steps to get smooth up/downscaling dependant on CPU load.
 
 	  If in doubt, say N.
+
+config CPU_FREQ_GOV_NEOX
+	tristate "'NeoX' cpufreq governor"
+	depends on CPU_FREQ
+	---help---
+	 'NeoX' - a tweaked "pegasusq" based smart and smooth optimized governor!
+
+	 If in doubt, say Y.
 
 config CPU_FREQ_GOV_SLEEPY
 	tristate "'sleepy' cpufreq governor"
