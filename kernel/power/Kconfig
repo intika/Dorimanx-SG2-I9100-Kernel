@@ -339,10 +339,6 @@ config SUSPEND_TIME
 	  keeps statistics on the time spent in suspend in
 	  /sys/kernel/debug/suspend_time
 
-config PM_GENERIC_DOMAINS
-	bool
-	depends on PM
-
 config CPU_PM
 	bool "Add cpu power management notifiers"
 	depends on SUSPEND || CPU_IDLE
@@ -378,6 +374,14 @@ config WQ_POWER_EFFICIENT_DEFAULT
 	  is enabled by default.
 
 	  If in doubt, say N.
+
+config PM_GENERIC_DOMAINS
+	bool
+	depends on PM
+
+config PM_GENERIC_DOMAINS_SLEEP
+	def_bool y
+	depends on PM_SLEEP && PM_GENERIC_DOMAINS
 
 config PM_GENERIC_DOMAINS_RUNTIME
 	def_bool y
