@@ -10,6 +10,7 @@
 #define _LINUX_PM_RUNTIME_H
 
 #include <linux/device.h>
+#include <linux/notifier.h>
 #include <linux/pm.h>
 
 #include <linux/jiffies.h>
@@ -79,6 +80,17 @@ static inline bool pm_runtime_suspended(struct device *dev)
 		&& !dev->power.disable_depth;
 }
 
+static inline bool pm_runtime_active(struct device *dev)
+{
+	return dev->power.runtime_status == RPM_ACTIVE
+		|| dev->power.disable_depth;
+}
+
+static inline bool pm_runtime_status_suspended(struct device *dev)
+{
+	return dev->power.runtime_status == RPM_SUSPENDED;
+}
+
 static inline bool pm_runtime_enabled(struct device *dev)
 {
 	return !dev->power.disable_depth;
@@ -126,6 +138,8 @@ static inline void pm_runtime_put_noidle(struct device *dev) {}
 static inline bool device_run_wake(struct device *dev) { return false; }
 static inline void device_set_run_wake(struct device *dev, bool enable) {}
 static inline bool pm_runtime_suspended(struct device *dev) { return false; }
+static inline bool pm_runtime_active(struct device *dev) { return true; }
+static inline bool pm_runtime_status_suspended(struct device *dev) { return false; }
 static inline bool pm_runtime_enabled(struct device *dev) { return false; }
 
 static inline int pm_generic_runtime_suspend(struct device *dev) { return 0; }
