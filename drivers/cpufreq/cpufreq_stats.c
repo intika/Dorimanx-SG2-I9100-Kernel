@@ -180,15 +180,19 @@ static void cpufreq_stats_free_sysfs(unsigned int cpu)
 {
 	struct cpufreq_policy *policy = cpufreq_cpu_get(cpu);
 
-	if (!cpufreq_frequency_get_table(cpu))
+	if (!policy)
 		return;
 
-	if (policy && (cpumask_weight(policy->cpus) == 1)) {
+	if (!cpufreq_frequency_get_table(cpu))
+		goto put_ref;
+
+	if (cpumask_weight(policy->cpus) == 1) {
 		pr_debug("%s: Free sysfs stat\n", __func__);
 		sysfs_remove_group(&policy->kobj, &stats_attr_group);
 	}
-	if (policy)
-		cpufreq_cpu_put(policy);
+
+put_ref:
+	cpufreq_cpu_put(policy);
 }
 
 static int cpufreq_stats_create_table(struct cpufreq_policy *policy,
