@@ -1073,7 +1073,7 @@ void bch_btree_sort_partial(struct btree *b, unsigned start)
 		unsigned i;
 
 		for (i = start; i <= b->nsets; i++)
-			keys += b->sets[i].data->keys;
+			keys += b->sets[i-1].data->keys;
 
 		order = roundup_pow_of_two(__set_bytes(b->sets->data,
 						       keys)) / PAGE_SIZE;
