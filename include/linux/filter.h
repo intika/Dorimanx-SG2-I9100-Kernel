@@ -5,7 +5,19 @@
 #define __LINUX_FILTER_H__
 
 #include <linux/atomic.h>
+#include <linux/compat.h>
+#include <linux/workqueue.h>
 #include <uapi/linux/filter.h>
+
+#ifdef CONFIG_COMPAT
+/*
+ * A struct sock_filter is architecture independent.
+ */
+struct compat_sock_fprog {
+	u16		len;
+	compat_uptr_t	filter;		/* struct sock_filter * */
+};
+#endif
 
 struct sk_buff;
 struct sock;
@@ -14,15 +26,19 @@ struct sk_filter
 {
 	atomic_t		refcnt;
 	unsigned int         	len;	/* Number of filter blocks */
+	struct rcu_head		rcu;
 	unsigned int		(*bpf_func)(const struct sk_buff *skb,
 					    const struct sock_filter *filter);
-	struct rcu_head		rcu;
-	struct sock_filter     	insns[0];
+	union {
+		struct sock_filter     	insns[0];
+		struct work_struct	work;
+	};
 };
 
-static inline unsigned int sk_filter_len(const struct sk_filter *fp)
+static inline unsigned int sk_filter_size(unsigned int proglen)
 {
-	return fp->len * sizeof(struct sock_filter) + sizeof(*fp);
+	return max(sizeof(struct sk_filter),
+		   offsetof(struct sk_filter, insns[proglen]));
 }
 
 extern int sk_filter(struct sock *sk, struct sk_buff *skb);
@@ -33,25 +49,31 @@ extern int sk_detach_filter(struct sock *sk);
 extern int sk_chk_filter(struct sock_filter *filter, int flen);
 
 #ifdef CONFIG_BPF_JIT
+#include <stdarg.h>
+#include <linux/linkage.h>
+#include <linux/printk.h>
+
 extern void bpf_jit_compile(struct sk_filter *fp);
 extern void bpf_jit_free(struct sk_filter *fp);
 
 static inline void bpf_jit_dump(unsigned int flen, unsigned int proglen,
 				u32 pass, void *image)
 {
-	pr_err("flen=%u proglen=%u pass=%u image=%p\n",
+	pr_err("flen=%u proglen=%u pass=%u image=%pK\n",
 	       flen, proglen, pass, image);
 	if (image)
-		print_hex_dump(KERN_ERR, "JIT code: ", DUMP_PREFIX_ADDRESS,
+		print_hex_dump(KERN_ERR, "JIT code: ", DUMP_PREFIX_OFFSET,
 			       16, 1, image, proglen, false);
 }
 #define SK_RUN_FILTER(FILTER, SKB) (*FILTER->bpf_func)(SKB, FILTER->insns)
 #else
+#include <linux/slab.h>
 static inline void bpf_jit_compile(struct sk_filter *fp)
 {
 }
 static inline void bpf_jit_free(struct sk_filter *fp)
 {
+	kfree(fp);
 }
 #define SK_RUN_FILTER(FILTER, SKB) sk_run_filter(SKB, FILTER->insns)
 #endif
@@ -66,10 +88,14 @@ enum {
 	BPF_S_ALU_MUL_K,
 	BPF_S_ALU_MUL_X,
 	BPF_S_ALU_DIV_X,
+	BPF_S_ALU_MOD_K,
+	BPF_S_ALU_MOD_X,
 	BPF_S_ALU_AND_K,
 	BPF_S_ALU_AND_X,
 	BPF_S_ALU_OR_K,
 	BPF_S_ALU_OR_X,
+	BPF_S_ALU_XOR_K,
+	BPF_S_ALU_XOR_X,
 	BPF_S_ALU_LSH_K,
 	BPF_S_ALU_LSH_X,
 	BPF_S_ALU_RSH_K,
@@ -113,6 +139,11 @@ enum {
 	BPF_S_ANC_HATYPE,
 	BPF_S_ANC_RXHASH,
 	BPF_S_ANC_CPU,
+	BPF_S_ANC_ALU_XOR_X,
+	BPF_S_ANC_SECCOMP_LD_W,
+	BPF_S_ANC_VLAN_TAG,
+	BPF_S_ANC_VLAN_TAG_PRESENT,
+	BPF_S_ANC_PAY_OFFSET,
 };
 
 #endif /* __LINUX_FILTER_H__ */
