@@ -582,7 +582,6 @@ void sk_filter_release_rcu(struct rcu_head *rcu)
 	struct sk_filter *fp = container_of(rcu, struct sk_filter, rcu);
 
 	bpf_jit_free(fp);
-	kfree(fp);
 }
 EXPORT_SYMBOL(sk_filter_release_rcu);
 
@@ -600,17 +599,18 @@ int sk_attach_filter(struct sock_fprog *fprog, struct sock *sk)
 {
 	struct sk_filter *fp, *old_fp;
 	unsigned int fsize = sizeof(struct sock_filter) * fprog->len;
+	unsigned int sk_fsize = sk_filter_size(fprog->len);
 	int err;
 
 	/* Make sure new filter is there and in the right amounts. */
 	if (fprog->filter == NULL)
 		return -EINVAL;
 
-	fp = sock_kmalloc(sk, fsize+sizeof(*fp), GFP_KERNEL);
+	fp = sock_kmalloc(sk, sk_fsize, GFP_KERNEL);
 	if (!fp)
 		return -ENOMEM;
 	if (copy_from_user(fp->insns, fprog->filter, fsize)) {
-		sock_kfree_s(sk, fp, fsize+sizeof(*fp));
+		sock_kfree_s(sk, fp, sk_fsize);
 		return -EFAULT;
 	}
 
