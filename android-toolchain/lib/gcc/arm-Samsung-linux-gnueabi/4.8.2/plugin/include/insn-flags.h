@@ -56,6 +56,7 @@
 #define HAVE_arm_casesi_internal (TARGET_ARM)
 #define HAVE_thumb1_casesi_dispatch (TARGET_THUMB1)
 #define HAVE_nop 1
+#define HAVE_movcond_addsi (TARGET_32BIT)
 #define HAVE_movcond (TARGET_ARM)
 #define HAVE_prologue_thumb1_interwork (TARGET_THUMB1)
 #define HAVE_stack_tie 1
@@ -2473,6 +2474,7 @@ extern rtx        gen_blockage                          (void);
 extern rtx        gen_arm_casesi_internal               (rtx, rtx, rtx, rtx);
 extern rtx        gen_thumb1_casesi_dispatch            (rtx);
 extern rtx        gen_nop                               (void);
+extern rtx        gen_movcond_addsi                     (rtx, rtx, rtx, rtx, rtx, rtx);
 extern rtx        gen_movcond                           (rtx, rtx, rtx, rtx, rtx, rtx);
 extern rtx        gen_prologue_thumb1_interwork         (void);
 extern rtx        gen_stack_tie                         (rtx, rtx);
