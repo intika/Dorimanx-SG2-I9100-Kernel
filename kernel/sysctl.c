@@ -251,8 +251,7 @@ rom_feature_set_sysctl(struct ctl_table *table, int write,
 		return error;
 
 	if (write) {
-		if( (rom_feature_set & 0x10) == 0x10)
-		{
+		if ((rom_feature_set & 0x10) == 0x10) {
 			rom_feature_set = rom_feature_set_save;
 #ifdef CONFIG_CPU_EXYNOS4210
 			u1_gps_ntt_init();
@@ -260,7 +259,8 @@ rom_feature_set_sysctl(struct ctl_table *table, int write,
 			return 0;
 		}
 		rom_feature_set_save = rom_feature_set;
-		printk("Initializing USB with rom_feature_set: %d\n", rom_feature_set);
+		printk("Initializing USB with rom_feature_set: %d\n",
+				rom_feature_set);
 		late_init_android_gadget(rom_feature_set);
 #ifdef CONFIG_MALI_R3P0_LSI
 		if(rom_feature_set == 3) new_late_mali_driver_init();
@@ -278,7 +278,6 @@ rom_feature_set_sysctl(struct ctl_table *table, int write,
 	}
 	return 0;
 }
-
 
 /* The default sysctl tables: */
 
