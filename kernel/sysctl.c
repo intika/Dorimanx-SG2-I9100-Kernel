@@ -1298,7 +1298,6 @@ static struct ctl_table vm_table[] = {
 		.mode		= 0644,
 		.proc_handler	= lowmem_reserve_ratio_sysctl_handler,
 	},
-#ifndef CONFIG_ANDROID
 	{
 		.procname	= "drop_caches",
 		.data		= &sysctl_drop_caches,
@@ -1308,7 +1307,6 @@ static struct ctl_table vm_table[] = {
 		.extra1		= &one,
 		.extra2		= &three,
 	},
-#endif
 #ifdef CONFIG_COMPACTION
 	{
 		.procname	= "compact_memory",
