@@ -538,12 +538,6 @@ static int exynos4_pm_suspend(void)
 	return 0;
 }
 
-#if !defined(CONFIG_CPU_EXYNOS4210)
-#define CHECK_POINT printk(KERN_DEBUG "%s:%d\n", __func__, __LINE__)
-#else
-#define CHECK_POINT
-#endif
-
 static void exynos4_pm_resume(void)
 {
 	unsigned long tmp;
@@ -595,8 +589,6 @@ static void exynos4_pm_resume(void)
 }
 #endif
 
-	CHECK_POINT;
-
 	if (!exynos4_is_c2c_use())
 		s3c_pm_do_restore_core(exynos4_core_save, ARRAY_SIZE(exynos4_core_save));
 	else {
@@ -611,8 +603,6 @@ static void exynos4_pm_resume(void)
 	/* For the suspend-again to check the value */
 	s3c_suspend_wakeup_stat = __raw_readl(S5P_WAKEUP_STAT);
 
-	CHECK_POINT;
-
 	if ((__raw_readl(S5P_WAKEUP_STAT) == 0) && soc_is_exynos4412()) {
 		__raw_writel(__raw_readl(S5P_EINT_PEND(0)), S5P_EINT_PEND(0));
 		__raw_writel(__raw_readl(S5P_EINT_PEND(1)), S5P_EINT_PEND(1));
@@ -626,8 +616,6 @@ static void exynos4_pm_resume(void)
 
 	scu_enable(S5P_VA_SCU);
 
-	CHECK_POINT;
-
 #ifdef CONFIG_CACHE_L2X0
 #ifdef CONFIG_ARM_TRUSTZONE
 	/*
@@ -637,17 +625,11 @@ static void exynos4_pm_resume(void)
 				       exynos4_l2cc_save[1].val,
 				       exynos4_l2cc_save[2].val);
 
-	CHECK_POINT;
-
 	exynos_smc(SMC_CMD_L2X0SETUP2,
 			L2X0_DYNAMIC_CLK_GATING_EN | L2X0_STNDBY_MODE_EN,
 			0x7C470001, 0xC200FFFF);
 
-	CHECK_POINT;
-
 	exynos_smc(SMC_CMD_L2X0INVALL, 0, 0, 0);
-
-	CHECK_POINT;
 
 	exynos_smc(SMC_CMD_L2X0CTRL, 1, 0, 0);
 #else
@@ -658,8 +640,6 @@ static void exynos4_pm_resume(void)
 #endif
 #endif
 
-	CHECK_POINT;
-
 early_wakeup:
 	if (!soc_is_exynos4210())
 		exynos4_reset_assert_ctrl(1);
@@ -668,8 +648,6 @@ early_wakeup:
 	/* Enable the full line of zero */
 	enable_cache_foz();
 #endif
-
-	CHECK_POINT;
 
 	/* Clear Check mode */
 	__raw_writel(0x0, REG_INFORM1);

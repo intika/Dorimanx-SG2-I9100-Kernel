@@ -171,12 +171,6 @@ void __attribute__ ((weak)) arch_suspend_enable_irqs(void)
 	local_irq_enable();
 }
 
-#if !defined(CONFIG_CPU_EXYNOS4210)
-#define CHECK_POINT printk(KERN_DEBUG "%s:%d\n", __func__, __LINE__)
-#else
-#define CHECK_POINT
-#endif
-
 /**
  * suspend_enter - Make the system enter the given sleep state.
  * @state: System sleep state to enter.
@@ -188,23 +182,17 @@ static int suspend_enter(suspend_state_t state, bool *wakeup)
 {
 	int error;
 
-	CHECK_POINT;
-
 	if (need_suspend_ops(state) && suspend_ops->prepare) {
 		error = suspend_ops->prepare();
 		if (error)
 			goto Platform_finish;
 	}
 
-	CHECK_POINT;
-
 	error = dpm_suspend_end(PMSG_SUSPEND);
 	if (error) {
 		printk(KERN_ERR "PM: Some devices failed to power down\n");
 		goto Platform_finish;
 	}
-
-	CHECK_POINT;
 
 	if (need_suspend_ops(state) && suspend_ops->prepare_late) {
 		error = suspend_ops->prepare_late();
@@ -231,15 +219,10 @@ static int suspend_enter(suspend_state_t state, bool *wakeup)
 	if (error || suspend_test(TEST_CPUS))
 		goto Enable_cpus;
 
-	CHECK_POINT;
-
 	arch_suspend_disable_irqs();
 	BUG_ON(!irqs_disabled());
 
 	error = syscore_suspend();
-
-	CHECK_POINT;
-
 	if (!error) {
 		*wakeup = pm_wakeup_pending();
 		if (!(suspend_test(TEST_CORE) || *wakeup)) {
@@ -321,10 +304,10 @@ int suspend_devices_and_enter(suspend_state_t state)
 }
 
 /**
- *	suspend_finish - Do final work before exiting suspend sequence.
+ * suspend_finish - Clean up before finishing the suspend sequence.
  *
- *	Call platform code to clean up, restart processes, and free the
- *	console that we've allocated. This is not called for suspend-to-disk.
+ * Call platform code to clean up, restart processes, and free the console that
+ * we've allocated. This routine is not called for hibernation.
  */
 static void suspend_finish(void)
 {
