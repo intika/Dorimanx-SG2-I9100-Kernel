@@ -39,10 +39,6 @@
 #include <mach/gpufreq.h>
 #endif
 
-#ifdef CONFIG_FAST_BOOT
-#include <linux/fake_shut_down.h>
-#endif
-
 #include "power.h"
 
 DEFINE_MUTEX(pm_mutex);
@@ -337,29 +333,7 @@ static ssize_t state_show(struct kobject *kobj, struct kobj_attribute *attr,
 	return (s - buf);
 }
 
-#ifdef CONFIG_FAST_BOOT
-bool fake_shut_down;
-EXPORT_SYMBOL(fake_shut_down);
-
-RAW_NOTIFIER_HEAD(fsd_notifier_list);
-
-int register_fake_shut_down_notifier(struct notifier_block *nb)
-{
-	return raw_notifier_chain_register(&fsd_notifier_list, nb);
-}
-EXPORT_SYMBOL(register_fake_shut_down_notifier);
-
-int unregister_fake_shut_down_notifier(struct notifier_block *nb)
-{
-	return raw_notifier_chain_unregister(&fsd_notifier_list, nb);
-}
-EXPORT_SYMBOL(unregister_fake_shut_down_notifier);
-
-extern void wakelock_force_suspend(void);
-#endif
-
-static ssize_t state_store(struct kobject *kobj, struct kobj_attribute *attr,
-			   const char *buf, size_t n)
+static suspend_state_t decode_state(const char *buf, size_t n)
 {
 #ifdef CONFIG_SUSPEND
 #ifdef CONFIG_EARLYSUSPEND
@@ -371,64 +345,55 @@ static ssize_t state_store(struct kobject *kobj, struct kobj_attribute *attr,
 #endif
 	char *p;
 	int len;
-	int error = -EINVAL;
 
 	p = memchr(buf, '\n', n);
 	len = p ? p - buf : n;
 
-	/* First, check if we are requested to hibernate */
-	if (len == 4 && !strncmp(buf, "disk", len)) {
-		error = hibernate();
-  goto Exit;
-	}
+	/* Check hibernation first. */
+	if (len == 4 && !strncmp(buf, "disk", len))
+		return PM_SUSPEND_MAX;
 
 #ifdef CONFIG_SUSPEND
-	for (s = &pm_states[state]; state < PM_SUSPEND_MAX; s++, state++) {
+	for (s = &pm_states[state]; state < PM_SUSPEND_MAX; s++, state++)
 		if (*s && len == strlen(*s) && !strncmp(buf, *s, len))
-			break;
-	}
-
-#ifdef CONFIG_FAST_BOOT
-	if (len == 4 && !strncmp(buf, "dmem", len)) {
-		pr_info("%s: fake shut down!!!\n", __func__);
-		fake_shut_down = true;
-		state = PM_SUSPEND_MEM;
-	}
+			return state;
 #endif
 
-#ifdef CONFIG_FAST_BOOT
-	if (len == 4 && !strncmp(buf, "dmem", len)) {
-		pr_info("%s: fake shut down!!!\n", __func__);
-		fake_shut_down = true;
-		raw_notifier_call_chain(&fsd_notifier_list,
-				FAKE_SHUT_DOWN_CMD_ON, NULL);
-		state = PM_SUSPEND_MEM;
-		error = 0;
-	}
-#endif
+	return PM_SUSPEND_ON;
+}
 
-	if (state < PM_SUSPEND_MAX && *s) {
+static ssize_t state_store(struct kobject *kobj, struct kobj_attribute *attr,
+			   const char *buf, size_t n)
+{
+	suspend_state_t state;
+	int error;
+
+	error = pm_autosleep_lock();
+	if (error)
+		return error;
+
+	if (pm_autosleep_state() > PM_SUSPEND_ON) {
+		error = -EBUSY;
+		goto out;
+	}
+
+	state = decode_state(buf, n);
+	if (state < PM_SUSPEND_MAX) {
 #ifdef CONFIG_EARLYSUSPEND
 		if (state == PM_SUSPEND_ON || valid_state(state)) {
 			error = 0;
 			request_suspend_state(state);
 		}
-#ifdef CONFIG_FAST_BOOT
-		if (fake_shut_down)
-			wakelock_force_suspend();
-#endif
 #else
-		error = enter_state(state);
-		if (error) {
-			suspend_stats.fail++;
-			dpm_save_failed_errno(error);
-		} else
-			suspend_stats.success++;
+		error = pm_suspend(state);
 #endif
-	}
-#endif
+	} else if (state == PM_SUSPEND_MAX)
+		error = hibernate();
+	else
+		error = -EINVAL;
 
- Exit:
+ out:
+	pm_autosleep_unlock();
 	return error ? error : n;
 }
 
@@ -478,17 +443,71 @@ static ssize_t wakeup_count_store(struct kobject *kobj,
 				const char *buf, size_t n)
 {
 	unsigned int val;
+	int error;
 
+	error = pm_autosleep_lock();
+	if (error)
+		return error;
+
+	if (pm_autosleep_state() > PM_SUSPEND_ON) {
+		error = -EBUSY;
+		goto out;
+	}
+
+	error = -EINVAL;
 	if (sscanf(buf, "%u", &val) == 1) {
 		if (pm_save_wakeup_count(val))
-			return n;
+			error = n;
 		else
 			pm_print_active_wakeup_sources();
 	}
-	return -EINVAL;
+
+ out:
+	pm_autosleep_unlock();
+	return error;
 }
 
 power_attr(wakeup_count);
+
+#ifdef CONFIG_PM_AUTOSLEEP
+static ssize_t autosleep_show(struct kobject *kobj,
+			      struct kobj_attribute *attr,
+			      char *buf)
+{
+	suspend_state_t state = pm_autosleep_state();
+
+	if (state == PM_SUSPEND_ON)
+		return sprintf(buf, "off\n");
+
+#ifdef CONFIG_SUSPEND
+	if (state < PM_SUSPEND_MAX)
+		return sprintf(buf, "%s\n", valid_state(state) ?
+						pm_states[state] : "error");
+#endif
+#ifdef CONFIG_HIBERNATION
+	return sprintf(buf, "disk\n");
+#else
+	return sprintf(buf, "error");
+#endif
+}
+
+static ssize_t autosleep_store(struct kobject *kobj,
+			       struct kobj_attribute *attr,
+			       const char *buf, size_t n)
+{
+	suspend_state_t state = decode_state(buf, n);
+	int error;
+
+	if (state == PM_SUSPEND_ON
+	    && strcmp(buf, "off") && strcmp(buf, "off\n"))
+		return -EINVAL;
+
+	error = pm_autosleep_set_state(state);
+	return error ? error : n;
+}
+
+power_attr(autosleep);
+#endif /* CONFIG_PM_AUTOSLEEP */
 #endif /* CONFIG_PM_SLEEP */
 
 #ifdef CONFIG_PM_TRACE
@@ -889,8 +908,9 @@ static struct attribute * g[] = {
 #ifdef CONFIG_PM_SLEEP
 	&pm_async_attr.attr,
 	&wakeup_count_attr.attr,
-#ifdef CONFIG_PM_DEBUG
-	&pm_test_attr.attr,
+#endif
+#ifdef CONFIG_PM_AUTOSLEEP
+	&autosleep_attr.attr,
 #endif
 #ifdef CONFIG_PM_SLEEP_DEBUG
 	&pm_print_times_attr.attr,
@@ -899,6 +919,8 @@ static struct attribute * g[] = {
 	&wake_lock_attr.attr,
 	&wake_unlock_attr.attr,
 #endif
+#ifdef CONFIG_PM_DEBUG
+	&pm_test_attr.attr,
 #endif
 #ifdef CONFIG_DVFS_LIMIT
 	&cpufreq_table_attr.attr,
@@ -945,8 +967,11 @@ static int __init pm_init(void)
 	power_kobj = kobject_create_and_add("power", NULL);
 	if (!power_kobj)
 		return -ENOMEM;
-	return sysfs_create_group(power_kobj, &attr_group);
+	error = sysfs_create_group(power_kobj, &attr_group);
+	if (error)
+		return error;
 	pm_print_times_init();
+	return pm_autosleep_init();
 }
 
 core_initcall(pm_init);
