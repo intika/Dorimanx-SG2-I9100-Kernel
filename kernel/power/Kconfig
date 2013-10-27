@@ -150,6 +150,9 @@ config HIBERNATION
 
 	  For more information take a look at <file:Documentation/power/swsusp.txt>.
 
+config ARCH_SAVE_PAGE_KEYS
+	bool
+
 config FULL_PAGE_RECLAIM
 	bool "Using Full Page Reclaim during Suspend-to-Disk"
 	depends on HIBERNATION
@@ -202,6 +205,15 @@ config PM_SLEEP_SMP
 	depends on ARCH_SUSPEND_POSSIBLE || ARCH_HIBERNATION_POSSIBLE
 	depends on PM_SLEEP
 	select HOTPLUG_CPU
+
+config PM_AUTOSLEEP
+	bool "Opportunistic sleep"
+	depends on PM_SLEEP
+	default n
+	---help---
+	Allow the kernel to trigger a system transition into a global sleep
+	state automatically whenever there are no active wakeup sources.
+
 
 config PM_RUNTIME
 	bool "Run-time PM core functionality"
@@ -332,6 +344,10 @@ config PM_CLK
 	def_bool y
 	depends on PM && HAVE_CLK
 
+config PM_GENERIC_DOMAINS
+	bool
+	depends on PM
+
 config SUSPEND_TIME
 	bool "Log time spent in suspend"
 	---help---
@@ -374,10 +390,6 @@ config WQ_POWER_EFFICIENT_DEFAULT
 	  is enabled by default.
 
 	  If in doubt, say N.
-
-config PM_GENERIC_DOMAINS
-	bool
-	depends on PM
 
 config PM_GENERIC_DOMAINS_SLEEP
 	def_bool y
