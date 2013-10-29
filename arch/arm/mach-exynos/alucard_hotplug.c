@@ -52,12 +52,12 @@ static struct hotplug_tuners {
 } hotplug_tuners_ins = {
 	.hotplug_sampling_rate = ATOMIC_INIT(60000),
 	.hotplug_enable = ATOMIC_INIT(0),
-	.cpu_up_rate = ATOMIC_INIT(10),
-	.cpu_down_rate = ATOMIC_INIT(20),
+	.cpu_up_rate = ATOMIC_INIT(5),
+	.cpu_down_rate = ATOMIC_INIT(10),
 	.maxcoreslimit = ATOMIC_INIT(NR_CPUS),
 };
 
-#define MAX_HOTPLUG_RATE		(40)
+#define MAX_HOTPLUG_RATE	(40)
 #define DOWN_INDEX		(0)
 #define UP_INDEX		(1)
 
@@ -173,7 +173,7 @@ static atomic_t hotplug_freq[2][2] = {
 	{ATOMIC_INIT(500000), ATOMIC_INIT(0)}
 };
 static atomic_t hotplug_load[2][2] = {
-	{ATOMIC_INIT(0), ATOMIC_INIT(65)},
+	{ATOMIC_INIT(0), ATOMIC_INIT(50)},
 	{ATOMIC_INIT(30), ATOMIC_INIT(0)}
 };
 static atomic_t hotplug_rq[2][2] = {
