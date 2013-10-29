@@ -22,6 +22,7 @@
 #include <linux/mutex.h>
 #include <linux/module.h>
 #include <linux/slab.h>
+#include <linux/clk.h>
 /*#ifndef CONFIG_CPU_EXYNOS4210
 #include "acpuclock.h"
 #endif*/
@@ -635,7 +636,7 @@ static void hotplug_work_fn(struct work_struct *work)
 /*#ifndef CONFIG_CPU_EXYNOS4210
 					cur_freq = acpuclk_get_rate(cpu);
 #else*/
-					cur_freq = cpufreq_quick_get(cpu);
+					cur_freq = clk_get_rate(clk_get(NULL, "armclk")) / 1000;
 /*#endif*/
 				} else {
 					cur_load = -1;
