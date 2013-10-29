@@ -169,16 +169,16 @@ static bool other_hotplugging = false;
 
 #ifdef CONFIG_CPU_EXYNOS4210
 static atomic_t hotplug_freq[2][2] = {
-	{ATOMIC_INIT(0), ATOMIC_INIT(800000)},
-	{ATOMIC_INIT(500000), ATOMIC_INIT(0)}
+	{ATOMIC_INIT(0), ATOMIC_INIT(500000)},
+	{ATOMIC_INIT(300000), ATOMIC_INIT(0)}
 };
 static atomic_t hotplug_load[2][2] = {
 	{ATOMIC_INIT(0), ATOMIC_INIT(50)},
 	{ATOMIC_INIT(30), ATOMIC_INIT(0)}
 };
 static atomic_t hotplug_rq[2][2] = {
-	{ATOMIC_INIT(0), ATOMIC_INIT(200)},
-	{ATOMIC_INIT(300), ATOMIC_INIT(0)}
+	{ATOMIC_INIT(0), ATOMIC_INIT(700)},
+	{ATOMIC_INIT(700), ATOMIC_INIT(0)}
 };
 #else
 static atomic_t hotplug_freq[4][2] = {
