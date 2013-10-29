@@ -1258,7 +1258,8 @@ static int __cpufreq_remove_dev(struct device *dev,
 		if (cpufreq_driver->exit)
 			cpufreq_driver->exit(data);
 
-		cpufreq_policy_free(data);
+		if (!frozen)
+			cpufreq_policy_free(data);
 #if 0 // will kill nightmare gov
 	} else {
 		if (cpufreq_driver->target) {
