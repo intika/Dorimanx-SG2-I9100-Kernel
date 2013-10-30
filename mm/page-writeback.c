@@ -100,9 +100,11 @@ unsigned long vm_dirty_bytes;
  * The interval between `kupdate'-style writebacks
  */
 #define DEFAULT_DIRTY_WRITEBACK_INTERVAL 600 /* centiseconds */
+#define DEFAULT_SUSPEND_DIRTY_WRITEBACK_INTERVAL 6000 /* centiseconds */
 unsigned int dirty_writeback_interval,
 	resume_dirty_writeback_interval;
-int suspend_dirty_writeback_interval = 6000;
+unsigned int sleep_dirty_writeback_interval,
+	suspend_dirty_writeback_interval;
 
 EXPORT_SYMBOL_GPL(dirty_writeback_interval);
 
@@ -110,9 +112,11 @@ EXPORT_SYMBOL_GPL(dirty_writeback_interval);
  * The longest time for which data is allowed to remain dirty
  */
 #define DEFAULT_DIRTY_EXPIRE_INTERVAL 3000 /* centiseconds */
+#define DEFAULT_SUSPEND_DIRTY_EXPIRE_INTERVAL 12000 /* centiseconds */
 unsigned int dirty_expire_interval,
 	resume_dirty_expire_interval;
-int suspend_dirty_expire_interval = 12000;
+unsigned int sleep_dirty_expire_interval,
+	suspend_dirty_expire_interval;
 
 /*
  * Flag that makes the machine dump writes/reads and block dirtyings.
@@ -1803,6 +1807,11 @@ static void dirty_early_suspend(struct early_suspend *handler)
 
 static void dirty_late_resume(struct early_suspend *handler)
 {
+	if (dirty_writeback_interval != suspend_dirty_writeback_interval)
+		suspend_dirty_writeback_interval = dirty_writeback_interval;
+	if (dirty_expire_interval != suspend_dirty_expire_interval)
+		suspend_dirty_expire_interval = dirty_expire_interval;
+
 	dirty_writeback_interval = resume_dirty_writeback_interval;
 	dirty_expire_interval = resume_dirty_expire_interval;
 }
@@ -1836,6 +1845,10 @@ void __init page_writeback_init(void)
 		DEFAULT_DIRTY_WRITEBACK_INTERVAL;
 	dirty_expire_interval = resume_dirty_expire_interval =
 		DEFAULT_DIRTY_EXPIRE_INTERVAL;
+	sleep_dirty_writeback_interval = suspend_dirty_writeback_interval =
+		DEFAULT_SUSPEND_DIRTY_WRITEBACK_INTERVAL;
+	sleep_dirty_expire_interval = suspend_dirty_expire_interval =
+		DEFAULT_SUSPEND_DIRTY_EXPIRE_INTERVAL;
 
 	register_early_suspend(&dirty_suspend);
 

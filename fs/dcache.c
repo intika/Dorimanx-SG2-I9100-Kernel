@@ -81,8 +81,9 @@
  *     dentry2->d_lock
  */
 #define DEFAULT_VFS_CACHE_PRESSURE 60
+#define DEFAULT_VFS_SUSPEND_CACHE_PRESSURE 20
 int sysctl_vfs_cache_pressure __read_mostly, resume_cache_pressure;
-int suspend_cache_pressure = 20;
+int sysctl_vfs_suspend_cache_pressure __read_mostly, suspend_cache_pressure;
 
 EXPORT_SYMBOL_GPL(sysctl_vfs_cache_pressure);
 
@@ -3353,6 +3354,9 @@ static void cpressure_early_suspend(struct early_suspend *handler)
 
 static void cpressure_late_resume(struct early_suspend *handler)
 {
+	if (sysctl_vfs_cache_pressure != suspend_cache_pressure)
+		suspend_cache_pressure = sysctl_vfs_cache_pressure;
+
 	sysctl_vfs_cache_pressure = resume_cache_pressure;
 }
 
@@ -3437,6 +3441,8 @@ void __init vfs_caches_init_early(void)
 {
 	sysctl_vfs_cache_pressure = resume_cache_pressure =
 		DEFAULT_VFS_CACHE_PRESSURE;
+	sysctl_vfs_suspend_cache_pressure = suspend_cache_pressure =
+		DEFAULT_VFS_SUSPEND_CACHE_PRESSURE;
 
 	dcache_init_early();
 	inode_init_early();
