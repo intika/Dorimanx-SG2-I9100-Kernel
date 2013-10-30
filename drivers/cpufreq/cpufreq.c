@@ -41,6 +41,7 @@ static struct cpufreq_driver *cpufreq_driver;
 static DEFINE_PER_CPU(struct cpufreq_policy *, cpufreq_cpu_data);
 static DEFINE_PER_CPU(struct cpufreq_policy *, cpufreq_cpu_data_fallback);
 static DEFINE_RWLOCK(cpufreq_driver_lock);
+static DEFINE_MUTEX(cpufreq_governor_lock);
 static LIST_HEAD(cpufreq_policy_list);
 
 #ifdef CONFIG_HOTPLUG_CPU
@@ -133,6 +134,21 @@ void disable_cpufreq(void)
 }
 static LIST_HEAD(cpufreq_governor_list);
 static DEFINE_MUTEX(cpufreq_governor_mutex);
+
+bool have_governor_per_policy(void)
+{
+	return cpufreq_driver->have_governor_per_policy;
+}
+EXPORT_SYMBOL_GPL(have_governor_per_policy);
+
+struct kobject *get_governor_parent_kobj(struct cpufreq_policy *policy)
+{
+	if (have_governor_per_policy())
+		return &policy->kobj;
+	else
+		return cpufreq_global_kobject;
+}
+EXPORT_SYMBOL_GPL(get_governor_parent_kobj);
 
 static inline u64 get_cpu_idle_time_jiffy(unsigned int cpu, u64 *wall)
 {
@@ -264,20 +280,9 @@ static inline void adjust_jiffies(unsigned long val, struct cpufreq_freqs *ci)
 }
 #endif
 
-
-/**
- * cpufreq_notify_transition - call notifier chain and adjust_jiffies
- * on frequency transition.
- *
- * This function calls the transition notifiers and the "adjust_jiffies"
- * function. It is called twice on all CPU frequency changes that have
- * external effects.
- */
-void cpufreq_notify_transition(struct cpufreq_freqs *freqs, unsigned int state)
+static void __cpufreq_notify_transition(struct cpufreq_policy *policy,
+		struct cpufreq_freqs *freqs, unsigned int state)
 {
-	struct cpufreq_policy *policy;
-	unsigned long flags;
-
 	BUG_ON(irqs_disabled());
 
 	if (cpufreq_disabled())
@@ -286,10 +291,6 @@ void cpufreq_notify_transition(struct cpufreq_freqs *freqs, unsigned int state)
 	freqs->flags = cpufreq_driver->flags;
 	pr_debug("notification %u of frequency transition to %u kHz\n",
 		state, freqs->new);
-
-	read_lock_irqsave(&cpufreq_driver_lock, flags);
-	policy = per_cpu(cpufreq_cpu_data, freqs->cpu);
-	read_unlock_irqrestore(&cpufreq_driver_lock, flags);
 
 	switch (state) {
 
@@ -326,7 +327,23 @@ void cpufreq_notify_transition(struct cpufreq_freqs *freqs, unsigned int state)
 		break;
 	}
 }
+
+/**
+ * cpufreq_notify_transition - call notifier chain and adjust_jiffies
+ * on frequency transition.
+ *
+ * This function calls the transition notifiers and the "adjust_jiffies"
+ * function. It is called twice on all CPU frequency changes that have
+ * external effects.
+ */
+void cpufreq_notify_transition(struct cpufreq_policy *policy,
+		struct cpufreq_freqs *freqs, unsigned int state)
+{
+	for_each_cpu(freqs->cpu, policy->cpus)
+		__cpufreq_notify_transition(policy, freqs, state);
+}
 EXPORT_SYMBOL_GPL(cpufreq_notify_transition);
+
 /**
  * cpufreq_notify_utilization - notify CPU userspace about CPU utilization
  * change
@@ -826,6 +843,7 @@ static int cpufreq_add_dev_interface(struct cpufreq_policy *policy,
 			goto err_out_kobj_put;
 	}
 
+	ret = cpufreq_add_dev_symlink(policy);
 	if (ret)
 		goto err_out_kobj_put;
 
@@ -875,7 +893,6 @@ static int cpufreq_add_policy_cpu(struct cpufreq_policy *policy,
 		}
 	}
 #endif
-
 	lock_policy_rwsem_write(policy->cpu);
 
 	write_lock_irqsave(&cpufreq_driver_lock, flags);
@@ -895,7 +912,6 @@ static int cpufreq_add_policy_cpu(struct cpufreq_policy *policy,
 		}
 	}
 #endif
-
 	/* Don't touch sysfs links during light-weight init */
 	if (!frozen)
 		ret = sysfs_create_link(&dev->kobj, &policy->kobj, "cpufreq");
@@ -1193,7 +1209,7 @@ static int __cpufreq_remove_dev_prepare(struct device *dev,
 
 #if 0 // will kill nightmare gov
 	if (cpufreq_driver->target) {
-		ret = __cpufreq_governor(policy, CPUFREQ_GOV_STOP);
+		ret = __cpufreq_governor(data, CPUFREQ_GOV_STOP);
 		if (ret) {
 			pr_err("%s: Failed to stop governor\n", __func__);
 			return ret;
@@ -1305,8 +1321,8 @@ static int __cpufreq_remove_dev_finish(struct device *dev,
 #if 0 // will kill nightmare gov
 	} else {
 		if (cpufreq_driver->target) {
-			if ((ret = __cpufreq_governor(policy, CPUFREQ_GOV_START)) ||
-					(ret = __cpufreq_governor(policy, CPUFREQ_GOV_LIMITS))) {
+			if ((ret = __cpufreq_governor(data, CPUFREQ_GOV_START)) ||
+					(ret = __cpufreq_governor(data, CPUFREQ_GOV_LIMITS))) {
 				pr_err("%s: Failed to start governor\n",
 						__func__);
 				return ret;
@@ -1374,16 +1390,22 @@ static void handle_update(struct work_struct *work)
 static void cpufreq_out_of_sync(unsigned int cpu, unsigned int old_freq,
 				unsigned int new_freq)
 {
+	struct cpufreq_policy *policy;
 	struct cpufreq_freqs freqs;
+	unsigned long flags;
 
 	pr_debug("Warning: CPU frequency out of sync: cpufreq and timing "
 	       "core thinks of %u, is %u kHz.\n", old_freq, new_freq);
 
-	freqs.cpu = cpu;
 	freqs.old = old_freq;
 	freqs.new = new_freq;
-	cpufreq_notify_transition(&freqs, CPUFREQ_PRECHANGE);
-	cpufreq_notify_transition(&freqs, CPUFREQ_POSTCHANGE);
+
+	read_lock_irqsave(&cpufreq_driver_lock, flags);
+	policy = per_cpu(cpufreq_cpu_data, cpu);
+	read_unlock_irqrestore(&cpufreq_driver_lock, flags);
+
+	cpufreq_notify_transition(policy, &freqs, CPUFREQ_PRECHANGE);
+	cpufreq_notify_transition(policy, &freqs, CPUFREQ_POSTCHANGE);
 }
 
 /**
@@ -1765,8 +1787,42 @@ static int __cpufreq_governor(struct cpufreq_policy *policy,
 
 	pr_debug("__cpufreq_governor for CPU %u, event %u\n",
 						policy->cpu, event);
+
+#if 0 // will kill nightmare gov
+	mutex_lock(&cpufreq_governor_lock);
+	if ((policy->governor_enabled && event == CPUFREQ_GOV_START)
+	    || (!policy->governor_enabled
+	    && (event == CPUFREQ_GOV_LIMITS || event == CPUFREQ_GOV_STOP))) {
+		mutex_unlock(&cpufreq_governor_lock);
+		return -EBUSY;
+	}
+
+	if (event == CPUFREQ_GOV_STOP)
+		policy->governor_enabled = false;
+	else if (event == CPUFREQ_GOV_START)
+		policy->governor_enabled = true;
+
+	mutex_unlock(&cpufreq_governor_lock);
+#endif
+
 	ret = policy->governor->governor(policy, event);
 
+#if 0 // will kill nightmare gov
+	if (!ret) {
+		if (event == CPUFREQ_GOV_POLICY_INIT)
+			policy->governor->initialized++;
+		else if (event == CPUFREQ_GOV_POLICY_EXIT)
+			policy->governor->initialized--;
+	} else {
+		/* Restore original values */
+		mutex_lock(&cpufreq_governor_lock);
+		if (event == CPUFREQ_GOV_STOP)
+			policy->governor_enabled = true;
+		else if (event == CPUFREQ_GOV_START)
+			policy->governor_enabled = false;
+		mutex_unlock(&cpufreq_governor_lock);
+	}
+#endif
 	if (((event == CPUFREQ_GOV_POLICY_INIT) && ret) ||
 			((event == CPUFREQ_GOV_POLICY_EXIT) && !ret))
 		module_put(policy->governor->owner);
@@ -1786,6 +1842,7 @@ int cpufreq_register_governor(struct cpufreq_governor *governor)
 
 	mutex_lock(&cpufreq_governor_mutex);
 
+	governor->initialized = 0;
 	err = -EBUSY;
 	if (__find_governor(governor->name) == NULL) {
 		err = 0;
