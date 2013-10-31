@@ -57,10 +57,10 @@ static int idle_event_handler(struct notifier_block *n,
 {
         switch (cmd) {
         case IDLE_START:
-                percpu_write(idle_start, jiffies);
+                this_cpu_write(idle_start, jiffies);
                 break;
         case IDLE_END:
-                percpu_write(idle_end, jiffies);
+                this_cpu_write(idle_end, jiffies);
                 break;
         }
 
