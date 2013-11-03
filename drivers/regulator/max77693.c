@@ -1,8 +1,8 @@
 /*
  * max77693.c - Regulator driver for the Maxim 77693
  *
- * Copyright (C) 2011 Samsung Electronics
- * Sukdong Kim <sukdong.kim@smasung.com>
+ * Copyright (C) 2013 Samsung Electronics
+ * Jonghwa Lee <jonghwa3.lee@samsung.com>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,528 +18,288 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * This driver is based on max8997.c
+ * This driver is based on max77686.c
  */
 
-#include <linux/bug.h>
-#include <linux/delay.h>
 #include <linux/err.h>
-#include <linux/gpio.h>
 #include <linux/slab.h>
 #include <linux/platform_device.h>
+#include <linux/module.h>
+#include <linux/export.h>
 #include <linux/regulator/driver.h>
 #include <linux/regulator/machine.h>
 #include <linux/mfd/max77693.h>
 #include <linux/mfd/max77693-private.h>
+#include <linux/regulator/of_regulator.h>
 
-struct max77693_data {
+#define CHGIN_ILIM_STEP_20mA			20000
+
+struct max77693_pmic_dev {
 	struct device *dev;
 	struct max77693_dev *iodev;
 	int num_regulators;
 	struct regulator_dev **rdev;
-
-	u8 saved_states[MAX77693_REG_MAX];
 };
 
-struct voltage_map_desc {
-	int min;
-	int max;
-	int step;
-	unsigned int n_bits;
-};
-
-/* current map in mA */
-static const struct voltage_map_desc charger_current_map_desc = {
-	.min = 60, .max = 2580, .step = 20, .n_bits = 7,
-};
-
-static const struct voltage_map_desc topoff_current_map_desc = {
-	.min = 50, .max = 200, .step = 10, .n_bits = 4,
-};
-
-static const struct voltage_map_desc *reg_voltage_map[] = {
-	[MAX77693_ESAFEOUT1] = NULL,
-	[MAX77693_ESAFEOUT2] = NULL,
-	[MAX77693_CHARGER] = &charger_current_map_desc,
-};
-
-static inline int max77693_get_rid(struct regulator_dev *rdev)
+/* CHARGER regulator ops */
+/* CHARGER regulator uses two bits for enabling */
+static int max77693_chg_is_enabled(struct regulator_dev *rdev)
 {
-	dev_info(&rdev->dev, "func:%s\n", __func__);
-	return rdev_get_id(rdev);
-}
-
-static int max77693_list_voltage_safeout(struct regulator_dev *rdev,
-					 unsigned int selector)
-{
-	int rid = max77693_get_rid(rdev);
-	dev_info(&rdev->dev, "func:%s\n", __func__);
-	if (rid == MAX77693_ESAFEOUT1 || rid == MAX77693_ESAFEOUT2) {
-		switch (selector) {
-		case 0:
-			return 4850000;
-		case 1:
-			return 4900000;
-		case 2:
-			return 4950000;
-		case 3:
-			return 3300000;
-		default:
-			return -EINVAL;
-		}
-	}
-
-	return -EINVAL;
-}
-
-static int max77693_get_enable_register(struct regulator_dev *rdev,
-					int *reg, int *mask, int *pattern)
-{
-	int rid = max77693_get_rid(rdev);
-	dev_info(&rdev->dev, "func:%s\n", __func__);
-	switch (rid) {
-	case MAX77693_ESAFEOUT1...MAX77693_ESAFEOUT2:
-		*reg = MAX77693_CHG_REG_SAFEOUT_CTRL;
-		*mask = 0x40 << (rid - MAX77693_ESAFEOUT1);
-		*pattern = 0x40 << (rid - MAX77693_ESAFEOUT1);
-		break;
-	case MAX77693_CHARGER:
-		*reg = MAX77693_CHG_REG_CHG_CNFG_00;
-		*mask = 0xf;
-		*pattern = 0x5;
-		break;
-	default:
-		/* Not controllable or not exists */
-		return -EINVAL;
-	}
-
-	return 0;
-}
-
-static int max77693_get_disable_register(struct regulator_dev *rdev,
-					int *reg, int *mask, int *pattern)
-{
-	int rid = max77693_get_rid(rdev);
-	dev_info(&rdev->dev, "func:%s\n", __func__);
-	switch (rid) {
-	case MAX77693_ESAFEOUT1...MAX77693_ESAFEOUT2:
-		*reg = MAX77693_CHG_REG_SAFEOUT_CTRL;
-		*mask = 0x40 << (rid - MAX77693_ESAFEOUT1);
-		*pattern = 0x00;
-		break;
-	case MAX77693_CHARGER:
-		*reg = MAX77693_CHG_REG_CHG_CNFG_00;
-		*mask = 0xf;
-		*pattern = 0x00;
-		break;
-	default:
-		/* Not controllable or not exists */
-		return -EINVAL;
-	}
-
-	return 0;
-}
-
-static int max77693_reg_is_enabled(struct regulator_dev *rdev)
-{
-	struct max77693_data *max77693 = rdev_get_drvdata(rdev);
-	struct i2c_client *i2c = max77693->iodev->i2c;
-	int ret, reg, mask, pattern;
+	int ret;
 	u8 val;
-	dev_info(&rdev->dev, "func:%s\n", __func__);
-	ret = max77693_get_enable_register(rdev, &reg, &mask, &pattern);
-	if (ret == -EINVAL)
-		return 1;	/* "not controllable" */
-	else if (ret)
-		return ret;
 
-	ret = max77693_read_reg(i2c, reg, &val);
+	ret = max77693_read_reg(rdev->regmap, rdev->desc->enable_reg, &val);
 	if (ret)
 		return ret;
 
-	return (val & mask) == pattern;
+	return (val & rdev->desc->enable_mask) == rdev->desc->enable_mask;
 }
 
-static int max77693_reg_enable(struct regulator_dev *rdev)
+/*
+ * CHARGER regulator - Min : 20mA, Max : 2580mA, step : 20mA
+ * 0x00, 0x01, 0x2, 0x03	= 60 mA
+ * 0x04 ~ 0x7E			= (60 + (X - 3) * 20) mA
+ */
+static int max77693_chg_get_current_limit(struct regulator_dev *rdev)
 {
-	struct max77693_data *max77693 = rdev_get_drvdata(rdev);
-	struct i2c_client *i2c = max77693->iodev->i2c;
-	int ret, reg, mask, pattern;
-	dev_info(&rdev->dev, "func:%s\n", __func__);
-	ret = max77693_get_enable_register(rdev, &reg, &mask, &pattern);
-	if (ret)
+	unsigned int chg_min_uA = rdev->constraints->min_uA;
+	unsigned int chg_max_uA = rdev->constraints->max_uA;
+	u8 reg, sel;
+	unsigned int val;
+	int ret;
+
+	ret = max77693_read_reg(rdev->regmap,
+				MAX77693_CHG_REG_CHG_CNFG_09, &reg);
+	if (ret < 0)
 		return ret;
 
-	return max77693_update_reg(i2c, reg, pattern, mask);
-}
+	sel = reg & CHG_CNFG_09_CHGIN_ILIM_MASK;
 
-static int max77693_reg_disable(struct regulator_dev *rdev)
-{
-	struct max77693_data *max77693 = rdev_get_drvdata(rdev);
-	struct i2c_client *i2c = max77693->iodev->i2c;
-	int ret, reg, mask, pattern;
-	dev_info(&rdev->dev, "func:%s\n", __func__);
-	ret = max77693_get_disable_register(rdev, &reg, &mask, &pattern);
-	if (ret)
-		return ret;
+	/* the first four codes for charger current are all 60mA */
+	if (sel <= 3)
+		sel = 0;
+	else
+		sel -= 3;
 
-	return max77693_update_reg(i2c, reg, pattern, mask);
-}
-
-static int max77693_get_voltage_register(struct regulator_dev *rdev,
-					 int *_reg, int *_shift, int *_mask)
-{
-	int rid = max77693_get_rid(rdev);
-	int reg, shift = 0, mask = 0x3f;
-	dev_info(&rdev->dev, "func:%s\n", __func__);
-	switch (rid) {
-	case MAX77693_ESAFEOUT1...MAX77693_ESAFEOUT2:
-		reg = MAX77693_CHG_REG_SAFEOUT_CTRL;
-		shift = (rid == MAX77693_ESAFEOUT2) ? 2 : 0;
-		mask = 0x3;
-		break;
-	case MAX77693_CHARGER:
-		reg = MAX77693_CHG_REG_CHG_CNFG_09;
-		shift = 0;
-		mask = 0x7f;
-		break;
-	default:
-		return -EINVAL;
-	}
-
-	*_reg = reg;
-	*_shift = shift;
-	*_mask = mask;
-
-	return 0;
-}
-
-static int max77693_list_voltage(struct regulator_dev *rdev,
-				 unsigned int selector)
-{
-	const struct voltage_map_desc *desc;
-	int rid = max77693_get_rid(rdev);
-	int val;
-	dev_info(&rdev->dev, "func:%s\n", __func__);
-	if (rid >= ARRAY_SIZE(reg_voltage_map) || rid < 0)
+	val = chg_min_uA + CHGIN_ILIM_STEP_20mA * sel;
+	if (val > chg_max_uA)
 		return -EINVAL;
 
-	desc = reg_voltage_map[rid];
-	if (desc == NULL)
+	return val;
+}
+
+static int max77693_chg_set_current_limit(struct regulator_dev *rdev,
+						int min_uA, int max_uA)
+{
+	unsigned int chg_min_uA = rdev->constraints->min_uA;
+	int sel = 0;
+
+	while (chg_min_uA + CHGIN_ILIM_STEP_20mA * sel < min_uA)
+		sel++;
+
+	if (chg_min_uA + CHGIN_ILIM_STEP_20mA * sel > max_uA)
 		return -EINVAL;
 
 	/* the first four codes for charger current are all 60mA */
-	if (rid == MAX77693_CHARGER) {
-		if (selector <= 3)
-			selector = 0;
-		else
-			selector -= 3;
-	}
+	sel += 3;
 
-	val = desc->min + desc->step * selector;
-	if (val > desc->max)
-		return -EINVAL;
-
-	return val * 1000;
+	return max77693_write_reg(rdev->regmap,
+				MAX77693_CHG_REG_CHG_CNFG_09, sel);
 }
+/* end of CHARGER regulator ops */
 
-static int max77693_get_voltage(struct regulator_dev *rdev)
-{
-	struct max77693_data *max77693 = rdev_get_drvdata(rdev);
-	struct i2c_client *i2c = max77693->iodev->i2c;
-	int reg, shift, mask, ret;
-
-	u8 val;
-	dev_info(&rdev->dev, "func:%s\n", __func__);
-	ret = max77693_get_voltage_register(rdev, &reg, &shift, &mask);
-	if (ret)
-		return ret;
-
-	ret = max77693_read_reg(i2c, reg, &val);
-	if (ret)
-		return ret;
-
-	val >>= shift;
-	val &= mask;
-
-	if (rdev->desc && rdev->desc->ops && rdev->desc->ops->list_voltage)
-		return rdev->desc->ops->list_voltage(rdev, val);
-
-	/*
-	 * max77693_list_voltage returns value for any rdev with voltage_map,
-	 * which works for "CHARGER" and "CHARGER TOPOFF" that do not have
-	 * list_voltage ops (they are current regulators).
-	 */
-	return max77693_list_voltage(rdev, val);
-}
-
-static inline int max77693_get_voltage_proper_val(
-		const struct voltage_map_desc *desc,
-		int min_vol, int max_vol)
-{
-	int i = 0;
-
-	if (desc == NULL)
-		return -EINVAL;
-
-	if (max_vol < desc->min || min_vol > desc->max)
-		return -EINVAL;
-
-	while (desc->min + desc->step * i < min_vol &&
-			desc->min + desc->step * i < desc->max)
-		i++;
-
-	if (desc->min + desc->step * i > max_vol)
-		return -EINVAL;
-
-	if (i >= (1 << desc->n_bits))
-		return -EINVAL;
-
-	return i;
-}
-
-static int max77693_set_voltage(struct regulator_dev *rdev,
-				int min_uV, int max_uV)
-{
-	struct max77693_data *max77693 = rdev_get_drvdata(rdev);
-	struct i2c_client *i2c = max77693->iodev->i2c;
-	int min_vol = min_uV / 1000, max_vol = max_uV / 1000;
-	const struct voltage_map_desc *desc;
-	int rid = max77693_get_rid(rdev);
-	int reg, shift = 0, mask, ret;
-	int i;
-	u8 org;
-
-	switch (rid) {
-	case MAX77693_CHARGER:
-		break;
-	default:
-		return -EINVAL;
-	}
-
-	desc = reg_voltage_map[rid];
-
-	i = max77693_get_voltage_proper_val(desc, min_vol, max_vol);
-	if (i < 0)
-		return i;
-
-	ret = max77693_get_voltage_register(rdev, &reg, &shift, &mask);
-	if (ret)
-		return ret;
-
-	max77693_read_reg(i2c, reg, &org);
-	org = (org & mask) >> shift;
-
-	/* the first four codes for charger current are all 60mA */
-	if (rid == MAX77693_CHARGER)
-		i += 3;
-
-	ret = max77693_update_reg(i2c, reg, i << shift, mask << shift);
-
-	return ret;
-}
-
-static const int safeoutvolt[] = {
-	3300000,
+static const unsigned int max77693_safeout_table[] = {
 	4850000,
 	4900000,
 	4950000,
+	3300000,
 };
 
-/* For SAFEOUT1 and SAFEOUT2 */
-static int max77693_set_voltage_safeout(struct regulator_dev *rdev,
-					int min_uV, int max_uV,
-					unsigned *selector)
-{
-	struct max77693_data *max77693 = rdev_get_drvdata(rdev);
-	struct i2c_client *i2c = max77693->iodev->i2c;
-	int rid = max77693_get_rid(rdev);
-	int reg, shift = 0, mask, ret;
-	int i = 0;
-	u8 val;
-	dev_info(&rdev->dev, "func:%s\n", __func__);
-	if (rid != MAX77693_ESAFEOUT1 && rid != MAX77693_ESAFEOUT2)
-		return -EINVAL;
-
-	for (i = 0; i < ARRAY_SIZE(safeoutvolt); i++) {
-		if (min_uV <= safeoutvolt[i] && max_uV >= safeoutvolt[i])
-			break;
-	}
-
-	if (i >= ARRAY_SIZE(safeoutvolt))
-		return -EINVAL;
-
-	if (i == 0)
-		val = 0x3;
-	else
-		val = i - 1;
-
-	ret = max77693_get_voltage_register(rdev, &reg, &shift, &mask);
-	if (ret)
-		return ret;
-
-	ret = max77693_update_reg(i2c, reg, val << shift, mask << shift);
-	*selector = val;
-
-	return ret;
-}
-
-static int max77693_reg_enable_suspend(struct regulator_dev *rdev)
-{
-	dev_info(&rdev->dev, "func:%s\n", __func__);
-	return 0;
-}
-
-static int max77693_reg_disable_suspend(struct regulator_dev *rdev)
-{
-	struct max77693_data *max77693 = rdev_get_drvdata(rdev);
-	struct i2c_client *i2c = max77693->iodev->i2c;
-	int ret, reg, mask, pattern;
-	int rid = max77693_get_rid(rdev);
-	dev_info(&rdev->dev, "func:%s\n", __func__);
-	ret = max77693_get_disable_register(rdev, &reg, &mask, &pattern);
-	if (ret)
-		return ret;
-
-	max77693_read_reg(i2c, reg, &max77693->saved_states[rid]);
-
-	dev_dbg(&rdev->dev, "Full Power-Off for %s (%xh -> %xh)\n",
-		rdev->desc->name, max77693->saved_states[rid] & mask,
-		(~pattern) & mask);
-	return max77693_update_reg(i2c, reg, pattern, mask);
-}
-
 static struct regulator_ops max77693_safeout_ops = {
-	.list_voltage = max77693_list_voltage_safeout,
-	.is_enabled = max77693_reg_is_enabled,
-	.enable = max77693_reg_enable,
-	.disable = max77693_reg_disable,
-	.get_voltage = max77693_get_voltage,
-	.set_voltage = max77693_set_voltage_safeout,
-	.set_suspend_enable = max77693_reg_enable_suspend,
-	.set_suspend_disable = max77693_reg_disable_suspend,
+	.list_voltage		= regulator_list_voltage_table,
+	.is_enabled		= regulator_is_enabled_regmap,
+	.enable			= regulator_enable_regmap,
+	.disable		= regulator_disable_regmap,
+	.get_voltage_sel	= regulator_get_voltage_sel_regmap,
+	.set_voltage_sel	= regulator_set_voltage_sel_regmap,
 };
 
 static struct regulator_ops max77693_charger_ops = {
-	.is_enabled		= max77693_reg_is_enabled,
-	.enable			= max77693_reg_enable,
-	.disable		= max77693_reg_disable,
-	.get_current_limit	= max77693_get_voltage,
-	.set_current_limit	= max77693_set_voltage,
+	.is_enabled		= max77693_chg_is_enabled,
+	.enable			= regulator_enable_regmap,
+	.disable		= regulator_disable_regmap,
+	.get_current_limit	= max77693_chg_get_current_limit,
+	.set_current_limit	= max77693_chg_set_current_limit,
 };
 
+#define regulator_desc_esafeout(_num)	{			\
+	.name		= "ESAFEOUT"#_num,			\
+	.id		= MAX77693_ESAFEOUT##_num,		\
+	.n_voltages	= 4,					\
+	.ops		= &max77693_safeout_ops,		\
+	.type		= REGULATOR_VOLTAGE,			\
+	.volt_table	= max77693_safeout_table,		\
+	.vsel_reg	= MAX77693_CHG_REG_SAFEOUT_CTRL,	\
+	.vsel_mask	= SAFEOUT_CTRL_SAFEOUT##_num##_MASK,	\
+	.enable_reg	= MAX77693_CHG_REG_SAFEOUT_CTRL,	\
+	.enable_mask	= SAFEOUT_CTRL_ENSAFEOUT##_num##_MASK ,	\
+}
+
 static struct regulator_desc regulators[] = {
+	regulator_desc_esafeout(1),
+	regulator_desc_esafeout(2),
 	{
-		.name = "ESAFEOUT1",
-		.id = MAX77693_ESAFEOUT1,
-		.ops = &max77693_safeout_ops,
-		.type = REGULATOR_VOLTAGE,
-		.owner = THIS_MODULE,
-	}, {
-		.name = "ESAFEOUT2",
-		.id = MAX77693_ESAFEOUT2,
-		.ops = &max77693_safeout_ops,
-		.type = REGULATOR_VOLTAGE,
-		.owner = THIS_MODULE,
-	}, {
 		.name = "CHARGER",
 		.id = MAX77693_CHARGER,
 		.ops = &max77693_charger_ops,
 		.type = REGULATOR_CURRENT,
 		.owner = THIS_MODULE,
-	}
+		.enable_reg = MAX77693_CHG_REG_CHG_CNFG_00,
+		.enable_mask = CHG_CNFG_00_CHG_MASK |
+				CHG_CNFG_00_BUCK_MASK,
+	},
 };
 
-static __devinit int max77693_pmic_probe(struct platform_device *pdev)
+#ifdef CONFIG_OF
+static int max77693_pmic_dt_parse_rdata(struct device *dev,
+					struct max77693_regulator_data **rdata)
+{
+	struct device_node *np;
+	struct of_regulator_match *rmatch;
+	struct max77693_regulator_data *tmp;
+	int i, matched = 0;
+
+	np = of_find_node_by_name(dev->parent->of_node, "regulators");
+	if (!np)
+		return -EINVAL;
+
+	rmatch = devm_kzalloc(dev,
+		 sizeof(*rmatch) * ARRAY_SIZE(regulators), GFP_KERNEL);
+	if (!rmatch)
+		return -ENOMEM;
+
+	for (i = 0; i < ARRAY_SIZE(regulators); i++)
+		rmatch[i].name = regulators[i].name;
+
+	matched = of_regulator_match(dev, np, rmatch, ARRAY_SIZE(regulators));
+	if (matched <= 0)
+		return matched;
+	*rdata = devm_kzalloc(dev, sizeof(**rdata) * matched, GFP_KERNEL);
+	if (!(*rdata))
+		return -ENOMEM;
+
+	tmp = *rdata;
+
+	for (i = 0; i < matched; i++) {
+		tmp->initdata = rmatch[i].init_data;
+		tmp->of_node = rmatch[i].of_node;
+		tmp->id = regulators[i].id;
+		tmp++;
+	}
+
+	return matched;
+}
+#else
+static int max77693_pmic_dt_parse_rdata(struct device *dev,
+					struct max77693_regulator_data **rdata)
+{
+	return 0;
+}
+#endif /* CONFIG_OF */
+
+static int max77693_pmic_init_rdata(struct device *dev,
+				    struct max77693_regulator_data **rdata)
+{
+	struct max77693_platform_data *pdata;
+	int num_regulators = 0;
+
+	pdata = dev_get_platdata(dev->parent);
+	if (pdata) {
+		*rdata = pdata->regulators;
+		num_regulators = pdata->num_regulators;
+	}
+
+	if (!(*rdata) && dev->parent->of_node)
+		num_regulators = max77693_pmic_dt_parse_rdata(dev, rdata);
+
+	return num_regulators;
+}
+
+static int max77693_pmic_probe(struct platform_device *pdev)
 {
 	struct max77693_dev *iodev = dev_get_drvdata(pdev->dev.parent);
-	struct max77693_platform_data *pdata = dev_get_platdata(iodev->dev);
-	struct regulator_dev **rdev;
-	struct max77693_data *max77693;
-	struct i2c_client *i2c;
-	int i, ret, size;
-	dev_info(&pdev->dev, "%s\n", __func__);
-	if (!pdata) {
-		pr_info("[%s:%d] !pdata\n", __FILE__, __LINE__);
-		dev_err(pdev->dev.parent, "No platform init data supplied.\n");
+	struct max77693_pmic_dev *max77693_pmic;
+	struct max77693_regulator_data *rdata = NULL;
+	int num_rdata, i, ret;
+	struct regulator_config config;
+
+	num_rdata = max77693_pmic_init_rdata(&pdev->dev, &rdata);
+	if (!rdata || num_rdata <= 0) {
+		dev_err(&pdev->dev, "No init data supplied.\n");
 		return -ENODEV;
 	}
 
-	max77693 = kzalloc(sizeof(struct max77693_data), GFP_KERNEL);
-	if (!max77693) {
-		pr_info("[%s:%d] if (!max77693)\n", __FILE__, __LINE__);
+	max77693_pmic = devm_kzalloc(&pdev->dev,
+				sizeof(struct max77693_pmic_dev),
+				GFP_KERNEL);
+	if (!max77693_pmic)
 		return -ENOMEM;
-	}
-	size = sizeof(struct regulator_dev *) * pdata->num_regulators;
-	max77693->rdev = kzalloc(size, GFP_KERNEL);
-	if (!max77693->rdev) {
-		pr_info("[%s:%d] if (!max77693->rdev)\n", __FILE__, __LINE__);
-		kfree(max77693);
+
+	max77693_pmic->rdev = devm_kzalloc(&pdev->dev,
+				sizeof(struct regulator_dev *) * num_rdata,
+				GFP_KERNEL);
+	if (!max77693_pmic->rdev)
 		return -ENOMEM;
-	}
 
-	rdev = max77693->rdev;
-	max77693->dev = &pdev->dev;
-	max77693->iodev = iodev;
-	max77693->num_regulators = pdata->num_regulators;
-	platform_set_drvdata(pdev, max77693);
-	i2c = max77693->iodev->i2c;
-	pr_info("[%s:%d] pdata->num_regulators:%d\n", __FILE__, __LINE__,
-		pdata->num_regulators);
-	for (i = 0; i < pdata->num_regulators; i++) {
+	max77693_pmic->dev = &pdev->dev;
+	max77693_pmic->iodev = iodev;
+	max77693_pmic->num_regulators = num_rdata;
 
-		const struct voltage_map_desc *desc;
-		int id = pdata->regulators[i].id;
-		pr_info("[%s:%d] for in pdata->num_regulators:%d\n", __FILE__,
-			__LINE__, pdata->num_regulators);
-		desc = reg_voltage_map[id];
-		if (id == MAX77693_ESAFEOUT1 || id == MAX77693_ESAFEOUT2)
-			regulators[id].n_voltages = 4;
+	config.dev = &pdev->dev;
+	config.regmap = iodev->regmap;
+	config.driver_data = max77693_pmic;
+	platform_set_drvdata(pdev, max77693_pmic);
 
-		rdev[i] = regulator_register(&regulators[id], max77693->dev,
-					     pdata->regulators[i].initdata,
-					     max77693);
-		if (IS_ERR(rdev[i])) {
-			ret = PTR_ERR(rdev[i]);
-			dev_err(max77693->dev, "regulator init failed for %d\n",
-				id);
-			rdev[i] = NULL;
+	for (i = 0; i < max77693_pmic->num_regulators; i++) {
+		int id = rdata[i].id;
+
+		config.init_data = rdata[i].initdata;
+		config.of_node = rdata[i].of_node;
+
+		max77693_pmic->rdev[i] = regulator_register(&regulators[id],
+							    &config);
+		if (IS_ERR(max77693_pmic->rdev[i])) {
+			ret = PTR_ERR(max77693_pmic->rdev[i]);
+			dev_err(max77693_pmic->dev,
+				"Failed to initialize regulator-%d\n", id);
+			max77693_pmic->rdev[i] = NULL;
 			goto err;
 		}
 	}
 
 	return 0;
  err:
-	pr_info("[%s:%d] err:\n", __FILE__, __LINE__);
-	for (i = 0; i < max77693->num_regulators; i++)
-		if (rdev[i])
-			regulator_unregister(rdev[i]);
- err_alloc:
-	pr_info("[%s:%d] err_alloc\n", __FILE__, __LINE__);
-	kfree(max77693->rdev);
-	kfree(max77693);
+	while (--i >= 0)
+		regulator_unregister(max77693_pmic->rdev[i]);
 
 	return ret;
 }
 
-static int __devexit max77693_pmic_remove(struct platform_device *pdev)
+static int max77693_pmic_remove(struct platform_device *pdev)
 {
-	struct max77693_data *max77693 = platform_get_drvdata(pdev);
-	struct regulator_dev **rdev = max77693->rdev;
+	struct max77693_pmic_dev *max77693_pmic = platform_get_drvdata(pdev);
+	struct regulator_dev **rdev = max77693_pmic->rdev;
 	int i;
-	dev_info(&pdev->dev, "%s\n", __func__);
-	for (i = 0; i < max77693->num_regulators; i++)
+
+	for (i = 0; i < max77693_pmic->num_regulators; i++)
 		if (rdev[i])
 			regulator_unregister(rdev[i]);
-
-	kfree(max77693->rdev);
-	kfree(max77693);
 
 	return 0;
 }
 
 static const struct platform_device_id max77693_pmic_id[] = {
-	{"max77693-safeout", 0},
+	{"max77693-pmic", 0},
 	{},
 };
 
@@ -547,31 +307,16 @@ MODULE_DEVICE_TABLE(platform, max77693_pmic_id);
 
 static struct platform_driver max77693_pmic_driver = {
 	.driver = {
-		   .name = "max77693-safeout",
+		   .name = "max77693-pmic",
 		   .owner = THIS_MODULE,
 		   },
 	.probe = max77693_pmic_probe,
-	.remove = __devexit_p(max77693_pmic_remove),
+	.remove = max77693_pmic_remove,
 	.id_table = max77693_pmic_id,
 };
 
-static int __init max77693_pmic_init(void)
-{
-	return platform_driver_register(&max77693_pmic_driver);
-}
-#ifdef CONFIG_FAST_RESUME
-beforeresume_initcall(max77693_pmic_init);
-#else
-subsys_initcall(max77693_pmic_init);
-#endif
+module_platform_driver(max77693_pmic_driver);
 
-static void __exit max77693_pmic_cleanup(void)
-{
-	platform_driver_unregister(&max77693_pmic_driver);
-}
-
-module_exit(max77693_pmic_cleanup);
-
-MODULE_DESCRIPTION("MAXIM 77693 Regulator Driver");
-MODULE_AUTHOR("Sukdong Kim <Sukdong.Kim@samsung.com>");
+MODULE_DESCRIPTION("MAXIM MAX77693 regulator driver");
+MODULE_AUTHOR("Jonghwa Lee <jonghwa3.lee@samsung.com>");
 MODULE_LICENSE("GPL");
