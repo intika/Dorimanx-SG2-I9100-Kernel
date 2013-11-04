@@ -1,5 +1,5 @@
 /*
- *  drivers/cpufreq/cpufreq_zzmoove.c
+ *  drivers/cpufreq/cpufreq_zzmanX.c
  *
  *  Copyright (C)  2001 Russell King
  *            (C)  2003 Venkatesh Pallipadi <venkatesh.pallipadi@intel.com>.
@@ -286,19 +286,20 @@
  *	- fixed unwanted disabling of cores when setting hotplug threshold tuneables to lowest or highest possible value
  *	  which would be a load of 100%/11% in up/down_hotplug_threshold and/or scaling frequency min/max in up/down_hotplug_threshold_freq
  *
- * Version 0.9.1DM - Cleanups for Dorimanx Kernel TREE! by Dorimanx
+ * New Renamed Version 1.0 - Cleanups for Dorimanx Kernel TREE! by Dorimanx
  *
  * - Removed unused functions for LCD freq, as we dont have such thing in I9100.
  * - Removed support for 4+ cores, as we have 2 in I9100
  * - Cleaned ULTRA MESS in Code Style and fixed white space.
  * - Removed ENABLE_LEGACY_MODE is not needed for I9100
+ * - Renamed gov to zzmanx
  *---------------------------------------------------------------------------------------------------------------------------------------------------------
  *-                                                                                                                                                       -
  *---------------------------------------------------------------------------------------------------------------------------------------------------------
  */
 
-// Yank: Added a sysfs interface to display current zzmoove version
-#define ZZMOOVE_VERSION "0.9.1DM"
+// Yank: Added a sysfs interface to display current zzmanX version
+#define ZZMANX_VERSION "1.0"
 
 #include "cpufreq_governor.h"
 
@@ -312,7 +313,7 @@
  * It helps to keep variable names smaller, simpler
  */
 
-// ZZ: midnight and zzmoove default values
+// ZZ: midnight and zzmanX default values
 #define DEF_FREQUENCY_UP_THRESHOLD		  (70)
 #define DEF_FREQUENCY_UP_THRESHOLD_HOTPLUG	  (68)	// ZZ: default for hotplug up threshold for all cpus (cpu0 stays allways on)
 #define DEF_FREQUENCY_UP_THRESHOLD_HOTPLUG_FREQ   (0)	// Yank: default for hotplug up threshold frequency for all cpus (0 = disabled)
@@ -385,7 +386,7 @@ static int hotplug_thresholds_tuneable[8] = { 0, 0, 0, 0, 0, 0, 0, 0 };
 
 // raise sampling rate to SR*multiplier and adjust sampling rate/thresholds/hotplug/scaling/freq limit/freq step on blank screen
 
-// ZZ: midnight and zzmoove momentum defaults
+// ZZ: midnight and zzmanX momentum defaults
 #define LATENCY_MULTIPLIER			(1000)
 #define MIN_LATENCY_MULTIPLIER			(100)
 #define DEF_SAMPLING_DOWN_FACTOR		(1)	// ZZ: default for sampling down factor (stratosk default = 4) here disabled by default
@@ -520,7 +521,7 @@ int freq_table_order = 1;								// Yank : 1 for descending order, -1 for ascend
  * -------------- since zzmoove v0.7 only in Legacy Mode -----------------
  * CPU load triggering faster upscaling can be adjusted via SYSFS,
  * VALUE between 1 and 100 (% CPU load):
- * echo VALUE > /sys/devices/system/cpu/cpufreq/zzmoove/smooth_up
+ * echo VALUE > /sys/devices/system/cpu/cpufreq/zzmanX/smooth_up
  *
  * improved by Zane Zaminsky and Yank555 2012/13
  */
@@ -628,7 +629,7 @@ static ssize_t show_sampling_rate_min(struct kobject *kobj,
 
 define_one_global_ro(sampling_rate_min);
 
-/* cpufreq_zzmoove Governor Tunables */
+/* cpufreq_zzmanX Governor Tunables */
 #define show_one(file_name, object)					\
 static ssize_t show_##file_name						\
 (struct kobject *kobj, struct attribute *attr, char *buf)		\
@@ -1178,7 +1179,7 @@ define_one_global_rw(hotplug_idle_threshold);			// ZZ: Hotplug idle threshold
 // Yank: add version info tunable
 static ssize_t show_version(struct device *dev, struct device_attribute *attr, char *buf)
 {
-	return sprintf(buf, "%s\n", ZZMOOVE_VERSION);
+	return sprintf(buf, "%s\n", ZZMANX_VERSION);
 }
 
 static DEVICE_ATTR(version, S_IRUGO , show_version, NULL);
@@ -1205,13 +1206,13 @@ static struct attribute *dbs_attributes[] = {
 	&disable_hotplug.attr,					// ZZ: Hotplug switch
 	&hotplug_block_cycles.attr,				// ZZ: Hotplug block cycles
 	&hotplug_idle_threshold.attr,				// ZZ: Hotplug idle threshold
-	&dev_attr_version.attr,					// Yank: zzmoove version
+	&dev_attr_version.attr,					// Yank: zzmanX version
 	NULL
 };
 
 static struct attribute_group dbs_attr_group = {
 	.attrs = dbs_attributes,
-	.name = "zzmoove",
+	.name = "zzmanX",
 };
 
 /************************** sysfs end ************************/
@@ -1675,7 +1676,7 @@ static inline void dbs_timer_init(struct cpu_dbs_info_s *dbs_info)
 static inline void dbs_timer_exit(struct cpu_dbs_info_s *dbs_info)
 {
 	dbs_info->enable = 0;
-	cancel_delayed_work(&dbs_info->work); // ZZ: Use asyncronous mode to avoid freezes / reboots when leaving zzmoove
+	cancel_delayed_work(&dbs_info->work); // ZZ: Use asyncronous mode to avoid freezes / reboots when leaving zzmanX
 }
 
 static void powersave_early_suspend(struct early_suspend *handler)
@@ -2004,11 +2005,11 @@ static int cpufreq_governor_dbs(struct cpufreq_policy *policy,
 	return 0;
 }
 
-#ifndef CONFIG_CPU_FREQ_DEFAULT_GOV_ZZMOOVE
+#ifndef CONFIG_CPU_FREQ_DEFAULT_GOV_ZZMANX
 static
 #endif
-struct cpufreq_governor cpufreq_gov_zzmoove = {
-	.name			= "zzmoove",
+struct cpufreq_governor cpufreq_gov_zzmanX = {
+	.name			= "zzmanX",
 	.governor		= cpufreq_governor_dbs,
 	.max_transition_latency	= TRANSITION_LATENCY_LIMIT,
 	.owner			= THIS_MODULE,
@@ -2028,12 +2029,12 @@ static int __init cpufreq_gov_dbs_init(void) // ZZ: added idle exit time handlin
 	INIT_WORK(&hotplug_offline_work, hotplug_offline_work_fn); // ZZ: init hotplug work
 	INIT_WORK(&hotplug_online_work, hotplug_online_work_fn); // ZZ: init hotplug work
 
-	return cpufreq_register_governor(&cpufreq_gov_zzmoove);
+	return cpufreq_register_governor(&cpufreq_gov_zzmanX);
 }
 
 static void __exit cpufreq_gov_dbs_exit(void)
 {
-	cpufreq_unregister_governor(&cpufreq_gov_zzmoove);
+	cpufreq_unregister_governor(&cpufreq_gov_zzmanX);
 	kfree(&dbs_tuners_ins);
 }
 
@@ -2048,14 +2049,14 @@ static void __exit cpufreq_gov_dbs_exit(void)
  */
 
 MODULE_AUTHOR("Zane Zaminsky <cyxman@yahoo.com>");
-MODULE_DESCRIPTION("'cpufreq_zzmoove' - A dynamic cpufreq governor based "
+MODULE_DESCRIPTION("'cpufreq_zzmanX' - A dynamic cpufreq governor based "
 		"on smoove governor from Michael Weingaertner which was originally based on "
-		"cpufreq_conservative from Alexander Clouter. Optimized for use with Samsung I9300 "
-		"using a fast scaling and CPU hotplug logic - ported/modified for I9300 "
-		"by ZaneZam November 2012/13");
+		"cpufreq_conservative from Alexander Clouter."
+		"using a fast scaling and CPU hotplug logic - ported/modified for I9100 "
+		"by ZaneZam November 2012/13, modded by Dorimanx for his kernel tree!");
 MODULE_LICENSE("GPL");
 
-#ifdef CONFIG_CPU_FREQ_DEFAULT_GOV_ZZMOOVE
+#ifdef CONFIG_CPU_FREQ_DEFAULT_GOV_ZZMANX
 fs_initcall(cpufreq_gov_dbs_init);
 #else
 module_init(cpufreq_gov_dbs_init);
