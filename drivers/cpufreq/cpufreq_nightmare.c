@@ -131,6 +131,20 @@ show_one(up_sf_step, up_sf_step);
 show_one(down_sf_step, down_sf_step);
 #endif
 
+static ssize_t show_cpucore_table(struct kobject *kobj,
+				struct attribute *attr, char *buf)
+{
+	ssize_t count = 0;
+	int i;
+
+	for (i = CONFIG_NR_CPUS; i > 0; i--) {
+		count += sprintf(&buf[count], "%d ", i);
+	}
+	count += sprintf(&buf[count], "\n");
+
+	return count;
+}
+
 /*#define show_freqlimit_param(file_name, cpu)		\
 static ssize_t show_##file_name##_##cpu		\
 (struct kobject *kobj, struct attribute *attr, char *buf)		\
@@ -565,6 +579,7 @@ define_one_global_rw(freq_step_dec_at_max_freq);
 define_one_global_rw(up_sf_step);
 define_one_global_rw(down_sf_step);
 #endif
+define_one_global_ro(cpucore_table);
 
 static struct attribute *nightmare_attributes[] = {
 	&sampling_rate.attr,
@@ -595,6 +610,7 @@ static struct attribute *nightmare_attributes[] = {
 	&up_sf_step.attr,
 	&down_sf_step.attr,
 #endif
+	&cpucore_table.attr,
 	NULL
 };
 
@@ -812,10 +828,9 @@ static int cpufreq_governor_nightmare(struct cpufreq_policy *policy,
 		nightmare_enable--;
 		mutex_destroy(&this_nightmare_cpuinfo->timer_mutex);
 
-		if (!nightmare_enable) {
+		if (!nightmare_enable)
 			sysfs_remove_group(cpufreq_global_kobject,
 					   &nightmare_attr_group);
-		}
 		mutex_unlock(&nightmare_mutex);
 
 		break;
