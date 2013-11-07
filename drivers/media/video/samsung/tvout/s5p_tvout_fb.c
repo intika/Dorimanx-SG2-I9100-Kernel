@@ -13,7 +13,6 @@
 #include <linux/fb.h>
 #include <linux/dma-mapping.h>
 #include <linux/uaccess.h>
-#include <linux/module.h>
 
 #include "s5p_tvout_common_lib.h"
 #include "s5p_tvout_ctrl.h"
