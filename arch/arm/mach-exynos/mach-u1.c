@@ -397,6 +397,9 @@ static int m5mo_power_on(void)
 
 	/* VT_CORE_1.5V */
 	ret = gpio_direction_output(GPIO_VT_CAM_15V, 1);
+#ifdef CONFIG_TARGET_LOCALE_NA
+	s3c_gpio_setpull(GPIO_VT_CAM_15V, S3C_GPIO_PULL_NONE);
+#endif /* CONFIG_TARGET_LOCALE_NA */
 	CAM_CHECK_ERR_RET(ret, "output VT_CAM_1.5V");
 	udelay(20);
 
@@ -530,7 +533,7 @@ void sii9234_power_onoff(bool on)
 		usleep_range(10000, 20000);
 		gpio_set_value(GPIO_MHL_RST, GPIO_LEVEL_HIGH);
 #ifdef CONFIG_TARGET_LOCALE_KOR
-		gpio_set_value(GPIO_HDMI_EN, GPIO_LEVEL_LOW);
+		gpio_set_value(GPIO_HDMI_EN, GPIO_LEVEL_HIGH);
 #else
 		if (system_rev < 7)
 			gpio_set_value(GPIO_HDMI_EN, GPIO_LEVEL_LOW);
@@ -1734,6 +1737,8 @@ static struct s3c_mshci_platdata exynos4_mshc_pdata __initdata = {
 	.max_width = 8,
 	.host_caps = MMC_CAP_8_BIT_DATA | MMC_CAP_1_8V_DDR |
 			MMC_CAP_UHS_DDR50 | MMC_CAP_CMD23,
+	/* enable PON */
+	.host_caps2 = MMC_CAP2_POWEROFF_NOTIFY,
 #elif defined(CONFIG_EXYNOS4_MSHC_8BIT)
 	.max_width = 8,
 	.host_caps = MMC_CAP_8_BIT_DATA | MMC_CAP_CMD23,
@@ -2075,9 +2080,9 @@ static struct spi_board_info spi0_board_info[] __initdata = {
 		.controller_data	=	&spi0_csi[0],
 	},
 
-#elif defined(CONFIG_PHONE_IPC_SPI)
+#elif defined(CONFIG_LINK_DEVICE_SPI)
 	{
-		.modalias = "ipc_spi",
+		.modalias = "modem_if_spi",
 		.bus_num = 0,
 		.chip_select = 0,
 		.max_speed_hz = 12*1000*1000,
@@ -3945,6 +3950,10 @@ static void u1_sound_init(void)
 		return;
 	}
 	gpio_direction_output(GPIO_MIC_BIAS_EN, 1);
+#ifdef CONFIG_TARGET_LOCALE_NA
+	s3c_gpio_setpull(GPIO_MIC_BIAS_EN, S3C_GPIO_PULL_NONE);
+#endif /* CONFIG_TARGET_LOCALE_NA */
+
 	gpio_set_value(GPIO_MIC_BIAS_EN, 0);
 	gpio_free(GPIO_MIC_BIAS_EN);
 
@@ -3954,6 +3963,10 @@ static void u1_sound_init(void)
 		return;
 	}
 	gpio_direction_output(GPIO_EAR_MIC_BIAS_EN, 1);
+#ifdef CONFIG_TARGET_LOCALE_NA
+	s3c_gpio_setpull(GPIO_EAR_MIC_BIAS_EN, S3C_GPIO_PULL_NONE);
+#endif /* CONFIG_TARGET_LOCALE_NA */
+
 	gpio_set_value(GPIO_EAR_MIC_BIAS_EN, 0);
 	gpio_free(GPIO_EAR_MIC_BIAS_EN);
 
@@ -5493,17 +5506,44 @@ static const u8 *mxt224_config[] = {
 /*
   Configuration for MXT224-E
 */
+#ifdef CONFIG_TARGET_LOCALE_NAATT_TEMP
 #define MXT224E_THRESHOLD_BATT		50
-#define MXT224E_MOVFILTER_BATT		12
-
+#define MXT224E_THRESHOLD_CHRG		40
+#define MXT224E_T48_THRESHOLD_BATT		33
+#define MXT224E_CALCFG_BATT		0x72
+#define MXT224E_CALCFG_CHRG		0x72
+#define MXT224E_ATCHFRCCALTHR_NORMAL		40
+#define MXT224E_ATCHFRCCALRATIO_NORMAL		55
+#define MXT224E_GHRGTIME_BATT		22
+#define MXT224E_GHRGTIME_CHRG		22
+#define MXT224E_ATCHCALST		4
+#define MXT224E_ATCHCALTHR		35
+#define MXT224E_BLEN_BATT		32
+#define MXT224E_T48_BLEN_BATT		0
+#define MXT224E_BLEN_CHRG		0
+#define MXT224E_T48_BLEN_CHRG		0
+#define MXT224E_MOVFILTER_BATT		14
+#define MXT224E_MOVFILTER_CHRG		46
+#define MXT224E_ACTVSYNCSPERX_NORMAL		29
+#define MXT224E_NEXTTCHDI_NORMAL		0
+#define MXT224E_NEXTTCHDI_CHRG		1
+#else
+#define MXT224E_THRESHOLD_BATT		50
+#define MXT224E_T48_THRESHOLD_BATT		28
 #define MXT224E_THRESHOLD_CHRG		42
-#define MXT224E_MOVFILTER_CHRG		47
-
-#define MXT224E_T48_THRESHOLD_BATT	28
+#if defined(CONFIG_MACH_U1_NA_SPR)
+#define MXT224E_CALCFG_BATT		0x72
+#else
 #define MXT224E_CALCFG_BATT		0x42
+#endif
 #define MXT224E_CALCFG_CHRG		0x52
-#define MXT224E_ATCHFRCCALTHR_NORMAL	40
-#define MXT224E_ATCHFRCCALRATIO_NORMAL	55
+#if defined(CONFIG_TARGET_LOCALE_NA)
+#define MXT224E_ATCHFRCCALTHR_NORMAL		45
+#define MXT224E_ATCHFRCCALRATIO_NORMAL		60
+#else
+#define MXT224E_ATCHFRCCALTHR_NORMAL		40
+#define MXT224E_ATCHFRCCALRATIO_NORMAL		55
+#endif
 #define MXT224E_GHRGTIME_BATT		22
 #define MXT224E_GHRGTIME_CHRG		22
 #define MXT224E_ATCHCALST		4
@@ -5512,8 +5552,11 @@ static const u8 *mxt224_config[] = {
 #define MXT224E_BLEN_CHRG		16
 #define MXT224E_T48_BLEN_BATT		0
 #define MXT224E_T48_BLEN_CHRG		0
-#define MXT224E_ACTVSYNCSPERX_NORMAL	32
-#define MXT224E_NEXTTCHDI_NORMAL	0
+#define MXT224E_MOVFILTER_BATT		12
+#define MXT224E_MOVFILTER_CHRG		47
+#define MXT224E_ACTVSYNCSPERX_NORMAL		32
+#define MXT224E_NEXTTCHDI_NORMAL		0
+#endif
 
 #if defined(CONFIG_TARGET_LOCALE_NAATT_TEMP)
 static u8 t7_config_e[] = { GEN_POWERCONFIG_T7,
@@ -7464,9 +7507,9 @@ static struct platform_device *smdkc210_devices[] __initdata = {
 /* below temperature base on the celcius degree */
 struct s5p_platform_tmu u1_tmu_data __initdata = {
 	.ts = {
-		.stop_1st_throttle  = 64,
+		.stop_1st_throttle  = 63,
 		.start_1st_throttle = 70,
-		.stop_2nd_throttle  = 80,
+		.stop_2nd_throttle  = 87,
 		.start_2nd_throttle = 103,
 		.start_tripping     = 110,
 		.start_emergency    = 120,
