@@ -89,7 +89,7 @@ struct cpu_dbs_info_s {
 	u64 prev_cpu_iowait;
 	u64 prev_cpu_wall;
 	unsigned int prev_cpu_wall_delta;
-	cputime64_t prev_cpu_nice;
+	u64 prev_cpu_nice;
 	struct cpufreq_policy *cur_policy;
 	struct delayed_work work;
 	struct cpufreq_frequency_table *freq_table;
@@ -276,6 +276,20 @@ show_one(boostpulse, boosted);
 show_one(boostfreq, boostfreq);
 show_one(freq_step, freq_step);
 show_one(freq_responsiveness, freq_responsiveness);
+
+static ssize_t show_cpucore_table(struct kobject *kobj,
+				struct attribute *attr, char *buf)
+{
+	ssize_t count = 0;
+	int i;
+
+	for (i = CONFIG_NR_CPUS; i > 0; i--) {
+		count += sprintf(&buf[count], "%d ", i);
+	}
+	count += sprintf(&buf[count], "\n");
+
+	return count;
+}
 
 /**
  * update_sampling_rate - update sampling rate effective immediately if needed.
@@ -601,6 +615,7 @@ define_one_global_rw(boostpulse);
 define_one_global_rw(boostfreq);
 define_one_global_rw(freq_step);
 define_one_global_rw(freq_responsiveness);
+define_one_global_ro(cpucore_table);
 
 static struct attribute *dbs_attributes[] = {
 	&sampling_rate_min.attr,
@@ -616,6 +631,7 @@ static struct attribute *dbs_attributes[] = {
 	&boostfreq.attr,
 	&freq_step.attr,
 	&freq_responsiveness.attr,
+	&cpucore_table.attr,
 	NULL
 };
 
@@ -1028,11 +1044,13 @@ static int cpufreq_governor_dbs(struct cpufreq_policy *policy,
 		break;
 
 	case CPUFREQ_GOV_STOP:
+
 		dbs_timer_exit(this_dbs_info);
 
+		mutex_lock(&dbs_mutex);
 		mutex_destroy(&this_dbs_info->timer_mutex);
 
-		mutex_lock(&dbs_mutex);
+
 		dbs_enable--;
 
 		if (!dbs_enable)
@@ -1044,12 +1062,16 @@ static int cpufreq_governor_dbs(struct cpufreq_policy *policy,
 
 	case CPUFREQ_GOV_LIMITS:
 		mutex_lock(&this_dbs_info->timer_mutex);
+
 		if (policy->max < this_dbs_info->cur_policy->cur)
 			__cpufreq_driver_target(this_dbs_info->cur_policy,
-				policy->max, CPUFREQ_RELATION_H);
+						policy->max,
+						CPUFREQ_RELATION_H);
 		else if (policy->min > this_dbs_info->cur_policy->cur)
 			__cpufreq_driver_target(this_dbs_info->cur_policy,
-				policy->min, CPUFREQ_RELATION_L);
+						policy->min,
+						CPUFREQ_RELATION_L);
+
 		dbs_check_cpu(this_dbs_info);
 		mutex_unlock(&this_dbs_info->timer_mutex);
 

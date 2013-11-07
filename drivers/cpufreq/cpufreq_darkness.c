@@ -121,6 +121,20 @@ show_one(down_sf_step, down_sf_step);
 show_one(force_freqs_step, force_freqs_step);
 #endif
 
+static ssize_t show_cpucore_table(struct kobject *kobj,
+				struct attribute *attr, char *buf)
+{
+	ssize_t count = 0;
+	int i;
+
+	for (i = CONFIG_NR_CPUS; i > 0; i--) {
+		count += sprintf(&buf[count], "%d ", i);
+	}
+	count += sprintf(&buf[count], "\n");
+
+	return count;
+}
+
 /*#define show_freqlimit_param(file_name, cpu)		\
 static ssize_t show_##file_name##_##cpu		\
 (struct kobject *kobj, struct attribute *attr, char *buf)		\
@@ -334,6 +348,7 @@ define_one_global_rw(up_sf_step);
 define_one_global_rw(down_sf_step);
 define_one_global_rw(force_freqs_step);
 #endif
+define_one_global_ro(cpucore_table);
 
 static struct attribute *darkness_attributes[] = {
 	&sampling_rate.attr,
@@ -354,6 +369,7 @@ static struct attribute *darkness_attributes[] = {
 	&max_freq_limit_2.attr,
 	&max_freq_limit_3.attr,
 #endif*/
+	&cpucore_table.attr,
 	NULL
 };
 
@@ -555,10 +571,9 @@ static int cpufreq_governor_darkness(struct cpufreq_policy *policy,
 		darkness_enable--;
 		mutex_destroy(&this_darkness_cpuinfo->timer_mutex);
 
-		if (!darkness_enable) {
+		if (!darkness_enable)
 			sysfs_remove_group(cpufreq_global_kobject,
 					   &darkness_attr_group);
-		}
 		mutex_unlock(&darkness_mutex);
 
 		break;

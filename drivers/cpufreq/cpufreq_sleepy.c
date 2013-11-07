@@ -77,7 +77,7 @@ static struct notifier_block idle_notifier_block = {
 
 static void do_dbs_timer(struct work_struct *work);
 static int cpufreq_governor_dbs(struct cpufreq_policy *policy,
-                                unsigned int event);
+				unsigned int event);
 
 #ifndef CONFIG_CPU_FREQ_DEFAULT_GOV_SLEEPY
 static
@@ -96,7 +96,7 @@ struct cpu_dbs_info_s {
 	u64 prev_cpu_idle;
 	u64 prev_cpu_iowait;
 	u64 prev_cpu_wall;
-	cputime64_t prev_cpu_nice;
+	u64 prev_cpu_nice;
 	struct cpufreq_policy *cur_policy;
 	struct delayed_work work;
 	struct cpufreq_frequency_table *freq_table;
@@ -288,6 +288,20 @@ show_one(ignore_nice_load, ignore_nice);
 show_one(powersave_bias, powersave_bias);
 show_one(suspend_freq, suspend_freq);
 
+static ssize_t show_cpucore_table(struct kobject *kobj,
+				struct attribute *attr, char *buf)
+{
+	ssize_t count = 0;
+	int i;
+
+	for (i = CONFIG_NR_CPUS; i > 0; i--) {
+		count += sprintf(&buf[count], "%d ", i);
+	}
+	count += sprintf(&buf[count], "\n");
+
+	return count;
+}
+
 static ssize_t store_sampling_rate(struct kobject *a, struct attribute *b,
 				   const char *buf, size_t count)
 {
@@ -469,6 +483,7 @@ define_one_global_rw(sampling_down_factor);
 define_one_global_rw(ignore_nice_load);
 define_one_global_rw(powersave_bias);
 define_one_global_rw(suspend_freq);
+define_one_global_ro(cpucore_table);
 
 static struct attribute *dbs_attributes[] = {
 	&sampling_rate_min.attr,
@@ -481,6 +496,7 @@ static struct attribute *dbs_attributes[] = {
 	&deep_sleep.attr,
 	&fast_start.attr,
 	&suspend_freq.attr,
+	&cpucore_table.attr,
 	NULL
 };
 
@@ -850,17 +866,18 @@ static int cpufreq_governor_dbs(struct cpufreq_policy *policy,
 		break;
 
 	case CPUFREQ_GOV_STOP:
+
 		dbs_timer_exit(this_dbs_info);
 
+		mutex_lock(&dbs_mutex);
 		mutex_destroy(&this_dbs_info->timer_mutex);
 
-		mutex_lock(&dbs_mutex);
+
 		dbs_enable--;
 
-		if (!dbs_enable) {
+		if (!dbs_enable)
 			sysfs_remove_group(cpufreq_global_kobject,
 					   &dbs_attr_group);
-		}
 		mutex_unlock(&dbs_mutex);
 		unregister_early_suspend(&sleepy_power_suspend);
 		pr_info("[sleepy] sleepy inactive\n");
@@ -868,12 +885,16 @@ static int cpufreq_governor_dbs(struct cpufreq_policy *policy,
 
 	case CPUFREQ_GOV_LIMITS:
 		mutex_lock(&this_dbs_info->timer_mutex);
+
 		if (policy->max < this_dbs_info->cur_policy->cur)
 			__cpufreq_driver_target(this_dbs_info->cur_policy,
-				policy->max, CPUFREQ_RELATION_H);
+						policy->max,
+						CPUFREQ_RELATION_H);
 		else if (policy->min > this_dbs_info->cur_policy->cur)
 			__cpufreq_driver_target(this_dbs_info->cur_policy,
-				policy->min, CPUFREQ_RELATION_L);
+						policy->min,
+						CPUFREQ_RELATION_L);
+
 		dbs_check_cpu(this_dbs_info);
 		mutex_unlock(&this_dbs_info->timer_mutex);
 

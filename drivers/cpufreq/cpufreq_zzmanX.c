@@ -293,13 +293,17 @@
  * - Cleaned ULTRA MESS in Code Style and fixed white space.
  * - Removed ENABLE_LEGACY_MODE is not needed for I9100
  * - Renamed gov to zzmanx
+ *
+ * Version 1.1
+ * - added core number value to show active cores
+ * - more sync with needed changes for my tree
  *---------------------------------------------------------------------------------------------------------------------------------------------------------
  *-                                                                                                                                                       -
  *---------------------------------------------------------------------------------------------------------------------------------------------------------
  */
 
 // Yank: Added a sysfs interface to display current zzmanX version
-#define ZZMANX_VERSION "1.0"
+#define ZZMANX_VERSION "1.1"
 
 #include "cpufreq_governor.h"
 
@@ -621,6 +625,7 @@ static struct notifier_block dbs_cpufreq_notifier_block = {
 };
 
 /************************** sysfs interface ************************/
+
 static ssize_t show_sampling_rate_min(struct kobject *kobj,
 				      struct attribute *attr, char *buf)
 {
@@ -656,6 +661,20 @@ show_one(early_demand, early_demand);						// ZZ: added Early demand tuneable ma
 show_one(disable_hotplug, disable_hotplug);					// ZZ: added Hotplug switch
 show_one(hotplug_block_cycles, hotplug_block_cycles);				// ZZ: added Hotplug block cycles
 show_one(hotplug_idle_threshold, hotplug_idle_threshold);			// ZZ: added Hotplug idle threshold
+
+static ssize_t show_cpucore_table(struct kobject *kobj,
+				struct attribute *attr, char *buf)
+{
+	ssize_t count = 0;
+	int i;
+
+	for (i = CONFIG_NR_CPUS; i > 0; i--) {
+		count += sprintf(&buf[count], "%d ", i);
+	}
+	count += sprintf(&buf[count], "\n");
+
+	return count;
+}
 
 // ZZ: added tuneable for Sampling down momentum -> possible values: 0 (disable) to MAX_SAMPLING_DOWN_FACTOR, if not set default is 0
 static ssize_t store_sampling_down_max_mom(struct kobject *a,
@@ -842,7 +861,6 @@ static ssize_t store_ignore_nice_load(struct kobject *a, struct attribute *b,
 {
 	unsigned int input;
 	int ret;
-
 	unsigned int j;
 
 	ret = sscanf(buf, "%u", &input);
@@ -852,10 +870,9 @@ static ssize_t store_ignore_nice_load(struct kobject *a, struct attribute *b,
 	if (input > 1)
 		input = 1;
 
-	if (input == dbs_tuners_ins.ignore_nice) { /* nothing to do */
+	if (input == dbs_tuners_ins.ignore_nice) {/* nothing to do */
 		return count;
 	}
-
 	dbs_tuners_ins.ignore_nice = input;
 
 	/* we need to re-evaluate prev_cpu_idle */
@@ -875,8 +892,8 @@ static ssize_t store_freq_step(struct kobject *a, struct attribute *b,
 {
 	unsigned int input;
 	int ret;
-	ret = sscanf(buf, "%u", &input);
 
+	ret = sscanf(buf, "%u", &input);
 	if (ret != 1)
 		return -EINVAL;
 
@@ -916,7 +933,6 @@ static ssize_t store_freq_limit(struct kobject *a,
 	int i = 0;
 
 	ret = sscanf(buf, "%u", &input);
-
 	if (ret != 1)
 		return -EINVAL;
 
@@ -961,7 +977,6 @@ static ssize_t store_fast_scaling(struct kobject *a,
 {
 	unsigned int input;
 	int ret;
-
 	ret = sscanf(buf, "%u", &input);
 
 	if (ret != 1 || input > 8 || input < 0)
@@ -1175,6 +1190,7 @@ define_one_global_rw(early_demand);				// ZZ: Early demand tuneable
 define_one_global_rw(disable_hotplug);				// ZZ: Hotplug switch
 define_one_global_rw(hotplug_block_cycles);			// ZZ: Hotplug block cycles
 define_one_global_rw(hotplug_idle_threshold);			// ZZ: Hotplug idle threshold
+define_one_global_ro(cpucore_table);
 
 // Yank: add version info tunable
 static ssize_t show_version(struct device *dev, struct device_attribute *attr, char *buf)
@@ -1207,6 +1223,7 @@ static struct attribute *dbs_attributes[] = {
 	&hotplug_block_cycles.attr,				// ZZ: Hotplug block cycles
 	&hotplug_idle_threshold.attr,				// ZZ: Hotplug idle threshold
 	&dev_attr_version.attr,					// Yank: zzmanX version
+	&cpucore_table.attr,
 	NULL
 };
 
@@ -1932,11 +1949,10 @@ static int cpufreq_governor_dbs(struct cpufreq_policy *policy,
 					&dbs_cpufreq_notifier_block,
 					CPUFREQ_TRANSITION_NOTIFIER);
 
-			mutex_unlock(&dbs_mutex);
 			if (!dbs_enable)
 				sysfs_remove_group(cpufreq_global_kobject,
 						&dbs_attr_group);
-
+			mutex_unlock(&dbs_mutex);
 			unregister_early_suspend(&_powersave_early_suspend);
 
 			break;
@@ -1954,10 +1970,13 @@ static int cpufreq_governor_dbs(struct cpufreq_policy *policy,
 			if (mutex_trylock(&this_dbs_info->timer_mutex)) {
 				if (policy->max < this_dbs_info->cur_policy->cur)
 					__cpufreq_driver_target(this_dbs_info->cur_policy,
-							policy->max, CPUFREQ_RELATION_H);
+							policy->max,
+							CPUFREQ_RELATION_H);
 				else if (policy->min > this_dbs_info->cur_policy->cur)
 					__cpufreq_driver_target(this_dbs_info->cur_policy,
-							policy->min, CPUFREQ_RELATION_L);
+							policy->min,
+							CPUFREQ_RELATION_L);
+				dbs_check_cpu(this_dbs_info);
 				mutex_unlock(&this_dbs_info->timer_mutex);
 			} else {
 				return 0;

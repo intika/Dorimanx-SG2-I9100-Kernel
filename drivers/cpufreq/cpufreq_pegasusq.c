@@ -25,14 +25,10 @@
  * It helps to keep variable names smaller, simpler
  */
 
-#define DEF_SAMPLING_DOWN_FACTOR		(2)
+#define DEF_SAMPLING_DOWN_FACTOR		(1)
 #define MAX_SAMPLING_DOWN_FACTOR		(100000)
 #define DEF_FREQUENCY_DOWN_DIFFERENTIAL		(5)
-#define DEF_FREQUENCY_UP_THRESHOLD		(85)
-
-/* for multiple freq_step */
-#define DEF_UP_THRESHOLD_DIFF	(5)
-
+#define DEF_FREQUENCY_UP_THRESHOLD		(82)
 #define DEF_FREQUENCY_MIN_SAMPLE_RATE		(10000)
 #define MIN_FREQUENCY_UP_THRESHOLD		(11)
 #define MAX_FREQUENCY_UP_THRESHOLD		(100)
@@ -40,16 +36,11 @@
 #define MIN_SAMPLING_RATE			(10000)
 
 #define DEF_FREQ_STEP				(37)
-/* for multiple freq_step */
-#define DEF_FREQ_STEP_DEC			(13)
-
 #define DEF_START_DELAY				(0)
 
 #define UP_THRESHOLD_AT_MIN_FREQ		(40)
 #define FREQ_FOR_RESPONSIVENESS			(400000)
-/* for fast decrease */
-#define FREQ_FOR_FAST_DOWN			(1200000)
-#define UP_THRESHOLD_AT_FAST_DOWN		(95)
+
 
 static unsigned int min_sampling_rate;
 
@@ -74,7 +65,7 @@ struct cpu_dbs_info_s {
 	u64 prev_cpu_iowait;
 	u64 prev_cpu_wall;
 	unsigned int prev_cpu_wall_delta;
-	cputime64_t prev_cpu_nice;
+	u64 prev_cpu_nice;
 	struct cpufreq_policy *cur_policy;
 	struct delayed_work work;
 	struct cpufreq_frequency_table *freq_table;
@@ -142,7 +133,7 @@ define_one_global_ro(sampling_rate_min);
 /* cpufreq_pegasusq Governor Tunables */
 #define show_one(file_name, object)					\
 static ssize_t show_##file_name						\
-(struct kobject *kobj, struct attribute *attr, char *buf)              \
+(struct kobject *kobj, struct attribute *attr, char *buf)		\
 {									\
 	return sprintf(buf, "%u\n", dbs_tuners_ins.object);		\
 }
@@ -155,6 +146,20 @@ show_one(down_differential, down_differential);
 show_one(freq_step, freq_step);
 show_one(up_threshold_at_min_freq, up_threshold_at_min_freq);
 show_one(freq_for_responsiveness, freq_for_responsiveness);
+
+static ssize_t show_cpucore_table(struct kobject *kobj,
+				struct attribute *attr, char *buf)
+{
+	ssize_t count = 0;
+	int i;
+
+	for (i = CONFIG_NR_CPUS; i > 0; i--) {
+		count += sprintf(&buf[count], "%d ", i);
+	}
+	count += sprintf(&buf[count], "\n");
+
+	return count;
+}
 
 static ssize_t store_sampling_rate(struct kobject *a, struct attribute *b,
 				   const char *buf, size_t count)
@@ -240,7 +245,7 @@ static ssize_t store_ignore_nice_load(struct kobject *a, struct attribute *b,
 	if (input > 1)
 		input = 1;
 
-	if (input == dbs_tuners_ins.ignore_nice)  {/* nothing to do */
+	if (input == dbs_tuners_ins.ignore_nice) {/* nothing to do */
 		return count;
 	}
 	dbs_tuners_ins.ignore_nice = input;
@@ -249,8 +254,8 @@ static ssize_t store_ignore_nice_load(struct kobject *a, struct attribute *b,
 	for_each_online_cpu(j) {
 		struct cpu_dbs_info_s *dbs_info;
 		dbs_info = &per_cpu(od_cpu_dbs_info, j);
-		dbs_info->prev_cpu_idle = get_cpu_idle_time(j,
-						&dbs_info->prev_cpu_wall);
+		dbs_info->prev_cpu_idle =
+			get_cpu_idle_time(j, &dbs_info->prev_cpu_wall);
 		if (dbs_tuners_ins.ignore_nice)
 			dbs_info->prev_cpu_nice = kcpustat_cpu(j).cpustat[CPUTIME_NICE];
 	}
@@ -286,8 +291,9 @@ static ssize_t store_freq_step(struct kobject *a, struct attribute *b,
 	return count;
 }
 
-static ssize_t store_up_threshold_at_min_freq(struct kobject *a, struct attribute *b,
-				   const char *buf, size_t count)
+static ssize_t store_up_threshold_at_min_freq(struct kobject *a,
+					      struct attribute *b,
+					      const char *buf, size_t count)
 {
 	unsigned int input;
 	int ret;
@@ -301,8 +307,9 @@ static ssize_t store_up_threshold_at_min_freq(struct kobject *a, struct attribut
 	return count;
 }
 
-static ssize_t store_freq_for_responsiveness(struct kobject *a, struct attribute *b,
-				   const char *buf, size_t count)
+static ssize_t store_freq_for_responsiveness(struct kobject *a,
+					     struct attribute *b,
+					     const char *buf, size_t count)
 {
 	unsigned int input;
 	int ret;
@@ -322,6 +329,7 @@ define_one_global_rw(down_differential);
 define_one_global_rw(freq_step);
 define_one_global_rw(up_threshold_at_min_freq);
 define_one_global_rw(freq_for_responsiveness);
+define_one_global_ro(cpucore_table);
 
 static struct attribute *dbs_attributes[] = {
 	&sampling_rate_min.attr,
@@ -334,6 +342,7 @@ static struct attribute *dbs_attributes[] = {
 	&freq_step.attr,
 	&up_threshold_at_min_freq.attr,
 	&freq_for_responsiveness.attr,
+	&cpucore_table.attr,
 	NULL
 };
 
@@ -356,7 +365,11 @@ static void dbs_freq_increase(struct cpufreq_policy *p, unsigned int freq)
 
 static void dbs_check_cpu(struct cpu_dbs_info_s *this_dbs_info)
 {
+	/* Extrapolated load of this CPU */
+	unsigned int load_at_max_freq = 0;
 	unsigned int max_load_freq;
+	/* Current load across this CPU */
+	unsigned int cur_load = 0;
 
 	struct cpufreq_policy *policy;
 	unsigned int j;
@@ -372,7 +385,7 @@ static void dbs_check_cpu(struct cpu_dbs_info_s *this_dbs_info)
 		u64 cur_wall_time, cur_idle_time, cur_iowait_time;
 		u64 prev_wall_time, prev_idle_time, prev_iowait_time;
 		unsigned int idle_time, wall_time, iowait_time;
-		unsigned int load, load_freq;
+		unsigned int load_freq;
 		int freq_avg;
 
 		j_dbs_info = &per_cpu(od_cpu_dbs_info, j);
@@ -418,41 +431,32 @@ static void dbs_check_cpu(struct cpu_dbs_info_s *this_dbs_info)
 		if (unlikely(!wall_time || wall_time < idle_time))
 			continue;
 
-		load = 100 * (wall_time - idle_time) / wall_time;
+		cur_load = 100 * (wall_time - idle_time) / wall_time;
 
 		freq_avg = __cpufreq_driver_getavg(policy, j);
 		if (freq_avg <= 0)
 			freq_avg = policy->cur;
 
-		load_freq = load * freq_avg;
+		load_freq = cur_load * freq_avg;
 		if (load_freq > max_load_freq)
 			max_load_freq = load_freq;
+
+		/* calculate the scaled load across CPU */
+		load_at_max_freq += (cur_load * policy->cur) /
+					policy->cpuinfo.max_freq;
+
+		cpufreq_notify_utilization(policy, load_at_max_freq);
+
 	}
 
 	/* Check for frequency increase */
-	if (policy->cur < dbs_tuners_ins.freq_for_responsiveness)
+	if (policy->cur < dbs_tuners_ins.freq_for_responsiveness) {
 		up_threshold = dbs_tuners_ins.up_threshold_at_min_freq;
-	/* for fast frequency decrease */
-	else
-		up_threshold = dbs_tuners_ins.up_threshold;
+	}
 
 	if (max_load_freq > up_threshold * policy->cur) {
-		/* for multiple freq_step */
-		int inc = policy->max * (dbs_tuners_ins.freq_step
-					- DEF_FREQ_STEP_DEC * 2) / 100;
-		int target = 0;
-
-		/* for multiple freq_step */
-		if (max_load_freq > (up_threshold + DEF_UP_THRESHOLD_DIFF * 2)
-			* policy->cur)
-			inc = policy->max * dbs_tuners_ins.freq_step / 100;
-		else if (max_load_freq > (up_threshold + DEF_UP_THRESHOLD_DIFF)
-			* policy->cur)
-			inc = policy->max * (dbs_tuners_ins.freq_step
-					- DEF_FREQ_STEP_DEC) / 100;
-
-		target = min(policy->max, policy->cur + inc);
-
+		int inc = (policy->max * dbs_tuners_ins.freq_step) / 100;
+		int target = min(policy->max, policy->cur + inc);
 		/* If switching to max speed, apply sampling_down_factor */
 		if (policy->cur < policy->max && target == policy->max)
 			this_dbs_info->rate_mult =
@@ -462,7 +466,7 @@ static void dbs_check_cpu(struct cpu_dbs_info_s *this_dbs_info)
 	}
 
 	/* Check for frequency decrease */
-#if !defined(CONFIG_ARCH_EXYNOS4) && !defined(CONFIG_ARCH_EXYNOS5)
+#ifndef CONFIG_ARCH_EXYNOS4
 	/* if we cannot reduce the frequency anymore, break out early */
 	if (policy->cur == policy->min)
 		return;
@@ -610,28 +614,31 @@ static int cpufreq_governor_dbs(struct cpufreq_policy *policy,
 
 		dbs_timer_exit(this_dbs_info);
 
+		mutex_lock(&dbs_mutex);
 		mutex_destroy(&this_dbs_info->timer_mutex);
 
-		mutex_lock(&dbs_mutex);
 
 		dbs_enable--;
 
-		if (!dbs_enable) {
+		if (!dbs_enable)
 			sysfs_remove_group(cpufreq_global_kobject,
 					   &dbs_attr_group);
-		}
 		mutex_unlock(&dbs_mutex);
 
 		break;
 
 	case CPUFREQ_GOV_LIMITS:
 		mutex_lock(&this_dbs_info->timer_mutex);
+
 		if (policy->max < this_dbs_info->cur_policy->cur)
 			__cpufreq_driver_target(this_dbs_info->cur_policy,
-				policy->max, CPUFREQ_RELATION_H);
+						policy->max,
+						CPUFREQ_RELATION_H);
 		else if (policy->min > this_dbs_info->cur_policy->cur)
 			__cpufreq_driver_target(this_dbs_info->cur_policy,
-				policy->min, CPUFREQ_RELATION_L);
+						policy->min,
+						CPUFREQ_RELATION_L);
+
 		dbs_check_cpu(this_dbs_info);
 		mutex_unlock(&this_dbs_info->timer_mutex);
 
