@@ -406,4 +406,3 @@ struct trace_data *trq_get_free_slot(struct trace_data_queue *trq);
 struct trace_data *trq_get_data_slot(struct trace_data_queue *trq);
 
 #endif
-

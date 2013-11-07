@@ -309,4 +309,3 @@ int ss222_init_modemctl_device(struct modem_ctl *mc, struct modem_data *pdata)
 	mif_debug("---\n");
 	return 0;
 }
-

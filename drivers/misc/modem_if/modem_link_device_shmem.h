@@ -697,4 +697,3 @@ static int init_shmem_ipc(struct shmem_link_device *shmd)
 }
 
 #endif
-

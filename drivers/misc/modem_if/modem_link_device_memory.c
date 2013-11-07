@@ -493,4 +493,3 @@ struct trace_data *trq_get_data_slot(struct trace_data_queue *trq)
 
 	return trd;
 }
-

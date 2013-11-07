@@ -339,4 +339,3 @@ struct idpram_pm_op *idpram_get_pm_op(enum ap_type id);
 extern void set_sromc_access(bool access);
 
 #endif
-

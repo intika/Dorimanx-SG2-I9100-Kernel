@@ -250,7 +250,7 @@ static struct spi_driver modem_boot_device_spi_driver = {
 		.owner = THIS_MODULE,
 	},
 	.probe = modem_spi_boot_probe,
-	.remove = __devexit_p(modem_spi_boot_remove),
+	.remove = modem_spi_boot_remove,
 };
 
 static int __init modem_boot_device_spi_init(void)
@@ -276,4 +276,3 @@ module_exit(modem_boot_device_spi_exit);
 
 MODULE_DESCRIPTION("SPI Driver for Downloading Modem Bootloader");
 MODULE_LICENSE("GPL");
-
