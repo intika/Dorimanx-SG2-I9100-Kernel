@@ -741,11 +741,9 @@ static inline int link_pm_slave_wake(struct link_pm_data *pm_data)
 				!= HOSTWAKE_TRIGLEVEL) {
 		if (gpio_get_value(pm_data->gpio_link_slavewake)) {
 			gpio_set_value(pm_data->gpio_link_slavewake, 0);
-			mif_debug("gpio [SWK] set [0]\n");
 			mdelay(5);
 		}
 		gpio_set_value(pm_data->gpio_link_slavewake, 1);
-		mif_debug("gpio [SWK] set [1]\n");
 		mdelay(5);
 
 		/* wait host wake signal*/
@@ -860,7 +858,6 @@ static irqreturn_t link_pm_irq_handler(int irq, void *data)
 		runtime pm status changes to ACTIVE
 	*/
 	value = gpio_get_value(pm_data->gpio_link_hostwake);
-	mif_debug("gpio [HWK] get [%d]\n", value);
 
 	/*
 	* igonore host wakeup interrupt at suspending kernel
@@ -1453,8 +1450,7 @@ static int usb_link_pm_init(struct usb_link_device *usb_ld, void *data)
 	struct modem_data *pdata =
 			(struct modem_data *)pdev->dev.platform_data;
 	struct modemlink_pm_data *pm_pdata;
-	struct link_pm_data *pm_data =
-			kzalloc(sizeof(struct link_pm_data), GFP_KERNEL);
+	struct link_pm_data *pm_data;
 
 	if (!pdata || !pdata->link_pm_data) {
 		mif_err("platform data is NULL\n");
@@ -1462,6 +1458,7 @@ static int usb_link_pm_init(struct usb_link_device *usb_ld, void *data)
 	}
 	pm_pdata = pdata->link_pm_data;
 
+	pm_data = kzalloc(sizeof(struct link_pm_data), GFP_KERNEL);
 	if (!pm_data) {
 		mif_err("link_pm_data is NULL\n");
 		return -ENOMEM;
