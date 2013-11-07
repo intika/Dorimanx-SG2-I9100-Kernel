@@ -1244,6 +1244,10 @@ CONFIG_SYNC=y
 CONFIG_SW_SYNC=y
 CONFIG_SW_SYNC_USER=y
 # CONFIG_DMA_CMA is not set
+
+#
+# Bus devices
+#
 # CONFIG_CONNECTOR is not set
 # CONFIG_PARPORT is not set
 CONFIG_BLK_DEV=y
@@ -1776,6 +1780,7 @@ CONFIG_SPI_GPIO=y
 #
 # CONFIG_SPI_SPIDEV is not set
 # CONFIG_SPI_TLE62X0 is not set
+# CONFIG_HSI is not set
 
 #
 # PPS support
@@ -2780,6 +2785,7 @@ CONFIG_RTC_DRV_S3C=y
 # CONFIG_DMADEVICES is not set
 # CONFIG_AUXDISPLAY is not set
 # CONFIG_UIO is not set
+# CONFIG_VIRT_DRIVERS is not set
 
 #
 # Virtio drivers
@@ -2790,16 +2796,30 @@ CONFIG_RTC_DRV_S3C=y
 # Microsoft Hyper-V guest support
 #
 CONFIG_STAGING=y
-# CONFIG_VIDEO_TM6000 is not set
 # CONFIG_USBIP_CORE is not set
 # CONFIG_PRISM2_USB is not set
 # CONFIG_ECHO is not set
-# CONFIG_BRCMUTIL is not set
 # CONFIG_COMEDI is not set
-# CONFIG_ASUS_OLED is not set
 # CONFIG_RTLLIB is not set
 # CONFIG_R8712U is not set
+# CONFIG_R8188EU is not set
+# CONFIG_RTS5139 is not set
 # CONFIG_TRANZPORT is not set
+# CONFIG_LINE6_USB is not set
+# CONFIG_USB_SERIAL_QUATECH2 is not set
+# CONFIG_VT6656 is not set
+CONFIG_ZSMALLOC=y
+# CONFIG_USB_ENESTORAGE is not set
+# CONFIG_BCM_WIMAX is not set
+# CONFIG_FT1000 is not set
+
+#
+# Speakup console speech
+#
+# CONFIG_SPEAKUP is not set
+# CONFIG_TOUCHSCREEN_CLEARPAD_TM1217 is not set
+# CONFIG_TOUCHSCREEN_SYNAPTICS_I2C_RMI4 is not set
+# CONFIG_STAGING_MEDIA is not set
 
 #
 # Android
@@ -2819,33 +2839,15 @@ CONFIG_ANDROID_TIMED_OUTPUT=y
 CONFIG_ANDROID_TIMED_GPIO=y
 CONFIG_ANDROID_LOW_MEMORY_KILLER=y
 CONFIG_ANDROID_LOW_MEMORY_KILLER_AUTODETECT_OOM_ADJ_VALUES=y
-# CONFIG_POHMELFS is not set
-# CONFIG_LINE6_USB is not set
-# CONFIG_USB_SERIAL_QUATECH2 is not set
-# CONFIG_USB_SERIAL_QUATECH_USB2 is not set
-# CONFIG_VT6656 is not set
-CONFIG_ZSMALLOC=y
-# CONFIG_FB_SM7XX is not set
-# CONFIG_LIRC_STAGING is not set
-# CONFIG_EASYCAP is not set
-# CONFIG_MACH_C110_WESTBRIDGE_AST_PNAND_HAL is not set
-CONFIG_MACH_NO_WESTBRIDGE=y
-# CONFIG_ATH6K_LEGACY is not set
-# CONFIG_USB_ENESTORAGE is not set
-# CONFIG_BCM_WIMAX is not set
-# CONFIG_FT1000 is not set
-
-#
-# Speakup console speech
-#
-# CONFIG_SPEAKUP is not set
-# CONFIG_TOUCHSCREEN_CLEARPAD_TM1217 is not set
-# CONFIG_TOUCHSCREEN_SYNAPTICS_I2C_RMI4 is not set
-
-#
-# Altera FPGA firmware download module
-#
-# CONFIG_ALTERA_STAPL is not set
+# CONFIG_USB_WPAN_HCD is not set
+# CONFIG_WIMAX_GDM72XX is not set
+# CONFIG_LTE_GDM724X is not set
+# CONFIG_CED1401 is not set
+# CONFIG_DGRP is not set
+# CONFIG_USB_DWC2 is not set
+# CONFIG_LUSTRE_FS is not set
+# CONFIG_USB_BTMTK is not set
+# CONFIG_DGAP is not set
 CONFIG_CLKDEV_LOOKUP=y
 # CONFIG_COMMON_CLK is not set
 
@@ -2853,6 +2855,31 @@ CONFIG_CLKDEV_LOOKUP=y
 # Hardware Spinlock drivers
 #
 CONFIG_ARM_ARCH_TIMER=y
+# CONFIG_MAILBOX is not set
+CONFIG_IOMMU_SUPPORT=y
+
+#
+# Remoteproc drivers
+#
+# CONFIG_STE_MODEM_RPROC is not set
+
+#
+# Rpmsg drivers
+#
+# CONFIG_PM_DEVFREQ is not set
+# CONFIG_EXTCON is not set
+# CONFIG_MEMORY is not set
+# CONFIG_IIO is not set
+# CONFIG_PWM is not set
+# CONFIG_IPACK_BUS is not set
+# CONFIG_RESET_CONTROLLER is not set
+# CONFIG_FMC is not set
+
+#
+# PHY Subsystem
+#
+# CONFIG_GENERIC_PHY is not set
+# CONFIG_PHY_EXYNOS_MIPI_VIDEO is not set
 CONFIG_VIBETONZ=y
 CONFIG_MOTOR_DRV_MAX8997=y
 # CONFIG_MOTOR_DRV_ISA1200 is not set
@@ -2888,7 +2915,6 @@ CONFIG_SENSORS_K3G=y
 #
 # Rpmsg drivers
 #
-# CONFIG_PM_DEVFREQ is not set
 # CONFIG_SAMSUNG_PHONE_SVNET is not set
 CONFIG_ACCESSORY=y
 # CONFIG_30PIN_CONN is not set
@@ -2897,9 +2923,7 @@ CONFIG_ACCESSORY=y
 # CONFIG_HPD_PULL is not set
 # CONFIG_SAMSUNG_MHL_9290 is not set
 # CONFIG_IR_REMOCON is not set
-# CONFIG_EXTCON is not set
 # CONFIG_BARCODE_EMUL is not set
-CONFIG_IOMMU_SUPPORT=y
 # CONFIG_FELICA is not set
 # CONFIG_AUTHENTEC_VPNCLIENT_INTERCEPTOR is not set
 # CONFIG_J4FS is not set

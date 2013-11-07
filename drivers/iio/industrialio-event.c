@@ -35,7 +35,6 @@
  */
 struct iio_event_interface {
 	wait_queue_head_t	wait;
-	struct mutex		read_lock;
 	DECLARE_KFIFO(det_events, struct iio_event_data, 16);
 
 	struct list_head	dev_attr_list;
@@ -73,8 +72,12 @@ EXPORT_SYMBOL(iio_push_event);
 static unsigned int iio_event_poll(struct file *filep,
 			     struct poll_table_struct *wait)
 {
-	struct iio_event_interface *ev_int = filep->private_data;
+	struct iio_dev *indio_dev = filep->private_data;
+	struct iio_event_interface *ev_int = indio_dev->event_interface;
 	unsigned int events = 0;
+
+	if (!indio_dev->info)
+		return -ENODEV;
 
 	poll_wait(filep, &ev_int->wait, wait);
 
@@ -91,40 +94,48 @@ static ssize_t iio_event_chrdev_read(struct file *filep,
 				     size_t count,
 				     loff_t *f_ps)
 {
-	struct iio_event_interface *ev_int = filep->private_data;
+	struct iio_dev *indio_dev = filep->private_data;
+	struct iio_event_interface *ev_int = indio_dev->event_interface;
 	unsigned int copied;
 	int ret;
+
+	if (!indio_dev->info)
+		return -ENODEV;
 
 	if (count < sizeof(struct iio_event_data))
 		return -EINVAL;
 
-	if (mutex_lock_interruptible(&ev_int->read_lock))
-		return -ERESTARTSYS;
-
+	spin_lock_irq(&ev_int->wait.lock);
 	if (kfifo_is_empty(&ev_int->det_events)) {
 		if (filep->f_flags & O_NONBLOCK) {
 			ret = -EAGAIN;
 			goto error_unlock;
 		}
 		/* Blocking on device; waiting for something to be there */
-		ret = wait_event_interruptible(ev_int->wait,
-					!kfifo_is_empty(&ev_int->det_events));
+		ret = wait_event_interruptible_locked_irq(ev_int->wait,
+					!kfifo_is_empty(&ev_int->det_events) ||
+					indio_dev->info == NULL);
 		if (ret)
 			goto error_unlock;
+		if (indio_dev->info == NULL) {
+			ret = -ENODEV;
+			goto error_unlock;
+		}
 		/* Single access device so no one else can get the data */
 	}
 
 	ret = kfifo_to_user(&ev_int->det_events, buf, count, &copied);
 
 error_unlock:
-	mutex_unlock(&ev_int->read_lock);
+	spin_unlock_irq(&ev_int->wait.lock);
 
 	return ret ? ret : copied;
 }
 
 static int iio_event_chrdev_release(struct inode *inode, struct file *filep)
 {
-	struct iio_event_interface *ev_int = filep->private_data;
+	struct iio_dev *indio_dev = filep->private_data;
+	struct iio_event_interface *ev_int = indio_dev->event_interface;
 
 	spin_lock_irq(&ev_int->wait.lock);
 	__clear_bit(IIO_BUSY_BIT_POS, &ev_int->flags);
@@ -135,6 +146,8 @@ static int iio_event_chrdev_release(struct inode *inode, struct file *filep)
 	 */
 	kfifo_reset_out(&ev_int->det_events);
 	spin_unlock_irq(&ev_int->wait.lock);
+
+	iio_device_put(indio_dev);
 
 	return 0;
 }
@@ -161,12 +174,15 @@ int iio_event_getfd(struct iio_dev *indio_dev)
 		return -EBUSY;
 	}
 	spin_unlock_irq(&ev_int->wait.lock);
-	fd = anon_inode_getfd("iio:event",
-				&iio_event_chrdev_fileops, ev_int, O_RDONLY);
+	iio_device_get(indio_dev);
+
+	fd = anon_inode_getfd("iio:event", &iio_event_chrdev_fileops,
+				indio_dev, O_RDONLY | O_CLOEXEC);
 	if (fd < 0) {
 		spin_lock_irq(&ev_int->wait.lock);
 		__clear_bit(IIO_BUSY_BIT_POS, &ev_int->flags);
 		spin_unlock_irq(&ev_int->wait.lock);
+		iio_device_put(indio_dev);
 	}
 	return fd;
 }
@@ -185,6 +201,27 @@ static const char * const iio_ev_dir_text[] = {
 	[IIO_EV_DIR_FALLING] = "falling"
 };
 
+static const char * const iio_ev_info_text[] = {
+	[IIO_EV_INFO_ENABLE] = "en",
+	[IIO_EV_INFO_VALUE] = "value",
+	[IIO_EV_INFO_HYSTERESIS] = "hysteresis",
+};
+
+static enum iio_event_direction iio_ev_attr_dir(struct iio_dev_attr *attr)
+{
+	return attr->c->event_spec[attr->address & 0xffff].dir;
+}
+
+static enum iio_event_type iio_ev_attr_type(struct iio_dev_attr *attr)
+{
+	return attr->c->event_spec[attr->address & 0xffff].type;
+}
+
+static enum iio_event_info iio_ev_attr_info(struct iio_dev_attr *attr)
+{
+	return (attr->address >> 16) & 0xffff;
+}
+
 static ssize_t iio_ev_state_store(struct device *dev,
 				  struct device_attribute *attr,
 				  const char *buf,
@@ -199,9 +236,14 @@ static ssize_t iio_ev_state_store(struct device *dev,
 	if (ret < 0)
 		return ret;
 
-	ret = indio_dev->info->write_event_config(indio_dev,
-						  this_attr->address,
-						  val);
+	if (indio_dev->info->write_event_config)
+		ret = indio_dev->info->write_event_config(indio_dev,
+			this_attr->address, val);
+	else
+		ret = indio_dev->info->write_event_config_new(indio_dev,
+			this_attr->c, iio_ev_attr_type(this_attr),
+			iio_ev_attr_dir(this_attr), val);
+
 	return (ret < 0) ? ret : len;
 }
 
@@ -211,9 +253,15 @@ static ssize_t iio_ev_state_show(struct device *dev,
 {
 	struct iio_dev *indio_dev = dev_to_iio_dev(dev);
 	struct iio_dev_attr *this_attr = to_iio_dev_attr(attr);
-	int val = indio_dev->info->read_event_config(indio_dev,
-						     this_attr->address);
+	int val;
 
+	if (indio_dev->info->read_event_config)
+		val = indio_dev->info->read_event_config(indio_dev,
+			this_attr->address);
+	else
+		val = indio_dev->info->read_event_config_new(indio_dev,
+			this_attr->c, iio_ev_attr_type(this_attr),
+			iio_ev_attr_dir(this_attr));
 	if (val < 0)
 		return val;
 	else
@@ -226,14 +274,24 @@ static ssize_t iio_ev_value_show(struct device *dev,
 {
 	struct iio_dev *indio_dev = dev_to_iio_dev(dev);
 	struct iio_dev_attr *this_attr = to_iio_dev_attr(attr);
-	int val, ret;
+	int val, val2;
+	int ret;
 
-	ret = indio_dev->info->read_event_value(indio_dev,
-						this_attr->address, &val);
-	if (ret < 0)
-		return ret;
-
-	return sprintf(buf, "%d\n", val);
+	if (indio_dev->info->read_event_value) {
+		ret = indio_dev->info->read_event_value(indio_dev,
+			this_attr->address, &val);
+		if (ret < 0)
+			return ret;
+		return sprintf(buf, "%d\n", val);
+	} else {
+		ret = indio_dev->info->read_event_value_new(indio_dev,
+			this_attr->c, iio_ev_attr_type(this_attr),
+			iio_ev_attr_dir(this_attr), iio_ev_attr_info(this_attr),
+			&val, &val2);
+		if (ret < 0)
+			return ret;
+		return iio_format_value(buf, ret, val, val2);
+	}
 }
 
 static ssize_t iio_ev_value_store(struct device *dev,
@@ -243,25 +301,120 @@ static ssize_t iio_ev_value_store(struct device *dev,
 {
 	struct iio_dev *indio_dev = dev_to_iio_dev(dev);
 	struct iio_dev_attr *this_attr = to_iio_dev_attr(attr);
-	int val;
+	int val, val2;
 	int ret;
 
-	if (!indio_dev->info->write_event_value)
+	if (!indio_dev->info->write_event_value &&
+		!indio_dev->info->write_event_value_new)
 		return -EINVAL;
 
-	ret = kstrtoint(buf, 10, &val);
-	if (ret)
-		return ret;
-
-	ret = indio_dev->info->write_event_value(indio_dev, this_attr->address,
-						 val);
+	if (indio_dev->info->write_event_value) {
+		ret = kstrtoint(buf, 10, &val);
+		if (ret)
+			return ret;
+		ret = indio_dev->info->write_event_value(indio_dev,
+			this_attr->address, val);
+	} else {
+		ret = iio_str_to_fixpoint(buf, 100000, &val, &val2);
+		if (ret)
+			return ret;
+		ret = indio_dev->info->write_event_value_new(indio_dev,
+			this_attr->c, iio_ev_attr_type(this_attr),
+			iio_ev_attr_dir(this_attr), iio_ev_attr_info(this_attr),
+			val, val2);
+	}
 	if (ret < 0)
 		return ret;
 
 	return len;
 }
 
-static int iio_device_add_event_sysfs(struct iio_dev *indio_dev,
+static int iio_device_add_event(struct iio_dev *indio_dev,
+	const struct iio_chan_spec *chan, unsigned int spec_index,
+	enum iio_event_type type, enum iio_event_direction dir,
+	enum iio_shared_by shared_by, const unsigned long *mask)
+{
+	ssize_t (*show)(struct device *, struct device_attribute *, char *);
+	ssize_t (*store)(struct device *, struct device_attribute *,
+		const char *, size_t);
+	unsigned int attrcount = 0;
+	unsigned int i;
+	char *postfix;
+	int ret;
+
+	for_each_set_bit(i, mask, sizeof(*mask)) {
+		postfix = kasprintf(GFP_KERNEL, "%s_%s_%s",
+				iio_ev_type_text[type], iio_ev_dir_text[dir],
+				iio_ev_info_text[i]);
+		if (postfix == NULL)
+			return -ENOMEM;
+
+		if (i == IIO_EV_INFO_ENABLE) {
+			show = iio_ev_state_show;
+			store = iio_ev_state_store;
+		} else {
+			show = iio_ev_value_show;
+			store = iio_ev_value_store;
+		}
+
+		ret = __iio_add_chan_devattr(postfix, chan, show, store,
+			 (i << 16) | spec_index, shared_by, &indio_dev->dev,
+			&indio_dev->event_interface->dev_attr_list);
+		kfree(postfix);
+
+		if (ret)
+			return ret;
+
+		attrcount++;
+	}
+
+	return attrcount;
+}
+
+static int iio_device_add_event_sysfs_new(struct iio_dev *indio_dev,
+	struct iio_chan_spec const *chan)
+{
+	int ret = 0, i, attrcount = 0;
+	enum iio_event_direction dir;
+	enum iio_event_type type;
+
+	for (i = 0; i < chan->num_event_specs; i++) {
+		type = chan->event_spec[i].type;
+		dir = chan->event_spec[i].dir;
+
+		ret = iio_device_add_event(indio_dev, chan, i, type, dir,
+			IIO_SEPARATE, &chan->event_spec[i].mask_separate);
+		if (ret < 0)
+			goto error_ret;
+		attrcount += ret;
+
+		ret = iio_device_add_event(indio_dev, chan, i, type, dir,
+			IIO_SHARED_BY_TYPE,
+			&chan->event_spec[i].mask_shared_by_type);
+		if (ret < 0)
+			goto error_ret;
+		attrcount += ret;
+
+		ret = iio_device_add_event(indio_dev, chan, i, type, dir,
+			IIO_SHARED_BY_DIR,
+			&chan->event_spec[i].mask_shared_by_dir);
+		if (ret < 0)
+			goto error_ret;
+		attrcount += ret;
+
+		ret = iio_device_add_event(indio_dev, chan, i, type, dir,
+			IIO_SHARED_BY_ALL,
+			&chan->event_spec[i].mask_shared_by_all);
+		if (ret < 0)
+			goto error_ret;
+		attrcount += ret;
+	}
+	ret = attrcount;
+error_ret:
+	return ret;
+}
+
+static int iio_device_add_event_sysfs_old(struct iio_dev *indio_dev,
 				      struct iio_chan_spec const *chan)
 {
 	int ret = 0, i, attrcount = 0;
@@ -279,7 +432,7 @@ static int iio_device_add_event_sysfs(struct iio_dev *indio_dev,
 			goto error_ret;
 		}
 		if (chan->modified)
-			mask = IIO_MOD_EVENT_CODE(chan->type, 0, chan->channel,
+			mask = IIO_MOD_EVENT_CODE(chan->type, 0, chan->channel2,
 						  i/IIO_EV_DIR_MAX,
 						  i%IIO_EV_DIR_MAX);
 		else if (chan->differential)
@@ -334,15 +487,14 @@ error_ret:
 	return ret;
 }
 
-static inline void __iio_remove_event_config_attrs(struct iio_dev *indio_dev)
+
+static int iio_device_add_event_sysfs(struct iio_dev *indio_dev,
+				      struct iio_chan_spec const *chan)
 {
-	struct iio_dev_attr *p, *n;
-	list_for_each_entry_safe(p, n,
-				 &indio_dev->event_interface->
-				 dev_attr_list, l) {
-		kfree(p->dev_attr.attr.name);
-		kfree(p);
-	}
+	if (chan->event_mask)
+		return iio_device_add_event_sysfs_old(indio_dev, chan);
+	else
+		return iio_device_add_event_sysfs_new(indio_dev, chan);
 }
 
 static inline int __iio_add_event_config_attrs(struct iio_dev *indio_dev)
@@ -364,9 +516,12 @@ static bool iio_check_for_dynamic_events(struct iio_dev *indio_dev)
 {
 	int j;
 
-	for (j = 0; j < indio_dev->num_channels; j++)
+	for (j = 0; j < indio_dev->num_channels; j++) {
 		if (indio_dev->channels[j].event_mask != 0)
 			return true;
+		if (indio_dev->channels[j].num_event_specs != 0)
+			return true;
+	}
 	return false;
 }
 
@@ -374,7 +529,6 @@ static void iio_setup_ev_int(struct iio_event_interface *ev_int)
 {
 	INIT_KFIFO(ev_int->det_events);
 	init_waitqueue_head(&ev_int->wait);
-	mutex_init(&ev_int->read_lock);
 }
 
 static const char *iio_event_group_name = "events";
@@ -437,20 +591,32 @@ int iio_device_register_eventset(struct iio_dev *indio_dev)
 	return 0;
 
 error_free_setup_event_lines:
-	__iio_remove_event_config_attrs(indio_dev);
-	mutex_destroy(&indio_dev->event_interface->read_lock);
+	iio_free_chan_devattr_list(&indio_dev->event_interface->dev_attr_list);
 	kfree(indio_dev->event_interface);
 error_ret:
 
 	return ret;
 }
 
+/**
+ * iio_device_wakeup_eventset - Wakes up the event waitqueue
+ * @indio_dev: The IIO device
+ *
+ * Wakes up the event waitqueue used for poll() and blocking read().
+ * Should usually be called when the device is unregistered.
+ */
+void iio_device_wakeup_eventset(struct iio_dev *indio_dev)
+{
+	if (indio_dev->event_interface == NULL)
+		return;
+	wake_up(&indio_dev->event_interface->wait);
+}
+
 void iio_device_unregister_eventset(struct iio_dev *indio_dev)
 {
 	if (indio_dev->event_interface == NULL)
 		return;
-	__iio_remove_event_config_attrs(indio_dev);
+	iio_free_chan_devattr_list(&indio_dev->event_interface->dev_attr_list);
 	kfree(indio_dev->event_interface->group.attrs);
-	mutex_destroy(&indio_dev->event_interface->read_lock);
 	kfree(indio_dev->event_interface);
 }

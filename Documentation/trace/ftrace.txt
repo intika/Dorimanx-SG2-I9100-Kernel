@@ -735,7 +735,7 @@ Here are the available options:
 		 function as well as the function being traced.
 
   print-parent:
-   bash-4000  [01]  1477.606694: simple_strtoul <-strict_strtoul
+   bash-4000  [01]  1477.606694: simple_strtoul <-kstrtoul
 
   noprint-parent:
    bash-4000  [01]  1477.606694: simple_strtoul
@@ -759,7 +759,7 @@ Here are the available options:
             latency-format option is enabled.
 
     bash  4000 1 0 00000000 00010a95 [58127d26] 1720.415ms \
-    (+0.000ms): simple_strtoul (strict_strtoul)
+    (+0.000ms): simple_strtoul (kstrtoul)
 
   raw - This will display raw numbers. This option is best for
 	use with user applications that can translate the raw
@@ -2013,35 +2013,6 @@ will produce:
  1)   1.449 us    |             }
 
 
-You can disable the hierarchical function call formatting and instead print a
-flat list of function entry and return events.  This uses the format described
-in the Output Formatting section and respects all the trace options that
-control that formatting.  Hierarchical formatting is the default.
-
-	hierachical: echo nofuncgraph-flat > trace_options
-	flat: echo funcgraph-flat > trace_options
-
-  ie:
-
-  # tracer: function_graph
-  #
-  # entries-in-buffer/entries-written: 68355/68355   #P:2
-  #
-  #                              _-----=> irqs-off
-  #                             / _----=> need-resched
-  #                            | / _---=> hardirq/softirq
-  #                            || / _--=> preempt-depth
-  #                            ||| /     delay
-  #           TASK-PID   CPU#  ||||    TIMESTAMP  FUNCTION
-  #              | |       |   ||||       |         |
-                sh-1806  [001] d...   198.843443: graph_ent: func=_raw_spin_lock
-                sh-1806  [001] d...   198.843445: graph_ent: func=__raw_spin_lock
-                sh-1806  [001] d..1   198.843447: graph_ret: func=__raw_spin_lock
-                sh-1806  [001] d..1   198.843449: graph_ret: func=_raw_spin_lock
-                sh-1806  [001] d..1   198.843451: graph_ent: func=_raw_spin_unlock_irqrestore
-                sh-1806  [001] d...   198.843453: graph_ret: func=_raw_spin_unlock_irqrestore
-
-
 You might find other useful features for this tracer in the
 following "dynamic ftrace" section such as tracing only specific
 functions or tasks.
@@ -2458,6 +2429,19 @@ The following commands are supported:
    	 set_ftrace_filter
    echo '!schedule:disable_event:sched:sched_switch' > \
    	 set_ftrace_filter
+
+- dump
+  When the function is hit, it will dump the contents of the ftrace
+  ring buffer to the console. This is useful if you need to debug
+  something, and want to dump the trace when a certain function
+  is hit. Perhaps its a function that is called before a tripple
+  fault happens and does not allow you to get a regular dump.
+
+- cpudump
+  When the function is hit, it will dump the contents of the ftrace
+  ring buffer for the current CPU to the console. Unlike the "dump"
+  command, it only prints out the contents of the ring buffer for the
+  CPU that executed the function that triggered the dump.
 
 trace_pipe
 ----------
