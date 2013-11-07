@@ -21,4 +21,3 @@
 #define CP_WAKEUP_HOLD_TIME	500		/* 500 ms */
 
 #endif
-

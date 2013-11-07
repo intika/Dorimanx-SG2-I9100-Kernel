@@ -1501,7 +1501,7 @@ static int spi_remove(struct spi_device *spi)
 
 static struct spi_driver spi_driver = {
 	.probe = spi_probe,
-	.remove = __devexit_p(spi_remove),
+	.remove = spi_remove,
 	.driver = {
 		.name = "modem_if_spi",
 		.bus = &spi_bus_type,

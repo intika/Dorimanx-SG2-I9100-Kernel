@@ -130,7 +130,7 @@ static int xmm6262_force_crash_exit(struct modem_ctl *mc)
 
 	if (!mc->gpio_ap_dump_int)
 		return -ENXIO;
-	
+
 	gpio_set_value(mc->gpio_ap_dump_int, 1);
 	mif_info("set ap_dump_int(%d) to high=%d\n",
 		mc->gpio_ap_dump_int, gpio_get_value(mc->gpio_ap_dump_int));

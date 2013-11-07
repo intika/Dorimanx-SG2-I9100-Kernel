@@ -315,4 +315,3 @@ void mif_save_file(struct file *fp, const char *buff, size_t size);
 void mif_close_file(struct file *fp);
 
 #endif/*__MODEM_UTILS_H__*/
-

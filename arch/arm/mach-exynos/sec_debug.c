@@ -1654,14 +1654,14 @@ static int __devinit sec_input_debug_probe(struct platform_device *pdev)
 	return input_register_handler(&ddata->input_handler);
 }
 
-static int __devexit sec_input_debug_remove(struct platform_device *pdev)
+static int sec_input_debug_remove(struct platform_device *pdev)
 {
 	return 0;
 }
 
 static struct platform_driver sec_input_debug_driver = {
 	.probe		= sec_input_debug_probe,
-	.remove		= __devexit_p(sec_input_debug_remove),
+	.remove		= sec_input_debug_remove,
 	.driver		= {
 		.name	= SEC_DEBUG_NAME,
 		.owner	= THIS_MODULE,

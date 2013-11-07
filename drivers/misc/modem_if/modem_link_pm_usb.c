@@ -196,7 +196,7 @@ static int link_pm_hub_standby(void *args)
 
 	mif_err("set hub_suspend gpio !!!\n");
 	gpio_set_value(pm_data->gpio_hub_suspend, 1);
-	
+
 	err = pm_data->port_enable(2, 0);
 	if (err < 0)
 		mif_err("hub off fail err=%d\n", err);

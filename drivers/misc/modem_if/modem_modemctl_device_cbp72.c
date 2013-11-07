@@ -261,4 +261,3 @@ int cbp72_init_modemctl_device(struct modem_ctl *mc, struct modem_data *pdata)
 
 	return 0;
 }
-

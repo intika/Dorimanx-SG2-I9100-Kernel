@@ -285,4 +285,3 @@ int cbp82_init_modemctl_device(struct modem_ctl *mc, struct modem_data *pdata)
 	mif_err("---\n");
 	return 0;
 }
-

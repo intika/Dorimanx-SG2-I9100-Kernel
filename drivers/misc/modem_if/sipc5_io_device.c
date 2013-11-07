@@ -1659,4 +1659,3 @@ int sipc5_init_io_device(struct io_device *iod)
 
 	return ret;
 }
-

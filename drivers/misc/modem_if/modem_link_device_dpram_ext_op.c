@@ -2061,4 +2061,3 @@ struct idpram_pm_op *idpram_get_pm_op(enum ap_type ap)
 	else
 		return NULL;
 }
-

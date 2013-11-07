@@ -236,4 +236,3 @@ bool std_udl_with_payload(u32 cmd)
 	u32 mask = cmd & STD_UDL_STEP_MASK;
 	return (mask && mask < STD_UDL_CRC) ? true : false;
 }
-
