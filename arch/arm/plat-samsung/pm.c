@@ -325,12 +325,21 @@ static int s3c_pm_enter(suspend_state_t state)
 		 * only enable  power key, FUEL ALERT, AP/IF PMIC IRQ
 		 * and SIM Detect Irq
 		 */
+#if defined(CONFIG_MACH_GD2)
+		__raw_writel(0xff7fdf7d, S5P_EINT_WAKEUP_MASK);
+#elif defined(CONFIG_MACH_GC2PD)
+		/* No SIM Detect IRQ */
+		__raw_writel(0xff77df7f, S5P_EINT_WAKEUP_MASK);
+#else /* Default - GC */
 		__raw_writel(0xdf77df7f, S5P_EINT_WAKEUP_MASK);
+#endif
 #else
 		/* Masking external wake up source
 		 * only enable  power key, FUEL ALERT, AP/IF PMIC IRQ */
 		__raw_writel(0xff77df7f, S5P_EINT_WAKEUP_MASK);
 #endif
+		printk(KERN_ALERT"EINT_MASK[ 0x%08x ]\n",
+				__raw_readl(S5P_EINT_WAKEUP_MASK));
 		/* disable all system int */
 		__raw_writel(0xffffffff, S5P_WAKEUP_MASK);
 	}

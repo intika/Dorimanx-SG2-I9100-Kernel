@@ -308,7 +308,6 @@ static struct sleep_save exynos4_l2cc_save[] = {
 
 void exynos4_cpu_suspend(void)
 {
-	unsigned int tmp;
 
 	if (soc_is_exynos4210()) {
 		/* eMMC power off delay (hidden register)
@@ -318,6 +317,8 @@ void exynos4_cpu_suspend(void)
 	}
 
 	if ((!soc_is_exynos4210()) && (exynos4_is_c2c_use())) {
+		unsigned int tmp;
+
 		/* Gating CLK_IEM_APC & Enable CLK_SSS */
 		tmp = __raw_readl(EXYNOS4_CLKGATE_IP_DMC);
 		tmp &= ~(0x1 << 17);
@@ -348,10 +349,12 @@ void exynos4_cpu_suspend(void)
 
 static int exynos4_pm_prepare(void)
 {
-	int ret = 0;
+	int ret;
 
 #if defined(CONFIG_REGULATOR)
 	ret = regulator_suspend_prepare(PM_SUSPEND_MEM);
+#else
+	ret = 0;
 #endif
 
 	return ret;
@@ -565,6 +568,7 @@ static void exynos4_pm_resume(void)
 	__raw_writel((1 << 28), S5P_PAD_RET_MMCB_OPTION);
 	__raw_writel((1 << 28), S5P_PAD_RET_EBIA_OPTION);
 	__raw_writel((1 << 28), S5P_PAD_RET_EBIB_OPTION);
+	__raw_writel((1 << 28), S5P_PAD_RETENTION_GPIO_COREBLK_SYS_OPTION);
 
 	s3c_pm_do_restore(exynos4_regs_save, ARRAY_SIZE(exynos4_regs_save));
 	if (soc_is_exynos4210())
