@@ -42,6 +42,8 @@
 #include "../platform/pegasus-m400/exynos4_pmm.h"
 #elif defined(CONFIG_SOC_EXYNOS3470)
 #include "../platform/exynos4270/exynos4_pmm.h"
+//#elif defined(CONFIG_CPU_EXYNOS4210)
+//#include "mali_platform.h"
 #endif
 
 /* Streamline support for the Mali driver */
@@ -96,6 +98,10 @@ MODULE_PARM_DESC(mali_max_pp_cores_group_2, "Limit the number of PP cores to use
 #include "mali_user_settings_db.h"
 EXPORT_SYMBOL(mali_set_user_setting);
 EXPORT_SYMBOL(mali_get_user_setting);
+
+extern int mali_utilization_timeout;
+module_param(mali_utilization_timeout, int, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP| S_IROTH); /* rw--rw--r-- */
+MODULE_PARM_DESC(mali_utilization_timeout, "Mali GPU Utilization Timeout");
 
 static char mali_dev_name[] = "mali"; /* should be const, but the functions we call requires non-cost */
 

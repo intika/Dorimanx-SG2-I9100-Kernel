@@ -41,6 +41,7 @@
 //#define USE_PM_NOTIFIER
 #endif
 
+#if 0
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(3,4,0)
 struct exynos_pm_domain;
 extern struct exynos_pm_domain exynos4_pd_g3d;
@@ -50,6 +51,9 @@ extern struct platform_device exynos4_device_pd[];
 #else
 extern struct platform_device s5pv310_device_pd[];
 #endif /* LINUX_VERSION_CODE >= KERNEL_VERSION(3,0,0) */
+#else
+extern struct platform_device exynos4_device_pd[];
+#endif
 
 static void mali_platform_device_release(struct device *device);
 
@@ -175,8 +179,10 @@ int mali_platform_device_register(void)
 
 	MALI_DEBUG_PRINT(4, ("mali_platform_device_register() called\n"));
 
+#if 0
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(3,4,0)
 	exynos_pm_add_dev_to_genpd(&mali_gpu_device, &exynos4_pd_g3d);
+#endif
 #endif
 
 	/* Connect resources to the device */
