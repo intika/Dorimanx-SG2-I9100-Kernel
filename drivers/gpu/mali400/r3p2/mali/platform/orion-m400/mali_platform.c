@@ -12,32 +12,29 @@
  * @file mali_platform.c
  * Platform specific Mali driver functions for a default platform
  */
-#include <linux/platform_device.h>
 #include <linux/version.h>
-#include <linux/pm.h>
-#include <linux/suspend.h>
-
-#ifdef CONFIG_PM_RUNTIME
-#include <linux/pm_runtime.h>
-#endif
-
-#ifdef CONFIG_MALI_DVFS
-#include "mali_kernel_utilization.h"
-#endif /* CONFIG_MALI_DVFS */
-
-#include <linux/mali/mali_utgard.h>
 #include "mali_kernel_common.h"
 #include "mali_osk.h"
 #include "mali_platform.h"
-#include "mali_kernel_linux.h"
+#include "mali_linux_pm.h"
+
+#if USING_MALI_PMM
 #include "mali_pm.h"
+#endif
 
 #include <linux/clk.h>
 #include <linux/err.h>
 #include <linux/platform_device.h>
 #include <linux/regulator/consumer.h>
 #include <linux/regulator/driver.h>
+
+#if MALI_PMM_RUNTIME_JOB_CONTROL_ON
 #include <plat/pd.h>
+#endif
+
+#if MALI_TIMELINE_PROFILING_ENABLED
+#include "mali_kernel_profiling.h"
+#endif
 
 #include <asm/io.h>
 #include <mach/regs-pmu.h>
@@ -90,7 +87,7 @@ static unsigned int GPU_MHZ	= 1000000;
 int mali_gpu_clk = 108;
 int mali_gpu_vol = 950000;
 
-#ifdef CONFIG_MALI_DVFS
+#if MALI_DVFS_ENABLED
 #define MALI_DVFS_DEFAULT_STEP 0
 #endif
 #if MALI_VOLTAGE_LOCK
@@ -117,147 +114,17 @@ struct regulator {
 struct regulator *g3d_regulator = NULL;
 #endif
 
+#if MALI_PMM_RUNTIME_JOB_CONTROL_ON
 #if LINUX_VERSION_CODE <= KERNEL_VERSION(2,6,36)
 extern struct platform_device s5pv310_device_pd[];
 #else
 extern struct platform_device exynos4_device_pd[];
 #endif
+#endif
 
 mali_io_address clk_register_map = 0;
 
 _mali_osk_lock_t *mali_dvfs_lock;
-
-static void mali_platform_device_release(struct device *device);
-
-#define MALI_GP_IRQ	   MALI_BASE_IRQ + 9
-#define MALI_PP0_IRQ	  MALI_BASE_IRQ + 5
-#define MALI_PP1_IRQ	  MALI_BASE_IRQ + 6
-#define MALI_PP2_IRQ	  MALI_BASE_IRQ + 7
-#define MALI_PP3_IRQ	  MALI_BASE_IRQ + 8
-#define MALI_GP_MMU_IRQ   MALI_BASE_IRQ + 4
-#define MALI_PP0_MMU_IRQ  MALI_BASE_IRQ + 0
-#define MALI_PP1_MMU_IRQ  MALI_BASE_IRQ + 1
-#define MALI_PP2_MMU_IRQ  MALI_BASE_IRQ + 2
-#define MALI_PP3_MMU_IRQ  MALI_BASE_IRQ + 3
-
-static struct resource mali_gpu_resources[] =
-{
-	MALI_GPU_RESOURCES_MALI400_MP4(0x13000000,
-								   MALI_GP_IRQ, MALI_GP_MMU_IRQ,
-								   MALI_PP0_IRQ, MALI_PP0_MMU_IRQ,
-								   MALI_PP1_IRQ, MALI_PP1_MMU_IRQ,
-								   MALI_PP2_IRQ, MALI_PP2_MMU_IRQ,
-								   MALI_PP3_IRQ, MALI_PP3_MMU_IRQ)
-};
-
-static struct platform_device mali_gpu_device =
-{
-	.name = "mali_dev", /* MALI_SEC MALI_GPU_NAME_UTGARD, */
-	.id = 0,
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,4,0)
-	/* Set in mali_platform_device_register() for these kernels */
-#elif LINUX_VERSION_CODE >= KERNEL_VERSION(3,0,0)
-	.dev.parent = &exynos4_device_pd[PD_G3D].dev,
-#else
-	.dev.parent = &s5pv310_device_pd[PD_G3D].dev,
-#endif /* LINUX_VERSION_CODE >= KERNEL_VERSION(3,0,0) */
-	.dev.release = mali_platform_device_release,
-#if 0
-	/*
-	 * We temporarily make use of a device type so that we can control the Mali power
-	 * from within the mali.ko (since the default platform bus implementation will not do that).
-	 * Ideally .dev.pm_domain should be used instead, as this is the new framework designed
-	 * to control the power of devices.
-	 */
-	.dev.type = &mali_gpu_device_device_type, /* We should probably use the pm_domain instead of type on newer kernels */
-#endif
-};
-
-static struct mali_gpu_device_data mali_gpu_data =
-{
-	.shared_mem_size = 256 * 1024 * 1024, /* 256MB */
-	.fb_start = 0x40000000,
-	.fb_size = 0xb1000000,
-	.utilization_interval = 100, /* 100ms */
-	.utilization_callback = mali_gpu_utilization_handler,
-};
-
-int mali_platform_device_register(void)
-{
-	int err;
-
-	MALI_DEBUG_PRINT(4, ("mali_platform_device_register() called\n"));
-
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,4,0)
-	exynos_pm_add_dev_to_genpd(&mali_gpu_device, &exynos4_pd_g3d);
-#endif
-
-	/* Connect resources to the device */
-	err = platform_device_add_resources(&mali_gpu_device, mali_gpu_resources, sizeof(mali_gpu_resources) / sizeof(mali_gpu_resources[0]));
-	if (0 == err)
-	{
-		err = platform_device_add_data(&mali_gpu_device, &mali_gpu_data, sizeof(mali_gpu_data));
-		if (0 == err)
-		{
-#ifdef CONFIG_PM_RUNTIME
-#if defined(USE_PM_NOTIFIER)
-			err = register_pm_notifier(&mali_pwr_notif_block);
-			if (err)
-			{
-				goto plat_init_err;
-			}
-#endif
-#endif /* CONFIG_PM_RUNTIME */
-
-			/* Register the platform device */
-			err = platform_device_register(&mali_gpu_device);
-			if (0 == err)
-			{
-				mali_platform_init(&(mali_gpu_device.dev));
-
-#ifdef CONFIG_PM_RUNTIME
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,37))
-				pm_runtime_set_autosuspend_delay(&(mali_gpu_device.dev), 1000);
-				pm_runtime_use_autosuspend(&(mali_gpu_device.dev));
-#endif
-				pm_runtime_enable(&(mali_gpu_device.dev));
-#endif
-
-				return 0;
-			}
-		}
-
-#ifdef CONFIG_PM_RUNTIME
-#if defined(USE_PM_NOTIFIER)
-plat_init_err:
-		unregister_pm_notifier(&mali_pwr_notif_block);
-#endif
-#endif /* CONFIG_PM_RUNTIME */
-		platform_device_unregister(&mali_gpu_device);
-	}
-
-	return err;
-}
-
-void mali_platform_device_unregister(void)
-{
-	MALI_DEBUG_PRINT(4, ("mali_platform_device_unregister() called\n"));
-
-#ifdef CONFIG_PM_RUNTIME
-#if defined(USE_PM_NOTIFIER)
-	unregister_pm_notifier(&mali_pwr_notif_block);
-#endif
-#endif /* CONFIG_PM_RUNTIME */
-
-	mali_platform_deinit(&(mali_gpu_device.dev));
-
-	platform_device_unregister(&mali_gpu_device);
-}
-
-static void mali_platform_device_release(struct device *device)
-{
-	MALI_DEBUG_PRINT(4, ("mali_platform_device_release() called\n"));
-}
 
 #ifdef CONFIG_REGULATOR
 int mali_regulator_get_usecount(void)
@@ -297,7 +164,7 @@ void mali_regulator_enable(void)
 void mali_regulator_set_voltage(int min_uV, int max_uV)
 {
 	int voltage;
-#ifndef CONFIG_MALI_DVFS
+#if !MALI_DVFS_ENABLED
 	min_uV = mali_gpu_vol;
 	max_uV = mali_gpu_vol;
 #endif
@@ -309,9 +176,22 @@ void mali_regulator_set_voltage(int min_uV, int max_uV)
 	}
 	MALI_DEBUG_PRINT(2, ("= regulator_set_voltage: %d, %d \n",min_uV, max_uV));
 
+#if MALI_TIMELINE_PROFILING_ENABLED
+	_mali_osk_profiling_add_event( MALI_PROFILING_EVENT_TYPE_SINGLE |
+                               MALI_PROFILING_EVENT_CHANNEL_SOFTWARE |
+                               MALI_PROFILING_EVENT_REASON_SINGLE_SW_GPU_VOLTS,
+                               min_uV, max_uV, 1, 0, 0);
+#endif
+
 	regulator_set_voltage(g3d_regulator,min_uV,max_uV);
 	voltage = regulator_get_voltage(g3d_regulator);
 
+#if MALI_TIMELINE_PROFILING_ENABLED
+	_mali_osk_profiling_add_event( MALI_PROFILING_EVENT_TYPE_SINGLE |
+                               MALI_PROFILING_EVENT_CHANNEL_SOFTWARE |
+                               MALI_PROFILING_EVENT_REASON_SINGLE_SW_GPU_VOLTS,
+                               voltage, 0, 2, 0, 0);
+#endif
 	mali_gpu_vol = voltage;
 	MALI_DEBUG_PRINT(1, ("= regulator_get_voltage: %d \n",mali_gpu_vol));
 
@@ -451,7 +331,7 @@ mali_bool mali_clk_set_rate(unsigned int clk, unsigned int mhz)
 	unsigned long rate = 0;
 	mali_bool bis_vpll = mali_use_vpll;
 
-#ifndef CONFIG_MALI_DVFS
+#if !MALI_DVFS_ENABLED
 	clk = mali_gpu_clk;
 #endif
 
@@ -478,8 +358,24 @@ mali_bool mali_clk_set_rate(unsigned int clk, unsigned int mhz)
 	if (clk_enable(mali_clock) < 0)
 		return MALI_FALSE;
 
+#if MALI_TIMELINE_PROFILING_ENABLED
+    unsigned long previous_rate = 0;
+    previous_rate = clk_get_rate(mali_clock);
+	_mali_osk_profiling_add_event( MALI_PROFILING_EVENT_TYPE_SINGLE |
+                               MALI_PROFILING_EVENT_CHANNEL_SOFTWARE |
+                               MALI_PROFILING_EVENT_REASON_SINGLE_SW_GPU_FREQ,
+                               previous_rate, 0, 0, 0, 0);
+#endif
+
 	clk_set_rate(mali_clock, rate);
 	rate = clk_get_rate(mali_clock);
+
+#if MALI_TIMELINE_PROFILING_ENABLED
+	_mali_osk_profiling_add_event( MALI_PROFILING_EVENT_TYPE_SINGLE |
+                               MALI_PROFILING_EVENT_CHANNEL_SOFTWARE |
+                               MALI_PROFILING_EVENT_REASON_SINGLE_SW_GPU_FREQ,
+                               rate, 1, 0, 0, 0);
+#endif
 
 	if (bis_vpll)
 		mali_gpu_clk = (int)(rate / mhz);
@@ -517,7 +413,11 @@ static mali_bool init_mali_clock(void)
 
 
 #ifdef CONFIG_REGULATOR
+#if USING_MALI_PMM
 	g3d_regulator = regulator_get(&mali_gpu_device.dev, "vdd_g3d");
+#else
+	g3d_regulator = regulator_get(NULL, "vdd_g3d");
+#endif
 
 	if (IS_ERR(g3d_regulator)) {
 		MALI_PRINT( ("MALI Error : failed to get vdd_g3d\n"));
@@ -576,7 +476,8 @@ static _mali_osk_errcode_t enable_mali_clocks(void)
 	MALI_DEBUG_PRINT(3,("enable_mali_clocks mali_clock %p error %d \n", mali_clock, err));
 
 	mali_runtime_resume.vol = mali_dvfs_get_vol(MALI_DVFS_STEPS + 1);
-#ifdef CONFIG_MALI_DVFS
+#if MALI_PMM_RUNTIME_JOB_CONTROL_ON
+#if MALI_DVFS_ENABLED
 	// set clock rate
 	if (get_mali_dvfs_control_status() != 0 || mali_gpu_clk >= mali_runtime_resume.clk)
 		mali_clk_set_rate(mali_gpu_clk, GPU_MHZ);
@@ -597,6 +498,9 @@ static _mali_osk_errcode_t enable_mali_clocks(void)
 	mali_regulator_set_voltage(mali_runtime_resume.vol, mali_runtime_resume.vol);
 	mali_clk_set_rate(mali_runtime_resume.clk, GPU_MHZ);
 #endif
+#else
+	mali_clk_set_rate(mali_gpu_clk, GPU_MHZ);
+#endif
 	MALI_SUCCESS;
 }
 
@@ -605,7 +509,7 @@ static _mali_osk_errcode_t disable_mali_clocks(void)
 	clk_disable(mali_clock);
 	MALI_DEBUG_PRINT(3,("disable_mali_clocks mali_clock %p \n", mali_clock));
 
-#ifdef CONFIG_MALI_DVFS
+#if MALI_DVFS_ENABLED
 	/* lock/unlock CPU freq by Mali */
 	cpufreq_unlock_by_mali();
 #endif
@@ -614,22 +518,65 @@ static _mali_osk_errcode_t disable_mali_clocks(void)
 
 void set_mali_parent_power_domain(struct platform_device* dev)
 {
+#if MALI_PMM_RUNTIME_JOB_CONTROL_ON
 #if LINUX_VERSION_CODE <= KERNEL_VERSION(2,6,36)
 	dev->dev.parent = &s5pv310_device_pd[PD_G3D].dev;
 #else
 	dev->dev.parent = &exynos4_device_pd[PD_G3D].dev;
+#endif
+
 #endif
 }
 
 _mali_osk_errcode_t g3d_power_domain_control(int bpower_on)
 {
 	if (bpower_on) {
+#if MALI_PMM_RUNTIME_JOB_CONTROL_ON
 		MALI_DEBUG_PRINT(3,("_mali_osk_pm_dev_activate \n"));
-		_mali_osk_pm_dev_ref_add();
+		_mali_osk_pm_dev_activate();
+#else //MALI_PMM_RUNTIME_JOB_CONTROL_ON
+		void __iomem *status;
+		u32 timeout;
+		__raw_writel(S5P_INT_LOCAL_PWR_EN, S5P_PMU_G3D_CONF);
+		status = S5P_PMU_G3D_CONF + 0x4;
+
+		timeout = 10;
+		while ((__raw_readl(status) & S5P_INT_LOCAL_PWR_EN)
+				!= S5P_INT_LOCAL_PWR_EN) {
+			if (timeout == 0) {
+				MALI_PRINTF(("Power domain  enable failed.\n"));
+				return -ETIMEDOUT;
+			}
+			timeout--;
+			_mali_osk_time_ubusydelay(100);
+		}
+		MALI_PRINTF(("MALI Power domain enabled"));
+#endif //MALI_PMM_RUNTIME_JOB_CONTROL_ON
 	} else {
+#if MALI_PMM_RUNTIME_JOB_CONTROL_ON
 		MALI_DEBUG_PRINT( 4,("_mali_osk_pmm_dev_idle\n"));
-		_mali_osk_pm_dev_disable();
+		_mali_osk_pm_dev_idle();
+
+#else //MALI_PMM_RUNTIME_JOB_CONTROL_ON
+		void __iomem *status;
+		u32 timeout;
+		__raw_writel(0, S5P_PMU_G3D_CONF);
+
+		status = S5P_PMU_G3D_CONF + 0x4;
+		/* Wait max 1ms */
+		timeout = 10;
+		while (__raw_readl(status) & S5P_INT_LOCAL_PWR_EN) {
+			if (timeout == 0) {
+				MALI_PRINTF(("Power domain  disable failed.\n" ));
+				return -ETIMEDOUT;
+			}
+			timeout--;
+			_mali_osk_time_ubusydelay( 100);
+		}
+		MALI_PRINTF(("MALI Power domain disabled"));
+#endif //MALI_PMM_RUNTIME_JOB_CONTROL_ON
 	}
+
 	MALI_SUCCESS;
 }
 
@@ -639,7 +586,7 @@ _mali_osk_errcode_t mali_platform_init()
 #if MALI_VOLTAGE_LOCK
 	_mali_osk_atomic_init(&voltage_lock_status, 0);
 #endif
-#ifdef CONFIG_MALI_DVFS
+#if MALI_DVFS_ENABLED
 	if (!clk_register_map) clk_register_map = _mali_osk_mem_mapioregion( CLK_DIV_STAT_G3D, 0x20, CLK_DESC );
 	if (!init_mali_dvfs_status(MALI_DVFS_DEFAULT_STEP))
 		MALI_DEBUG_PRINT(1, ("mali_platform_init failed\n"));
@@ -654,7 +601,7 @@ _mali_osk_errcode_t mali_platform_deinit()
 #if MALI_VOLTAGE_LOCK
 	_mali_osk_atomic_term(&voltage_lock_status);
 #endif
-#ifdef CONFIG_MALI_DVFS
+#if MALI_DVFS_ENABLED
 	deinit_mali_dvfs_status();
 	if (clk_register_map) {
 		_mali_osk_mem_unmapioregion(CLK_DIV_STAT_G3D, 0x20, clk_register_map);
@@ -705,12 +652,20 @@ _mali_osk_errcode_t mali_platform_powerup(u32 cores)
 void mali_gpu_utilization_handler(u32 utilization)
 {
 	if (bPoweroff == 0) {
-#ifdef CONFIG_MALI_DVFS
+#if MALI_DVFS_ENABLED
 		if (!mali_dvfs_handler(utilization))
 			MALI_DEBUG_PRINT(1,( "error on mali dvfs status in utilization\n"));
 #endif
 	}
 }
+
+#if MALI_POWER_MGMT_TEST_SUITE
+u32 pmu_get_power_up_down_info(void)
+{
+	return 4095;
+}
+
+#endif
 
 void mali_force_mpll(void);
 void mali_restore_vpll_mode(void);
@@ -728,6 +683,10 @@ _mali_osk_errcode_t mali_platform_power_mode_change(mali_power_mode power_mode)
 
 				MALI_DEBUG_PRINT(4,("enable clock \n"));
 				enable_mali_clocks();
+#if MALI_TIMELINE_PROFILING_ENABLED
+				_mali_osk_profiling_add_event(MALI_PROFILING_EVENT_TYPE_SINGLE| MALI_PROFILING_EVENT_CHANNEL_GPU|MALI_PROFILING_EVENT_REASON_SINGLE_GPU_FREQ_VOLT_CHANGE, mali_gpu_clk, mali_gpu_vol/1000, 0, 0, 0);
+#endif
+				//MALI_PRINTF(("Mali Platform powered up"));
 				mali_restore_vpll_mode();
 				gpu_power_state = 1;
 				bPoweroff = 0;
@@ -741,6 +700,10 @@ _mali_osk_errcode_t mali_platform_power_mode_change(mali_power_mode power_mode)
 			if (bPoweroff == 0) {
 				mali_force_mpll();
 				disable_mali_clocks();
+#if MALI_TIMELINE_PROFILING_ENABLED
+				_mali_osk_profiling_add_event(MALI_PROFILING_EVENT_TYPE_SINGLE| MALI_PROFILING_EVENT_CHANNEL_GPU|MALI_PROFILING_EVENT_REASON_SINGLE_GPU_FREQ_VOLT_CHANGE, 0, 0, 0, 0, 0);
+#endif
+
 #ifndef CONFIG_PM_RUNTIME
 				g3d_power_domain_control(0);
 #endif

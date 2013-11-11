@@ -267,6 +267,7 @@ static unsigned int get_mali_dvfs_status(void)
 {
 	return maliDvfsStatus.currentStep;
 }
+#if MALI_PMM_RUNTIME_JOB_CONTROL_ON
 int get_mali_dvfs_control_status(void)
 {
 	return mali_dvfs_control;
@@ -281,6 +282,7 @@ mali_bool set_mali_dvfs_current_step(unsigned int step)
 	_mali_osk_lock_signal(mali_dvfs_lock, _MALI_OSK_LOCKMODE_RW);
 	return MALI_TRUE;
 }
+#endif
 static mali_bool set_mali_dvfs_status(u32 step,mali_bool boostup)
 {
 	u32 validatedStep=step;

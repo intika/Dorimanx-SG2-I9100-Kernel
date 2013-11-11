@@ -38,7 +38,7 @@ static u32 last_utilization_gp = 0 ;
 static u32 last_utilization_pp = 0 ;
 
 #ifndef CONFIG_PM_DEVFREQ	/* MALI_SEC */
-u32 mali_utilization_timeout = 1000;
+u32 mali_gpu_utilization_timeout = 100;
 #endif
 void (*mali_utilization_callback)(struct mali_gpu_utilization_data *data) = NULL;
 
@@ -166,7 +166,7 @@ void calculate_gpu_utilization(void *arg)
 	_mali_osk_lock_signal(time_data_lock, _MALI_OSK_LOCKMODE_RW);
 
 #ifndef CONFIG_PM_DEVFREQ
-	_mali_osk_timer_add(utilization_timer, _mali_osk_time_mstoticks(mali_utilization_timeout));
+	_mali_osk_timer_add(utilization_timer, _mali_osk_time_mstoticks(mali_gpu_utilization_timeout));
 #endif
 
 	if (NULL != mali_utilization_callback)
@@ -186,7 +186,7 @@ _mali_osk_errcode_t mali_utilization_init(void)
 #ifndef CONFIG_PM_DEVFREQ
 		if (0 != data.utilization_interval)
 		{
-			mali_utilization_timeout = data.utilization_interval;
+			mali_gpu_utilization_timeout = data.utilization_interval;
 		}
 #endif
 		if (NULL != data.utilization_callback)
@@ -199,7 +199,7 @@ _mali_osk_errcode_t mali_utilization_init(void)
 	if (NULL != mali_utilization_callback)
 	{
 #ifndef CONFIG_PM_DEVFREQ
-		MALI_DEBUG_PRINT(2, ("Mali GPU Utilization: Utilization handler installed with interval %u\n", mali_utilization_timeout));
+		MALI_DEBUG_PRINT(2, ("Mali GPU Utilization: Utilization handler installed with interval %u\n", mali_gpu_utilization_timeout));
 #endif
 	}
 	else
@@ -292,7 +292,7 @@ void mali_utilization_gp_start(void)
 
 			_mali_osk_lock_signal(time_data_lock, _MALI_OSK_LOCKMODE_RW);
 
-			_mali_osk_timer_add(utilization_timer, _mali_osk_time_mstoticks(mali_utilization_timeout));
+			_mali_osk_timer_add(utilization_timer, _mali_osk_time_mstoticks(mali_gpu_utilization_timeout));
 		}
 		else
 		{
@@ -335,7 +335,7 @@ void mali_utilization_pp_start(void)
 
 			_mali_osk_lock_signal(time_data_lock, _MALI_OSK_LOCKMODE_RW);
 #ifndef CONFIG_PM_DEVFREQ
-			_mali_osk_timer_add(utilization_timer, _mali_osk_time_mstoticks(mali_utilization_timeout));
+			_mali_osk_timer_add(utilization_timer, _mali_osk_time_mstoticks(mali_gpu_utilization_timeout));
 #endif
 		}
 		else
