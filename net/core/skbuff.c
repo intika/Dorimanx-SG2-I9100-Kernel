@@ -182,11 +182,20 @@ struct sk_buff *__alloc_skb(unsigned int size, gfp_t gfp_mask,
 		goto out;
 	prefetchw(skb);
 
-	size = SKB_DATA_ALIGN(size);
-	data = kmalloc_node_track_caller(size + sizeof(struct skb_shared_info),
-			gfp_mask, node);
+	/* We do our best to align skb_shared_info on a separate cache
+	 * line. It usually works because kmalloc(X > SMP_CACHE_BYTES) gives
+	 * aligned memory blocks, unless SLUB/SLAB debug is enabled.
+	 * Both skb->head and skb_shared_info are cache line aligned.
+	 */
+	size += SKB_DATA_ALIGN(sizeof(struct skb_shared_info));
+	data = kmalloc_node_track_caller(size, gfp_mask, node);
 	if (!data)
 		goto nodata;
+	/* kmalloc(size) might give us more room than requested.
+	 * Put skb_shared_info exactly at the end of allocated zone,
+	 * to allow max possible filling before reallocation.
+	 */
+	size = SKB_WITH_OVERHEAD(ksize(data));
 	prefetchw(data + size);
 
 	/*
@@ -195,7 +204,8 @@ struct sk_buff *__alloc_skb(unsigned int size, gfp_t gfp_mask,
 	 * the tail pointer in struct sk_buff!
 	 */
 	memset(skb, 0, offsetof(struct sk_buff, tail));
-	skb->truesize = size + sizeof(struct sk_buff);
+	/* Account for allocated memory : skb + skb->head */
+	skb->truesize = SKB_TRUESIZE(size);
 	atomic_set(&skb->users, 1);
 	skb->head = data;
 	skb->data = data;
@@ -473,6 +483,30 @@ void consume_skb(struct sk_buff *skb)
 EXPORT_SYMBOL(consume_skb);
 
 /**
+ * 	skb_recycle - clean up an skb for reuse
+ * 	@skb: buffer
+ *
+ * 	Recycles the skb to be reused as a receive buffer. This
+ * 	function does any necessary reference count dropping, and
+ * 	cleans up the skbuff as if it just came from __alloc_skb().
+ */
+void skb_recycle(struct sk_buff *skb)
+{
+	struct skb_shared_info *shinfo;
+
+	skb_release_head_state(skb);
+
+	shinfo = skb_shinfo(skb);
+	memset(shinfo, 0, offsetof(struct skb_shared_info, dataref));
+	atomic_set(&shinfo->dataref, 1);
+
+	memset(skb, 0, offsetof(struct sk_buff, tail));
+	skb->data = skb->head + NET_SKB_PAD;
+	skb_reset_tail_pointer(skb);
+}
+EXPORT_SYMBOL(skb_recycle);
+
+/**
  *	skb_recycle_check - check if skb can be reused for receive
  *	@skb: buffer
  *	@skb_size: minimum receive buffer size
@@ -486,33 +520,10 @@ EXPORT_SYMBOL(consume_skb);
  */
 bool skb_recycle_check(struct sk_buff *skb, int skb_size)
 {
-	struct skb_shared_info *shinfo;
-
-	if (irqs_disabled())
+	if (!skb_is_recycleable(skb, skb_size))
 		return false;
 
-	if (skb_shinfo(skb)->tx_flags & SKBTX_DEV_ZEROCOPY)
-		return false;
-
-	if (skb_is_nonlinear(skb) || skb->fclone != SKB_FCLONE_UNAVAILABLE)
-		return false;
-
-	skb_size = SKB_DATA_ALIGN(skb_size + NET_SKB_PAD);
-	if (skb_end_pointer(skb) - skb->head < skb_size)
-		return false;
-
-	if (skb_shared(skb) || skb_cloned(skb))
-		return false;
-
-	skb_release_head_state(skb);
-
-	shinfo = skb_shinfo(skb);
-	memset(shinfo, 0, offsetof(struct skb_shared_info, dataref));
-	atomic_set(&shinfo->dataref, 1);
-
-	memset(skb, 0, offsetof(struct sk_buff, tail));
-	skb->data = skb->head + NET_SKB_PAD;
-	skb_reset_tail_pointer(skb);
+	skb_recycle(skb);
 
 	return true;
 }
@@ -658,14 +669,14 @@ int skb_copy_ubufs(struct sk_buff *skb, gfp_t gfp_mask)
 
 	/* skb frags release userspace buffers */
 	for (i = 0; i < skb_shinfo(skb)->nr_frags; i++)
-		put_page(skb_shinfo(skb)->frags[i].page);
+		skb_frag_unref(skb, i);
 
 	uarg->callback(uarg);
 
 	/* skb frags point to kernel buffers */
 	for (i = skb_shinfo(skb)->nr_frags; i > 0; i--) {
-		skb_shinfo(skb)->frags[i - 1].page_offset = 0;
-		skb_shinfo(skb)->frags[i - 1].page = head;
+		__skb_fill_page_desc(skb, i-1, head, 0,
+				     skb_shinfo(skb)->frags[i - 1].size);
 		head = (struct page *)head->private;
 	}
 
@@ -694,7 +705,6 @@ struct sk_buff *skb_clone(struct sk_buff *skb, gfp_t gfp_mask)
 	if (skb_shinfo(skb)->tx_flags & SKBTX_DEV_ZEROCOPY) {
 		if (skb_copy_ubufs(skb, gfp_mask))
 			return NULL;
-		skb_shinfo(skb)->tx_flags &= ~SKBTX_DEV_ZEROCOPY;
 	}
 
 	n = skb + 1;
@@ -820,7 +830,6 @@ struct sk_buff *__pskb_copy(struct sk_buff *skb, int headroom, gfp_t gfp_mask)
 				n = NULL;
 				goto out;
 			}
-			skb_shinfo(skb)->tx_flags &= ~SKBTX_DEV_ZEROCOPY;
 		}
 		for (i = 0; i < skb_shinfo(skb)->nr_frags; i++) {
 			skb_shinfo(n)->frags[i] = skb_shinfo(skb)->frags[i];
@@ -913,7 +922,6 @@ int pskb_expand_head(struct sk_buff *skb, int nhead, int ntail,
 		if (skb_shinfo(skb)->tx_flags & SKBTX_DEV_ZEROCOPY) {
 			if (skb_copy_ubufs(skb, gfp_mask))
 				goto nofrags;
-			skb_shinfo(skb)->tx_flags &= ~SKBTX_DEV_ZEROCOPY;
 		}
 		for (i = 0; i < skb_shinfo(skb)->nr_frags; i++)
 			skb_frag_ref(skb, i);

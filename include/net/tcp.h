@@ -18,7 +18,6 @@
 #ifndef _TCP_H
 #define _TCP_H
 
-#define TCP_DEBUG 1
 #define FASTRETRANS_DEBUG 1
 
 #include <linux/list.h>
@@ -358,6 +357,7 @@ static inline void tcp_dec_quickack_mode(struct sock *sk,
 #define	TCP_ECN_OK		1
 #define	TCP_ECN_QUEUE_CWR	2
 #define	TCP_ECN_DEMAND_CWR	4
+#define	TCP_ECN_SEEN		8
 
 static __inline__ void
 TCP_ECN_create_request(struct request_sock *req, struct tcphdr *th)
@@ -637,13 +637,14 @@ struct tcp_skb_cb {
 	__u32		seq;		/* Starting sequence number	*/
 	__u32		end_seq;	/* SEQ + FIN + SYN + datalen	*/
 	__u32		when;		/* used to compute rtt's	*/
-	__u8		flags;		/* TCP header flags.		*/
+	__u8		tcp_flags;	/* TCP header flags. (tcp[13])	*/
 	__u8		sacked;		/* State flags for SACK/FACK.	*/
 #define TCPCB_SACKED_ACKED	0x01	/* SKB ACK'd by a SACK block	*/
 #define TCPCB_SACKED_RETRANS	0x02	/* SKB retransmitted		*/
 #define TCPCB_LOST		0x04	/* SKB is lost			*/
 #define TCPCB_TAGBITS		0x07	/* All tag bits			*/
-
+	__u8		ip_dsfield;	/* IPv4 tos or IPv6 dsfield	*/
+	/* 1 byte hole */
 #define TCPCB_EVER_RETRANS	0x80	/* Ever retransmitted frame	*/
 #define TCPCB_RETRANS		(TCPCB_SACKED_RETRANS|TCPCB_EVER_RETRANS)
 
@@ -1186,8 +1187,9 @@ struct tcp_md5sig_pool {
 
 /* - functions */
 extern int tcp_v4_md5_hash_skb(char *md5_hash, struct tcp_md5sig_key *key,
-			       struct sock *sk, struct request_sock *req,
-			       struct sk_buff *skb);
+			       const struct sock *sk,
+			       const struct request_sock *req,
+			       const struct sk_buff *skb);
 extern struct tcp_md5sig_key * tcp_v4_md5_lookup(struct sock *sk,
 						 struct sock *addr_sk);
 extern int tcp_v4_md5_do_add(struct sock *sk, __be32 addr, u8 *newkey,
@@ -1204,13 +1206,13 @@ extern int tcp_v4_md5_do_del(struct sock *sk, __be32 addr);
 #define tcp_twsk_md5_key(twsk)	NULL
 #endif
 
-extern struct tcp_md5sig_pool * __percpu *tcp_alloc_md5sig_pool(struct sock *);
+extern struct tcp_md5sig_pool __percpu *tcp_alloc_md5sig_pool(struct sock *);
 extern void tcp_free_md5sig_pool(void);
 
 extern struct tcp_md5sig_pool	*tcp_get_md5sig_pool(void);
 extern void tcp_put_md5sig_pool(void);
 
-extern int tcp_md5_hash_header(struct tcp_md5sig_pool *, struct tcphdr *);
+extern int tcp_md5_hash_header(struct tcp_md5sig_pool *, const struct tcphdr *);
 extern int tcp_md5_hash_skb_data(struct tcp_md5sig_pool *, const struct sk_buff *,
 				 unsigned int header_len);
 extern int tcp_md5_hash_key(struct tcp_md5sig_pool *hp,
@@ -1451,9 +1453,9 @@ struct tcp_sock_af_ops {
 						struct sock *addr_sk);
 	int			(*calc_md5_hash) (char *location,
 						  struct tcp_md5sig_key *md5,
-						  struct sock *sk,
-						  struct request_sock *req,
-						  struct sk_buff *skb);
+						  const struct sock *sk,
+						  const struct request_sock *req,
+						  const struct sk_buff *skb);
 	int			(*md5_add) (struct sock *sk,
 					    struct sock *addr_sk,
 					    u8 *newkey,
@@ -1470,9 +1472,9 @@ struct tcp_request_sock_ops {
 						struct request_sock *req);
 	int			(*calc_md5_hash) (char *location,
 						  struct tcp_md5sig_key *md5,
-						  struct sock *sk,
-						  struct request_sock *req,
-						  struct sk_buff *skb);
+						  const struct sock *sk,
+						  const struct request_sock *req,
+						  const struct sk_buff *skb);
 #endif
 };
 

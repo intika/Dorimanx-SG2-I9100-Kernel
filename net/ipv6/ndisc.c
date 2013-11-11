@@ -367,17 +367,14 @@ static int ndisc_constructor(struct neighbour *neigh)
 	struct neigh_parms *parms;
 	int is_multicast = ipv6_addr_is_multicast(addr);
 
-	rcu_read_lock();
 	in6_dev = in6_dev_get(dev);
 	if (in6_dev == NULL) {
-		rcu_read_unlock();
 		return -EINVAL;
 	}
 
 	parms = in6_dev->nd_parms;
 	__neigh_parms_put(neigh->parms);
 	neigh->parms = neigh_parms_clone(parms);
-	rcu_read_unlock();
 
 	neigh->type = is_multicast ? RTN_MULTICAST : RTN_UNICAST;
 	if (!dev->header_ops) {
@@ -1208,6 +1205,9 @@ static void ndisc_router_discovery(struct sk_buff *skb)
 	if (!in6_dev->cnf.accept_ra_defrtr)
 		goto skip_defrtr;
 
+	if (ipv6_chk_addr(dev_net(in6_dev->dev), &ipv6_hdr(skb)->saddr, NULL, 0))
+		goto skip_defrtr;
+
 	lifetime = ntohs(ra_msg->icmph.icmp6_rt_lifetime);
 
 #ifdef CONFIG_IPV6_ROUTER_PREF
@@ -1330,6 +1330,9 @@ skip_linkparms:
 		goto out;
 
 #ifdef CONFIG_IPV6_ROUTE_INFO
+	if (ipv6_chk_addr(dev_net(in6_dev->dev), &ipv6_hdr(skb)->saddr, NULL, 0))
+		goto skip_routeinfo;
+
 	if (in6_dev->cnf.accept_ra_rtr_pref && ndopts.nd_opts_ri) {
 		struct nd_opt_hdr *p;
 		for (p = ndopts.nd_opts_ri;
@@ -1347,6 +1350,8 @@ skip_linkparms:
 				      &ipv6_hdr(skb)->saddr);
 		}
 	}
+
+skip_routeinfo:
 #endif
 
 #ifdef CONFIG_IPV6_NDISC_NODETYPE

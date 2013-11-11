@@ -221,16 +221,25 @@ static inline void TCP_ECN_withdraw_cwr(struct tcp_sock *tp)
 	tp->ecn_flags &= ~TCP_ECN_DEMAND_CWR;
 }
 
-static inline void TCP_ECN_check_ce(struct tcp_sock *tp, struct sk_buff *skb)
+static inline void TCP_ECN_check_ce(struct tcp_sock *tp, const struct sk_buff *skb)
 {
-	if (tp->ecn_flags & TCP_ECN_OK) {
-		if (INET_ECN_is_ce(TCP_SKB_CB(skb)->flags))
-			tp->ecn_flags |= TCP_ECN_DEMAND_CWR;
+	if (!(tp->ecn_flags & TCP_ECN_OK))
+		return;
+
+	switch (TCP_SKB_CB(skb)->ip_dsfield & INET_ECN_MASK) {
+	case INET_ECN_NOT_ECT:
 		/* Funny extension: if ECT is not set on a segment,
-		 * it is surely retransmit. It is not in ECN RFC,
-		 * but Linux follows this rule. */
-		else if (INET_ECN_is_not_ect((TCP_SKB_CB(skb)->flags)))
+		 * and we already seen ECT on a previous segment,
+		 * it is probably a retransmit.
+		 */
+		if (tp->ecn_flags & TCP_ECN_SEEN)
 			tcp_enter_quickack_mode((struct sock *)tp);
+		break;
+	case INET_ECN_CE:
+		tp->ecn_flags |= TCP_ECN_DEMAND_CWR;
+		/* fallinto */
+	default:
+		tp->ecn_flags |= TCP_ECN_SEEN;
 	}
 }
 
@@ -260,14 +269,11 @@ static inline int TCP_ECN_rcv_ecn_echo(const struct tcp_sock *tp, const struct t
 
 static void tcp_fixup_sndbuf(struct sock *sk)
 {
-	int sndmem = tcp_sk(sk)->rx_opt.mss_clamp + MAX_TCP_HEADER + 16 +
-		     sizeof(struct sk_buff);
+	int sndmem = SKB_TRUESIZE(tcp_sk(sk)->rx_opt.mss_clamp + MAX_TCP_HEADER);
 
-	if (sk->sk_sndbuf < 3 * sndmem) {
-		sk->sk_sndbuf = 3 * sndmem;
-		if (sk->sk_sndbuf > sysctl_tcp_wmem[2])
-			sk->sk_sndbuf = sysctl_tcp_wmem[2];
-	}
+	sndmem *= TCP_INIT_CWND;
+	if (sk->sk_sndbuf < sndmem)
+		sk->sk_sndbuf = min(sndmem, sysctl_tcp_wmem[2]);
 }
 
 /* 2. Tuning advertised window (window_clamp, rcv_ssthresh)
@@ -344,17 +350,24 @@ static void tcp_grow_window(struct sock *sk, const struct sk_buff *skb)
 
 static void tcp_fixup_rcvbuf(struct sock *sk)
 {
-	struct tcp_sock *tp = tcp_sk(sk);
-	int rcvmem = tp->advmss + MAX_TCP_HEADER + 16 + sizeof(struct sk_buff);
+	u32 mss = tcp_sk(sk)->advmss;
+	u32 icwnd = TCP_DEFAULT_INIT_RCVWND;
+	int rcvmem;
 
-	/* Try to select rcvbuf so that 4 mss-sized segments
-	 * will fit to window and corresponding skbs will fit to our rcvbuf.
-	 * (was 3; 4 is minimum to allow fast retransmit to work.)
+	/* Limit to 10 segments if mss <= 1460,
+	 * or 14600/mss segments, with a minimum of two segments.
 	 */
-	while (tcp_win_from_space(rcvmem) < tp->advmss)
+	if (mss > 1460)
+		icwnd = max_t(u32, (1460 * TCP_DEFAULT_INIT_RCVWND) / mss, 2);
+
+	rcvmem = SKB_TRUESIZE(mss + MAX_TCP_HEADER);
+	while (tcp_win_from_space(rcvmem) < mss)
 		rcvmem += 128;
-	if (sk->sk_rcvbuf < 4 * rcvmem)
-		sk->sk_rcvbuf = min(4 * rcvmem, sysctl_tcp_rmem[2]);
+
+	rcvmem *= icwnd;
+
+	if (sk->sk_rcvbuf < rcvmem)
+		sk->sk_rcvbuf = min(rcvmem, sysctl_tcp_rmem[2]);
 }
 
 /* 4. Try to fixup all. It is made immediately after connection enters
@@ -539,8 +552,7 @@ void tcp_rcv_space_adjust(struct sock *sk)
 			space /= tp->advmss;
 			if (!space)
 				space = 1;
-			rcvmem = (tp->advmss + MAX_TCP_HEADER +
-				  16 + sizeof(struct sk_buff));
+			rcvmem = SKB_TRUESIZE(tp->advmss + MAX_TCP_HEADER);
 			while (tcp_win_from_space(rcvmem) < tp->advmss)
 				rcvmem += 128;
 			space *= rcvmem;
@@ -1457,7 +1469,7 @@ static int tcp_shifted_skb(struct sock *sk, struct sk_buff *skb,
 		tp->lost_cnt_hint -= tcp_skb_pcount(prev);
 	}
 
-	TCP_SKB_CB(skb)->flags |= TCP_SKB_CB(prev)->flags;
+	TCP_SKB_CB(skb)->tcp_flags |= TCP_SKB_CB(prev)->tcp_flags;
 	if (skb == tcp_highest_sack(sk))
 		tcp_advance_highest_sack(sk, skb);
 
@@ -3366,7 +3378,7 @@ static int tcp_clean_rtx_queue(struct sock *sk, int prior_fackets,
 		 * connection startup slow start one packet too
 		 * quickly.  This is severely frowned upon behavior.
 		 */
-		if (!(scb->flags & TCPHDR_SYN)) {
+		if (!(scb->tcp_flags & TCPHDR_SYN)) {
 			flag |= FLAG_DATA_ACKED;
 		} else {
 			flag |= FLAG_SYN_ACKED;
@@ -5006,8 +5018,10 @@ static void tcp_new_space(struct sock *sk)
 	struct tcp_sock *tp = tcp_sk(sk);
 
 	if (tcp_should_expand_sndbuf(sk)) {
-		int sndmem = max_t(u32, tp->rx_opt.mss_clamp, tp->mss_cache) +
-			MAX_TCP_HEADER + 16 + sizeof(struct sk_buff);
+		int sndmem = SKB_TRUESIZE(max_t(u32,
+						tp->rx_opt.mss_clamp,
+						tp->mss_cache) +
+					  MAX_TCP_HEADER);
 		int demanded = max_t(unsigned int, tp->snd_cwnd,
 				     tp->reordering + 1);
 		sndmem *= 2 * demanded;

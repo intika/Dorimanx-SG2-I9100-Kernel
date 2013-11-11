@@ -257,7 +257,7 @@ static struct lock_class_key af_callback_keys[AF_MAX];
  * not depend upon such differences.
  */
 #define _SK_MEM_PACKETS		256
-#define _SK_MEM_OVERHEAD	(sizeof(struct sk_buff) + 256)
+#define _SK_MEM_OVERHEAD	SKB_TRUESIZE(256)
 #define SK_WMEM_MAX		(_SK_MEM_OVERHEAD * _SK_MEM_PACKETS)
 #define SK_RMEM_MAX		(_SK_MEM_OVERHEAD * _SK_MEM_PACKETS)
 
@@ -783,10 +783,7 @@ set_rcvbuf:
 		/* We implement the SO_SNDLOWAT etc to
 		   not be settable (1003.1g 5.3) */
 	case SO_RXQ_OVFL:
-		if (valbool)
-			sock_set_flag(sk, SOCK_RXQ_OVFL);
-		else
-			sock_reset_flag(sk, SOCK_RXQ_OVFL);
+		sock_valbool_flag(sk, SOCK_RXQ_OVFL, valbool);
 		break;
 
 	case SO_WIFI_STATUS:

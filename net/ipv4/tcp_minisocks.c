@@ -328,6 +328,7 @@ void tcp_time_wait(struct sock *sk, int state, int timeo)
 		struct tcp_timewait_sock *tcptw = tcp_twsk((struct sock *)tw);
 		const int rto = (icsk->icsk_rto << 2) - (icsk->icsk_rto >> 1);
 
+		tw->tw_transparent	= inet_sk(sk)->transparent;
 		tw->tw_rcv_wscale	= tp->rx_opt.rcv_wscale;
 		tcptw->tw_rcv_nxt	= tp->rcv_nxt;
 		tcptw->tw_snd_nxt	= tp->snd_nxt;
@@ -344,6 +345,7 @@ void tcp_time_wait(struct sock *sk, int state, int timeo)
 			tw6 = inet6_twsk((struct sock *)tw);
 			tw6->tw_v6_daddr = np->daddr;
 			tw6->tw_v6_rcv_saddr = np->rcv_saddr;
+			tw->tw_tclass = np->tclass;
 			tw->tw_ipv6only = np->ipv6only;
 		}
 #endif

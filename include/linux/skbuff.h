@@ -47,6 +47,11 @@
 #define SKB_MAX_HEAD(X)		(SKB_MAX_ORDER((X), 0))
 #define SKB_MAX_ALLOC		(SKB_MAX_ORDER(0, 2))
 
+/* return minimum truesize of one skb containing X bytes of data */
+#define SKB_TRUESIZE(X) ((X) +						\
+			 SKB_DATA_ALIGN(sizeof(struct sk_buff)) +	\
+			 SKB_DATA_ALIGN(sizeof(struct skb_shared_info)))
+
 /* A. Checksumming of received packets by device.
  *
  *	NONE: device failed to checksum this packet.
@@ -136,7 +141,9 @@ struct sk_buff;
 typedef struct skb_frag_struct skb_frag_t;
 
 struct skb_frag_struct {
-	struct page *page;
+	struct {
+		struct page *p;
+	} page;
 #if (BITS_PER_LONG > 32) || (PAGE_SIZE >= 65536)
 	__u32 page_offset;
 	__u32 size;
@@ -554,6 +561,7 @@ static inline struct sk_buff *alloc_skb_fclone(unsigned int size,
 	return __alloc_skb(size, priority, 1, NUMA_NO_NODE);
 }
 
+extern void skb_recycle(struct sk_buff *skb);
 extern bool skb_recycle_check(struct sk_buff *skb, int skb_size);
 
 extern struct sk_buff *skb_morph(struct sk_buff *dst, struct sk_buff *src);
@@ -1178,7 +1186,7 @@ static inline void __skb_fill_page_desc(struct sk_buff *skb, int i,
 {
 	skb_frag_t *frag = &skb_shinfo(skb)->frags[i];
 
-	frag->page		  = page;
+	frag->page.p		  = page;
 	frag->page_offset	  = off;
 	skb_frag_size_set(frag, size);
 }
@@ -1718,7 +1726,7 @@ static inline struct sk_buff *pskb_copy(struct sk_buff *skb,
  */
 static inline struct page *skb_frag_page(const skb_frag_t *frag)
 {
-	return frag->page;
+	return frag->page.p;
 }
 
 /**
@@ -1804,8 +1812,7 @@ static inline void *skb_frag_address_safe(const skb_frag_t *frag)
  */
 static inline void __skb_frag_set_page(skb_frag_t *frag, struct page *page)
 {
-	frag->page = page;
-	__skb_frag_ref(frag);
+	frag->page.p = page;
 }
 
 /**
@@ -2526,5 +2533,25 @@ static inline void skb_checksum_none_assert(const struct sk_buff *skb)
 
 bool skb_partial_csum_set(struct sk_buff *skb, u16 start, u16 off);
 
+static inline bool skb_is_recycleable(struct sk_buff *skb, int skb_size)
+{
+	if (irqs_disabled())
+		return false;
+
+	if (skb_shinfo(skb)->tx_flags & SKBTX_DEV_ZEROCOPY)
+		return false;
+
+	if (skb_is_nonlinear(skb) || skb->fclone != SKB_FCLONE_UNAVAILABLE)
+		return false;
+
+	skb_size = SKB_DATA_ALIGN(skb_size + NET_SKB_PAD);
+	if (skb_end_pointer(skb) - skb->head < skb_size)
+		return false;
+
+	if (skb_shared(skb) || skb_cloned(skb))
+		return false;
+
+	return true;
+}
 #endif	/* __KERNEL__ */
 #endif	/* _LINUX_SKBUFF_H */

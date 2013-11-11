@@ -1434,8 +1434,10 @@ void ip_rt_redirect(__be32 old_gw, __be32 daddr, __be32 new_gw,
 {
 	int s, i;
 	struct in_device *in_dev = __in_dev_get_rcu(dev);
+	struct rtable *rt;
 	__be32 skeys[2] = { saddr, 0 };
 	int    ikeys[2] = { dev->ifindex, 0 };
+	struct flowi4 fl4;
 	struct inet_peer *peer;
 	struct net *net;
 
@@ -1458,42 +1460,33 @@ void ip_rt_redirect(__be32 old_gw, __be32 daddr, __be32 new_gw,
 			goto reject_redirect;
 	}
 
+	memset(&fl4, 0, sizeof(fl4));
+	fl4.daddr = daddr;
 	for (s = 0; s < 2; s++) {
 		for (i = 0; i < 2; i++) {
-			unsigned int hash;
-			struct rtable __rcu **rthp;
-			struct rtable *rt;
+			fl4.flowi4_oif = ikeys[i];
+			fl4.saddr = skeys[s];
+			rt = __ip_route_output_key(net, &fl4);
+			if (IS_ERR(rt))
+				continue;
 
-			hash = rt_hash(daddr, skeys[s], ikeys[i], rt_genid(net));
-
-			rthp = &rt_hash_table[hash].chain;
-
-			while ((rt = rcu_dereference(*rthp)) != NULL) {
-				rthp = &rt->dst.rt_next;
-
-				if (rt->rt_key_dst != daddr ||
-				    rt->rt_key_src != skeys[s] ||
-				    rt->rt_oif != ikeys[i] ||
-				    rt_is_input_route(rt) ||
-				    rt_is_expired(rt) ||
-				    !net_eq(dev_net(rt->dst.dev), net) ||
-				    rt->dst.error ||
-				    rt->dst.dev != dev ||
-				    rt->rt_gateway != old_gw)
-					continue;
-
-				if (!rt->peer)
-					rt_bind_peer(rt, rt->rt_dst, 1);
-
-				peer = rt->peer;
-				if (peer) {
-					if (peer->redirect_learned.a4 != new_gw) {
-						peer->redirect_learned.a4 = new_gw;
-						atomic_inc(&__rt_peer_genid);
-					}
-					check_peer_redir(&rt->dst, peer);
-				}
+			if (rt->dst.error || rt->dst.dev != dev ||
+			    rt->rt_gateway != old_gw) {
+				ip_rt_put(rt);
+				continue;
 			}
+
+			if (!rt->peer)
+				rt_bind_peer(rt, rt->rt_dst, 1);
+
+			peer = rt->peer;
+			if (peer) {
+				peer->redirect_learned.a4 = new_gw;
+				atomic_inc(&__rt_peer_genid);
+			}
+
+			ip_rt_put(rt);
+			return;
 		}
 	}
 	return;
@@ -1724,11 +1717,10 @@ unsigned short ip_rt_frag_needed(struct net *net, const struct iphdr *iph,
 			est_mtu = mtu;
 			peer->pmtu_learned = mtu;
 			peer->pmtu_expires = pmtu_expires;
+			atomic_inc(&__rt_peer_genid);
 		}
 
 		inet_putpeer(peer);
-
-		atomic_inc(&__rt_peer_genid);
 	}
 	return est_mtu ? : new_mtu;
 }

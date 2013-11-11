@@ -149,7 +149,7 @@ static ssize_t show_speed(struct device *dev,
 
 	if (netif_running(netdev)) {
 		struct ethtool_cmd cmd;
-		if (!dev_ethtool_get_settings(netdev, &cmd))
+		if (!__ethtool_get_settings(netdev, &cmd))
 			ret = sprintf(buf, fmt_udec, ethtool_cmd_speed(&cmd));
 	}
 	rtnl_unlock();
@@ -167,7 +167,7 @@ static ssize_t show_duplex(struct device *dev,
 
 	if (netif_running(netdev)) {
 		struct ethtool_cmd cmd;
-		if (!dev_ethtool_get_settings(netdev, &cmd))
+		if (!__ethtool_get_settings(netdev, &cmd))
 			ret = sprintf(buf, "%s\n",
 				      cmd.duplex ? "full" : "half");
 	}

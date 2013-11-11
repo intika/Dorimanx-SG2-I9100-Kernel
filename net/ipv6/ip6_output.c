@@ -180,7 +180,7 @@ int ip6_output(struct sk_buff *skb)
  */
 
 int ip6_xmit(struct sock *sk, struct sk_buff *skb, struct flowi6 *fl6,
-	     struct ipv6_txoptions *opt)
+	     struct ipv6_txoptions *opt, int tclass)
 {
 	struct net *net = sock_net(sk);
 	struct ipv6_pinfo *np = inet6_sk(sk);
@@ -190,7 +190,6 @@ int ip6_xmit(struct sock *sk, struct sk_buff *skb, struct flowi6 *fl6,
 	u8  proto = fl6->flowi6_proto;
 	int seg_len = skb->len;
 	int hlimit = -1;
-	int tclass = 0;
 	u32 mtu;
 
 	if (opt) {
@@ -228,10 +227,8 @@ int ip6_xmit(struct sock *sk, struct sk_buff *skb, struct flowi6 *fl6,
 	/*
 	 *	Fill in the IPv6 header
 	 */
-	if (np) {
-		tclass = np->tclass;
+	if (np)
 		hlimit = np->hop_limit;
-	}
 	if (hlimit < 0)
 		hlimit = ip6_dst_hoplimit(dst);
 
@@ -1139,7 +1136,7 @@ static inline int ip6_ufo_append_data(struct sock *sk,
 			hh_len + fragheaderlen + transhdrlen + 20,
 			(flags & MSG_DONTWAIT), &err);
 		if (skb == NULL)
-			return -ENOMEM;
+			return err;
 
 		/* reserve space for Hardware header */
 		skb_reserve(skb, hh_len);
@@ -1195,6 +1192,7 @@ int ip6_append_data(struct sock *sk, int getfrag(void *from, char *to,
 	struct sk_buff *skb;
 	unsigned int maxfraglen, fragheaderlen;
 	int exthdrlen;
+	int dst_exthdrlen;
 	int hh_len;
 	int mtu;
 	int copy;
@@ -1250,7 +1248,7 @@ int ip6_append_data(struct sock *sk, int getfrag(void *from, char *to,
 		np->cork.hop_limit = hlimit;
 		np->cork.tclass = tclass;
 		mtu = np->pmtudisc == IPV6_PMTUDISC_PROBE ?
-			rt->dst.dev->mtu : dst_mtu(rt->dst.path);
+		      rt->dst.dev->mtu : dst_mtu(&rt->dst);
 		if (np->frag_size < mtu) {
 			if (np->frag_size)
 				mtu = np->frag_size;
@@ -1261,16 +1259,17 @@ int ip6_append_data(struct sock *sk, int getfrag(void *from, char *to,
 		cork->length = 0;
 		sk->sk_sndmsg_page = NULL;
 		sk->sk_sndmsg_off = 0;
-		exthdrlen = rt->dst.header_len + (opt ? opt->opt_flen : 0) -
-			    rt->rt6i_nfheader_len;
+		exthdrlen = (opt ? opt->opt_flen : 0) - rt->rt6i_nfheader_len;
 		length += exthdrlen;
 		transhdrlen += exthdrlen;
+		dst_exthdrlen = rt->dst.header_len;
 	} else {
 		rt = (struct rt6_info *)cork->dst;
 		fl6 = &inet->cork.fl.u.ip6;
 		opt = np->cork.opt;
 		transhdrlen = 0;
 		exthdrlen = 0;
+		dst_exthdrlen = 0;
 		mtu = cork->fragsize;
 	}
 
@@ -1367,6 +1366,8 @@ alloc_new_skb:
 			else
 				alloclen = datalen + fragheaderlen;
 
+			alloclen += dst_exthdrlen;
+
 			/*
 			 * The last fragment gets additional space at tail.
 			 * Note: we overallocate on fragments with MSG_MODE
@@ -1418,9 +1419,9 @@ alloc_new_skb:
 			/*
 			 *	Find where to start putting bytes
 			 */
-			data = skb_put(skb, fraglen);
-			skb_set_network_header(skb, exthdrlen);
-			data += fragheaderlen;
+			data = skb_put(skb, fraglen + dst_exthdrlen);
+			skb_set_network_header(skb, exthdrlen + dst_exthdrlen);
+			data += fragheaderlen + dst_exthdrlen;
 			skb->transport_header = (skb->network_header +
 						 fragheaderlen);
 			if (fraggap) {
@@ -1433,6 +1434,7 @@ alloc_new_skb:
 				pskb_trim_unique(skb_prev, maxfraglen);
 			}
 			copy = datalen - transhdrlen - fraggap;
+
 			if (copy < 0) {
 				err = -EINVAL;
 				kfree_skb(skb);
@@ -1447,6 +1449,7 @@ alloc_new_skb:
 			length -= datalen - fraggap;
 			transhdrlen = 0;
 			exthdrlen = 0;
+			dst_exthdrlen = 0;
 			csummode = CHECKSUM_NONE;
 
 			/*
