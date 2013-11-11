@@ -1,9 +1,9 @@
 /*
  * Copyright (C) 2010, 2012 ARM Limited. All rights reserved.
- * 
+ *
  * This program is free software and is provided to you under the terms of the GNU General Public License version 2
  * as published by the Free Software Foundation, and any use by you of this program is subject to the terms of such GNU licence.
- * 
+ *
  * A copy of the licence is included with the program, and can also be obtained from Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
@@ -59,7 +59,7 @@ typedef enum
 	MALIGP2_REG_VAL_CMD_UPDATE_PLBU_ALLOC	= (1<< 4),
 	MALIGP2_REG_VAL_CMD_RESET				= (1<< 5),
 	MALIGP2_REG_VAL_CMD_FORCE_HANG			= (1<< 6),
-	MALIGP2_REG_VAL_CMD_STOP_BUS 			= (1<< 9),
+	MALIGP2_REG_VAL_CMD_STOP_BUS			= (1<< 9),
 	MALI400GP_REG_VAL_CMD_SOFT_RESET		= (1<<10), /* only valid for Mali-300 and later */
 } mgp_contr_reg_val_cmd;
 

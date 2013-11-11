@@ -111,17 +111,17 @@ static unsigned int asv_3d_volt_4210_14_table[MALI_DVFS_STEPS][ASV_LEVEL_4210_14
 };
 #endif /* EXYNOS4_ASV_ENABLED */
 
-#define EXTXTALCLK_NAME  "ext_xtal"
-#define VPLLSRCCLK_NAME  "vpll_src"
-#define FOUTVPLLCLK_NAME "fout_vpll"
-#define SCLVPLLCLK_NAME  "sclk_vpll"
-#define GPUMOUT1CLK_NAME "mout_g3d1"
+#define EXTXTALCLK_NAME		"ext_xtal"
+#define VPLLSRCCLK_NAME		"vpll_src"
+#define FOUTVPLLCLK_NAME	"fout_vpll"
+#define SCLVPLLCLK_NAME		"sclk_vpll"
+#define GPUMOUT1CLK_NAME	"mout_g3d1"
 
-#define MPLLCLK_NAME	 "mout_mpll"
-#define GPUMOUT0CLK_NAME "mout_g3d0"
-#define GPUCLK_NAME	  "sclk_g3d"
-#define CLK_DIV_STAT_G3D 0x1003C62C
-#define CLK_DESC		 "clk-divider-status"
+#define MPLLCLK_NAME		"mout_mpll"
+#define GPUMOUT0CLK_NAME	"mout_g3d0"
+#define GPUCLK_NAME			"sclk_g3d"
+#define CLK_DIV_STAT_G3D	0x1003C62C
+#define CLK_DESC			"clk-divider-status"
 
 static struct clk *ext_xtal_clock	= NULL;
 static struct clk *vpll_src_clock	= NULL;
@@ -193,8 +193,7 @@ static DECLARE_WORK(mali_dvfs_work, mali_dvfs_work_handler);
 #ifdef CONFIG_REGULATOR
 void mali_regulator_disable(void)
 {
-	if(IS_ERR_OR_NULL(g3d_regulator))
-	{
+	if (IS_ERR_OR_NULL(g3d_regulator)) {
 		MALI_DEBUG_PRINT(1, ("error on mali_regulator_disable : g3d_regulator is null\n"));
 		return;
 	}
@@ -203,8 +202,7 @@ void mali_regulator_disable(void)
 
 void mali_regulator_enable(void)
 {
-	if(IS_ERR_OR_NULL(g3d_regulator))
-	{
+	if (IS_ERR_OR_NULL(g3d_regulator)) {
 		MALI_DEBUG_PRINT(1, ("error on mali_regulator_enable : g3d_regulator is null\n"));
 		return;
 	}
@@ -214,8 +212,8 @@ void mali_regulator_enable(void)
 void mali_regulator_set_voltage(int min_uV, int max_uV)
 {
 	_mali_osk_lock_wait(mali_dvfs_lock, _MALI_OSK_LOCKMODE_RW);
-	if(IS_ERR_OR_NULL(g3d_regulator))
-	{
+
+	if (IS_ERR_OR_NULL(g3d_regulator)) {
 		MALI_DEBUG_PRINT(1, ("error on mali_regulator_set_voltage : g3d_regulator is null\n"));
 		_mali_osk_lock_signal(mali_dvfs_lock, _MALI_OSK_LOCKMODE_RW);
 		return;
@@ -241,10 +239,8 @@ static unsigned int get_mali_dvfs_status(void)
 
 mali_bool mali_clk_get(mali_bool bis_vpll)
 {
-	if (bis_vpll == MALI_TRUE)
-	{
-		if (ext_xtal_clock == NULL)
-		{
+	if (bis_vpll == MALI_TRUE) {
+		if (ext_xtal_clock == NULL) {
 			ext_xtal_clock = clk_get(NULL, EXTXTALCLK_NAME);
 			if (IS_ERR(ext_xtal_clock)) {
 				MALI_PRINT(("MALI Error : failed to get source ext_xtal_clock\n"));
@@ -252,8 +248,7 @@ mali_bool mali_clk_get(mali_bool bis_vpll)
 			}
 		}
 
-		if (vpll_src_clock == NULL)
-		{
+		if (vpll_src_clock == NULL) {
 			vpll_src_clock = clk_get(NULL, VPLLSRCCLK_NAME);
 			if (IS_ERR(vpll_src_clock)) {
 				MALI_PRINT(("MALI Error : failed to get source vpll_src_clock\n"));
@@ -261,8 +256,7 @@ mali_bool mali_clk_get(mali_bool bis_vpll)
 			}
 		}
 
-		if (fout_vpll_clock == NULL)
-		{
+		if (fout_vpll_clock == NULL) {
 			fout_vpll_clock = clk_get(NULL, FOUTVPLLCLK_NAME);
 			if (IS_ERR(fout_vpll_clock)) {
 				MALI_PRINT(("MALI Error : failed to get source fout_vpll_clock\n"));
@@ -270,8 +264,7 @@ mali_bool mali_clk_get(mali_bool bis_vpll)
 			}
 		}
 
-		if (sclk_vpll_clock == NULL)
-		{
+		if (sclk_vpll_clock == NULL) {
 			sclk_vpll_clock = clk_get(NULL, SCLVPLLCLK_NAME);
 			if (IS_ERR(sclk_vpll_clock)) {
 				MALI_PRINT(("MALI Error : failed to get source sclk_vpll_clock\n"));
@@ -279,8 +272,7 @@ mali_bool mali_clk_get(mali_bool bis_vpll)
 			}
 		}
 
-		if (mali_parent_clock == NULL)
-		{
+		if (mali_parent_clock == NULL) {
 			mali_parent_clock = clk_get(NULL, GPUMOUT1CLK_NAME);
 
 			if (IS_ERR(mali_parent_clock)) {
@@ -289,8 +281,7 @@ mali_bool mali_clk_get(mali_bool bis_vpll)
 			}
 		}
 
-		if (mali_mout0_clock == NULL)
-		{
+		if (mali_mout0_clock == NULL) {
 			mali_mout0_clock = clk_get(NULL, GPUMOUT0CLK_NAME);
 
 			if (IS_ERR(mali_mout0_clock)) {
@@ -298,11 +289,9 @@ mali_bool mali_clk_get(mali_bool bis_vpll)
 				return MALI_FALSE;
 			}
 		}
-	}
-	else /* mpll */
-	{
-		if (mpll_clock == NULL)
-		{
+	/* mpll */
+	} else {
+		if (mpll_clock == NULL) {
 			mpll_clock = clk_get(NULL, MPLLCLK_NAME);
 
 			if (IS_ERR(mpll_clock)) {
@@ -311,8 +300,7 @@ mali_bool mali_clk_get(mali_bool bis_vpll)
 			}
 		}
 
-		if (mali_parent_clock == NULL)
-		{
+		if (mali_parent_clock == NULL) {
 			mali_parent_clock = clk_get(NULL, GPUMOUT0CLK_NAME);
 
 			if (IS_ERR(mali_parent_clock)) {
@@ -323,8 +311,7 @@ mali_bool mali_clk_get(mali_bool bis_vpll)
 	}
 
 	/* mali clock get always. */
-	if (mali_clock == NULL)
-	{
+	if (mali_clock == NULL) {
 		mali_clock = clk_get(NULL, GPUCLK_NAME);
 
 		if (IS_ERR(mali_clock)) {
@@ -338,50 +325,42 @@ mali_bool mali_clk_get(mali_bool bis_vpll)
 
 void mali_clk_put(mali_bool binc_mali_clock)
 {
-	if (mali_parent_clock)
-	{
+	if (mali_parent_clock) {
 		clk_put(mali_parent_clock);
 		mali_parent_clock = NULL;
 	}
 
-	if (mali_mout0_clock)
-	{
+	if (mali_mout0_clock) {
 		clk_put(mali_mout0_clock);
 		mali_mout0_clock = NULL;
 	}
 
-	if (mpll_clock)
-	{
+	if (mpll_clock) {
 		clk_put(mpll_clock);
 		mpll_clock = NULL;
 	}
 
-	if (sclk_vpll_clock)
-	{
+	if (sclk_vpll_clock) {
 		clk_put(sclk_vpll_clock);
 		sclk_vpll_clock = NULL;
 	}
 
-	if (binc_mali_clock && fout_vpll_clock)
-	{
+	if (binc_mali_clock && fout_vpll_clock) {
 		clk_put(fout_vpll_clock);
 		fout_vpll_clock = NULL;
 	}
 
-	if (vpll_src_clock)
-	{
+	if (vpll_src_clock) {
 		clk_put(vpll_src_clock);
 		vpll_src_clock = NULL;
 	}
 
-	if (ext_xtal_clock)
-	{
+	if (ext_xtal_clock) {
 		clk_put(ext_xtal_clock);
 		ext_xtal_clock = NULL;
 	}
 
-	if (binc_mali_clock && mali_clock)
-	{
+	if (binc_mali_clock && mali_clock) {
 		clk_put(mali_clock);
 		mali_clock = NULL;
 	}
@@ -402,18 +381,15 @@ void mali_clk_set_rate(unsigned int clk, unsigned int mhz)
   	_mali_osk_lock_signal(mali_dvfs_lock, _MALI_OSK_LOCKMODE_RW);
  		return;
 	}
-	
-	if (bis_vpll)
-	{
+
+	if (bis_vpll) {
 		clk_set_rate(fout_vpll_clock, (unsigned int)clk * GPU_MHZ);
 		clk_set_parent(vpll_src_clock, ext_xtal_clock);
 		clk_set_parent(sclk_vpll_clock, fout_vpll_clock);
 
 		clk_set_parent(mali_parent_clock, sclk_vpll_clock);
 		clk_set_parent(mali_clock, mali_parent_clock);
-	}
-	else
-	{
+	} else {
 		clk_set_parent(mali_parent_clock, mpll_clock);
 		clk_set_parent(mali_clock, mali_parent_clock);
 	}
@@ -753,8 +729,7 @@ static mali_bool init_mali_clock(void)
 #ifdef CONFIG_REGULATOR
 	g3d_regulator = regulator_get(NULL, "vdd_g3d");
 
-	if (IS_ERR(g3d_regulator))
-	{
+	if (IS_ERR(g3d_regulator)) {
 		MALI_PRINT(("MALI Error : failed to get vdd_g3d\n"));
 		ret = MALI_FALSE;
 		goto err_regulator;
@@ -793,8 +768,7 @@ static mali_bool deinit_mali_clock(void)
 		return MALI_TRUE;
 
 #ifdef CONFIG_REGULATOR
-	if (g3d_regulator)
-	{
+	if (g3d_regulator) {
 		regulator_put(g3d_regulator);
 		g3d_regulator = NULL;
 	}
@@ -804,7 +778,6 @@ static mali_bool deinit_mali_clock(void)
 
 	return MALI_TRUE;
 }
-
 
 static _mali_osk_errcode_t enable_mali_clocks(void)
 {
@@ -841,8 +814,6 @@ static _mali_osk_errcode_t enable_mali_clocks(void)
 	mali_clk_set_rate((unsigned int)mali_gpu_clk, GPU_MHZ);
 	maliDvfsStatus.currentStep = MALI_DVFS_DEFAULT_STEP;
 #endif
-
-
 	MALI_SUCCESS;
 }
 
@@ -853,7 +824,7 @@ static _mali_osk_errcode_t disable_mali_clocks(void)
 		atomic_set(&clk_active, 0);
 		gpu_power_state = 0;
 	}
-	MALI_DEBUG_PRINT(3, ("disable_mali_clocks mali_clock %p \n", mali_clock));
+	MALI_DEBUG_PRINT(3,("disable_mali_clocks mali_clock %p \n", mali_clock));
 
 	MALI_SUCCESS;
 }
@@ -868,8 +839,7 @@ static _mali_osk_errcode_t disable_mali_clocks(void)
 
 _mali_osk_errcode_t g3d_power_domain_control(int bpower_on)
 {
-	if (bpower_on)
-	{
+	if (bpower_on) {
 		void __iomem *status;
 		u32 timeout;
 		__raw_writel(S5P_INT_LOCAL_PWR_EN, S5P_G3D_CONFIGURATION);
@@ -877,7 +847,7 @@ _mali_osk_errcode_t g3d_power_domain_control(int bpower_on)
 
 		timeout = 10;
 		while ((__raw_readl(status) & S5P_INT_LOCAL_PWR_EN)
-			!= S5P_INT_LOCAL_PWR_EN) {
+				!= S5P_INT_LOCAL_PWR_EN) {
 			if (timeout == 0) {
 				MALI_PRINTF(("Power domain  enable failed.\n"));
 				return -ETIMEDOUT;
@@ -885,9 +855,7 @@ _mali_osk_errcode_t g3d_power_domain_control(int bpower_on)
 			timeout--;
 			_mali_osk_time_ubusydelay(100);
 		}
-	}
-	else
-	{
+	} else {
 		void __iomem *status;
 		u32 timeout;
 		__raw_writel(0, S5P_G3D_CONFIGURATION);
@@ -895,8 +863,7 @@ _mali_osk_errcode_t g3d_power_domain_control(int bpower_on)
 		status = S5P_G3D_STATUS;
 		/* Wait max 1ms */
 		timeout = 10;
-		while (__raw_readl(status) & S5P_INT_LOCAL_PWR_EN)
-		{
+		while (__raw_readl(status) & S5P_INT_LOCAL_PWR_EN) {
 			if (timeout == 0) {
 				MALI_PRINTF(("Power domain  disable failed.\n" ));
 				return -ETIMEDOUT;
@@ -911,12 +878,6 @@ _mali_osk_errcode_t g3d_power_domain_control(int bpower_on)
 
 _mali_osk_errcode_t mali_platform_init(struct device *dev)
 {
-/*
-#ifdef EXYNOS4_ASV_ENABLED
-	mali_dvfs_table_update();
-#endif
-*/
-
 	MALI_CHECK(init_mali_clock(), _MALI_OSK_ERR_FAULT);
 
 	atomic_set(&clk_active, 0);
@@ -945,8 +906,7 @@ _mali_osk_errcode_t mali_platform_deinit(struct device *dev)
 
 #ifdef CONFIG_MALI_DVFS
 	deinit_mali_dvfs_status();
-	if (clk_register_map )
-	{
+	if (clk_register_map) {
 		_mali_osk_mem_unmapioregion(CLK_DIV_STAT_G3D, 0x20, clk_register_map);
 		clk_register_map = NULL;
 	}
@@ -960,20 +920,18 @@ void mali_restore_vpll_mode(void);
 
 _mali_osk_errcode_t mali_platform_power_mode_change(struct device *dev, mali_power_mode power_mode)
 {
-	switch (power_mode)
-	{
+	switch (power_mode) {
 		case MALI_POWER_MODE_ON:
 			MALI_DEBUG_PRINT(3, ("Mali platform: Got MALI_POWER_MODE_ON event, %s\n",
 								 bPoweroff ? "powering on" : "already on"));
-			if (bPoweroff == 1)
-			{
+			if (bPoweroff == 1) {
 #if !defined(CONFIG_PM_RUNTIME)
 				g3d_power_domain_control(1);
 #endif
-				MALI_DEBUG_PRINT(4, ("enable clock \n"));
+				MALI_DEBUG_PRINT(4,("enable clock \n"));
 				enable_mali_clocks();
 				mali_restore_vpll_mode();
-				bPoweroff=0;
+				bPoweroff = 0;
 			}
 			break;
 		case MALI_POWER_MODE_LIGHT_SLEEP:
@@ -981,14 +939,13 @@ _mali_osk_errcode_t mali_platform_power_mode_change(struct device *dev, mali_pow
 			MALI_DEBUG_PRINT(3, ("Mali platform: Got %s event, %s\n", power_mode ==
 						MALI_POWER_MODE_LIGHT_SLEEP ?  "MALI_POWER_MODE_LIGHT_SLEEP" :
 						"MALI_POWER_MODE_DEEP_SLEEP", bPoweroff ? "already off" : "powering off"));
-			if (bPoweroff == 0)
-			{
+			if (bPoweroff == 0) {
 				mali_force_mpll();
 				disable_mali_clocks();
 #if !defined(CONFIG_PM_RUNTIME)
 				g3d_power_domain_control(0);
 #endif
-				bPoweroff=1;
+				bPoweroff = 1;
 			}
 
 			break;
@@ -998,10 +955,9 @@ _mali_osk_errcode_t mali_platform_power_mode_change(struct device *dev, mali_pow
 
 void mali_gpu_utilization_handler(struct mali_gpu_utilization_data *data)
 {
-	if (bPoweroff==0)
-	{
+	if (bPoweroff == 0) {
 #ifdef CONFIG_MALI_DVFS
-		if(!mali_dvfs_handler(data->utilization_gpu))
+		if (!mali_dvfs_handler(data->utilization_gpu))
 			MALI_DEBUG_PRINT(1, ("error on mali dvfs status in utilization\n"));
 #endif
 	}
@@ -1016,9 +972,9 @@ int mali_dvfs_bottom_lock_push()
 		return -1;
 	}
 	if (prev_status == 0) {
-                mali_regulator_set_voltage(mali_dvfs[1].vol, mali_dvfs[1].vol);
-                mali_clk_set_rate(mali_dvfs[1].clock, mali_dvfs[1].freq);
-                set_mali_dvfs_current_step(1);
+		mali_regulator_set_voltage(mali_dvfs[1].vol, mali_dvfs[1].vol);
+		mali_clk_set_rate(mali_dvfs[1].clock, mali_dvfs[1].freq);
+		set_mali_dvfs_current_step(1);
     }
 	return _mali_osk_atomic_inc_return(&bottomlock_status);
 }
@@ -1111,9 +1067,9 @@ void mali_force_mpll(void)
 static void update_time_in_state(int level)
 {
 	u64 current_time;
-	static u64 prev_time=0;
+	static u64 prev_time = 0;
 
-	if (prev_time ==0)
+	if (prev_time == 0)
 		prev_time=get_jiffies_64();
 
 	current_time = get_jiffies_64();
