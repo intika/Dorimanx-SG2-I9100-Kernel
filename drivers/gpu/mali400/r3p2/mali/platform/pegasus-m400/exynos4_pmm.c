@@ -68,7 +68,7 @@ typedef struct mali_dvfs_statusTag{
 
 /* dvfs status */
 mali_dvfs_status_t maliDvfsStatus;
-int mali_dvfs_control;
+int mali_dvfs_control = 0;
 
 typedef struct mali_runtime_resumeTag{
 	int clk;
@@ -80,11 +80,11 @@ mali_runtime_resume_table mali_runtime_resume = {108, 950000, 1};
 
 /* dvfs table */
 mali_dvfs_table mali_dvfs[MALI_DVFS_STEPS]={
-	/* step 0 */{108  ,1000000	, 950000    ,0    ,30},
-	/* step 1 */{160  ,1000000	, 950000    ,20   ,40},
-	/* step 2 */{200  ,1000000      , 1000000   ,30   ,55},
-	/* step 3 */{267  ,1000000      , 1050000   ,45   ,80},
-	/* step 4 */{400  ,1000000      , 1200000   ,60   ,90},
+	/* step 0 */{108 ,1000000  ,950000  ,0 ,30},
+	/* step 1 */{160 ,1000000  ,950000 ,20 ,40},
+	/* step 2 */{200 ,1000000 ,1000000 ,30 ,55},
+	/* step 3 */{267 ,1000000 ,1050000 ,45 ,80},
+	/* step 4 */{400 ,1000000 ,1200000 ,60 ,90},
 };
 
 #ifdef EXYNOS4_ASV_ENABLED
@@ -109,7 +109,7 @@ static unsigned int asv_3d_volt_4210_14_table[MALI_DVFS_STEPS][ASV_LEVEL_4210_14
 	{ 900000,  950000, 1000000, 1050000, 1150000}, /* C */
 	{ 900000,  950000,  950000, 1000000, 1100000}, /* D */
 };
-#endif /* ASV_LEVEL */
+#endif /* EXYNOS4_ASV_ENABLED */
 
 #define EXTXTALCLK_NAME  "ext_xtal"
 #define VPLLSRCCLK_NAME  "vpll_src"
