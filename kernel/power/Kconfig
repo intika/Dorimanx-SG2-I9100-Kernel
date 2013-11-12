@@ -355,22 +355,6 @@ config SUSPEND_TIME
 	  keeps statistics on the time spent in suspend in
 	  /sys/kernel/debug/suspend_time
 
-config CPU_PM
-	bool "Add cpu power management notifiers"
-	depends on SUSPEND || CPU_IDLE
-	default y
-	---help---
-	  During some CPU power modes entered during idle, hotplug and
-	  suspend, peripherals located in the CPU power domain, such as
-	  the GIC, localtimers, and VFP, may be powered down.  Add a
-	  notifier chain that allows drivers for those peripherals to
-	  be notified before and after they may be reset.
-
-	  Notified drivers can include VFP co-processor, interrupt controller
-	  and it's PM extensions, local CPU timers context save/restore which
-	  shouldn't be interrupted. Hence CPU PM event APIs  must be called
-	  with interrupts disabled.
-
 config WQ_POWER_EFFICIENT_DEFAULT
 	bool "Enable workqueue power-efficient mode by default"
 	depends on PM
@@ -398,3 +382,7 @@ config PM_GENERIC_DOMAINS_SLEEP
 config PM_GENERIC_DOMAINS_RUNTIME
 	def_bool y
 	depends on PM_RUNTIME && PM_GENERIC_DOMAINS
+
+config CPU_PM
+	bool
+	depends on SUSPEND || CPU_IDLE

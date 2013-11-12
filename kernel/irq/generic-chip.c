@@ -183,7 +183,7 @@ void irq_gc_eoi(struct irq_data *d)
 
 /**
  * irq_gc_set_wake - Set/clr wake bit for an interrupt
- * @d: irq_data
+ * @d:  irq_data
  *
  * For chips where the wake from suspend functionality is not
  * configured in a separate register and the wakeup active state is
@@ -322,7 +322,7 @@ EXPORT_SYMBOL_GPL(irq_setup_generic_chip);
 /**
  * irq_setup_alt_chip - Switch to alternative chip
  * @d:		irq_data for this interrupt
- * @type	Flow type to be initialized
+ * @type:	Flow type to be initialized
  *
  * Only to be called from chip->irq_set_type() callbacks.
  */
