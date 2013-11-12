@@ -49,7 +49,7 @@ static
 void hold_module_trace_bprintk_format(const char **start, const char **end)
 {
 	const char **iter;
-	char *fmt = NULL;
+	char *fmt;
 
 	/* allocate the trace_printk per cpu buffers */
 	if (start != end)
