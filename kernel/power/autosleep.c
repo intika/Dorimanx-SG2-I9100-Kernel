@@ -46,6 +46,7 @@ static void try_to_suspend(struct work_struct *work)
 		hibernate();
 	else
 		pm_suspend(autosleep_state);
+
 	mutex_unlock(&autosleep_lock);
 
 	if (!pm_get_wakeup_count(&final_count, false))

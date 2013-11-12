@@ -908,12 +908,8 @@ static struct attribute * g[] = {
 #ifdef CONFIG_PM_SLEEP
 	&pm_async_attr.attr,
 	&wakeup_count_attr.attr,
-#endif
 #ifdef CONFIG_PM_AUTOSLEEP
 	&autosleep_attr.attr,
-#endif
-#ifdef CONFIG_PM_SLEEP_DEBUG
-	&pm_print_times_attr.attr,
 #endif
 #ifdef CONFIG_USER_WAKELOCK
 	&wake_lock_attr.attr,
@@ -921,6 +917,10 @@ static struct attribute * g[] = {
 #endif
 #ifdef CONFIG_PM_DEBUG
 	&pm_test_attr.attr,
+#endif
+#ifdef CONFIG_PM_SLEEP_DEBUG
+	&pm_print_times_attr.attr,
+#endif
 #endif
 #ifdef CONFIG_DVFS_LIMIT
 	&cpufreq_table_attr.attr,
