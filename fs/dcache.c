@@ -2917,9 +2917,9 @@ static int prepend_path(const struct path *path,
 			const struct path *root,
 			char **buffer, int *buflen)
 {
-	struct dentry *dentry = path->dentry;
-	struct vfsmount *vfsmnt = path->mnt;
-	struct mount *mnt = real_mount(vfsmnt);
+	struct dentry *dentry;
+	struct vfsmount *vfsmnt;
+	struct mount *mnt;
 	int error = 0;
 	unsigned seq, m_seq = 0;
 	char *bptr;
@@ -2929,10 +2929,14 @@ static int prepend_path(const struct path *path,
 restart_mnt:
 	read_seqbegin_or_lock(&mount_lock, &m_seq);
 	seq = 0;
+	rcu_read_lock();
 restart:
 	bptr = *buffer;
 	blen = *buflen;
 	error = 0;
+	dentry = path->dentry;
+	vfsmnt = path->mnt;
+	mnt = real_mount(vfsmnt);
 	read_seqbegin_or_lock(&rename_lock, &seq);
 	while (dentry != root->dentry || vfsmnt != root->mnt) {
 		struct dentry * parent;
@@ -2976,6 +2980,9 @@ restart:
 		goto restart;
 	}
 	done_seqretry(&rename_lock, seq);
+
+	if (!(m_seq & 1))
+		rcu_read_unlock();
 	if (need_seqretry(&mount_lock, m_seq)) {
 		m_seq = 1;
 		goto restart_mnt;
