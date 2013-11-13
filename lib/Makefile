@@ -133,6 +133,7 @@ obj-$(CONFIG_INTERVAL_TREE_TEST) += interval_tree_test.o
 interval_tree_test-objs := interval_tree_test_main.o interval_tree.o
 
 obj-$(CONFIG_GENERIC_NET_UTILS) += net_utils.o
+obj-$(CONFIG_PERCPU_TEST) += percpu_test.o
 
 CFLAGS_snappy.o += $(call cc-disable-warning, declaration-after-statement) \
 		   -DNDEBUG=1

@@ -1,106 +1,83 @@
-/* linux/drivers/video/backlight/lms501kf03.c
+/*
+ * lms501kf03 TFT LCD panel driver.
  *
- * Copyright (c) 2011 Samsung Electronics Co., Ltd.
- *		http://www.samsung.com/
+ * Copyright (c) 2012 Samsung Electronics Co., Ltd.
+ * Author: Jingoo Han  <jg1.han@samsung.com>
  *
- * LMS501KF03 5.0" WVGA Landscape LCD module driver for the SMDK
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
-*/
+ * This program is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License as published by the
+ * Free Software Foundation; either version 2 of the License, or (at your
+ * option) any later version.
+ */
 
-#include <linux/wait.h>
-#include <linux/fb.h>
-#include <linux/delay.h>
-#include <linux/gpio.h>
-#include <linux/spi/spi.h>
-#include <linux/lcd.h>
 #include <linux/backlight.h>
-#ifdef CONFIG_HAS_EARLYSUSPEND
-#include <linux/earlysuspend.h>
-#endif
+#include <linux/delay.h>
+#include <linux/fb.h>
+#include <linux/gpio.h>
+#include <linux/lcd.h>
+#include <linux/module.h>
+#include <linux/spi/spi.h>
+#include <linux/wait.h>
 
-#define ENDDEF			0xFF00
-#define COMMAND_ONLY	0x00
+#define COMMAND_ONLY		0x00
 #define DATA_ONLY		0x01
-
-#define MIN_BRIGHTNESS		0
-#define MAX_BRIGHTNESS		255
-#define DEFAULT_BRIGHTNESS	150
-
-#define POWER_IS_ON(pwr)	((pwr) <= FB_BLANK_NORMAL)
 
 struct lms501kf03 {
 	struct device			*dev;
 	struct spi_device		*spi;
 	unsigned int			power;
 	struct lcd_device		*ld;
-	struct backlight_device		*bd;
 	struct lcd_platform_data	*lcd_pd;
-#ifdef CONFIG_HAS_EARLYSUSPEND
-	struct early_suspend		early_suspend;
-#endif
 };
 
-const unsigned short SEQ_PASSWORD[] = {
+static const unsigned char seq_password[] = {
 	0xb9, 0xff, 0x83, 0x69,
-	ENDDEF
 };
 
-const unsigned short SEQ_POWER[] = {
+static const unsigned char seq_power[] = {
 	0xb1, 0x01, 0x00, 0x34, 0x06, 0x00, 0x14, 0x14, 0x20, 0x28,
 	0x12, 0x12, 0x17, 0x0a, 0x01, 0xe6, 0xe6, 0xe6, 0xe6, 0xe6,
-	ENDDEF
 };
 
-const unsigned short SEQ_DISPLAY[] = {
+static const unsigned char seq_display[] = {
 	0xb2, 0x00, 0x2b, 0x03, 0x03, 0x70, 0x00, 0xff, 0x00, 0x00,
 	0x00, 0x00, 0x03, 0x03, 0x00, 0x01,
-	ENDDEF
 };
 
-const unsigned short SEQ_RGB_IF[] = {
+static const unsigned char seq_rgb_if[] = {
 	0xb3, 0x09,
-	ENDDEF
 };
 
-const unsigned short SEQ_DISPLAY_INV[] = {
+static const unsigned char seq_display_inv[] = {
 	0xb4, 0x01, 0x08, 0x77, 0x0e, 0x06,
-	ENDDEF
 };
 
-const unsigned short SEQ_VCOM[] = {
+static const unsigned char seq_vcom[] = {
 	0xb6, 0x4c, 0x2e,
-	ENDDEF
 };
 
-const unsigned short SEQ_GATE[] = {
+static const unsigned char seq_gate[] = {
 	0xd5, 0x00, 0x05, 0x03, 0x29, 0x01, 0x07, 0x17, 0x68, 0x13,
 	0x37, 0x20, 0x31, 0x8a, 0x46, 0x9b, 0x57, 0x13, 0x02, 0x75,
 	0xb9, 0x64, 0xa8, 0x07, 0x0f, 0x04, 0x07,
-	ENDDEF
 };
 
-const unsigned short SEQ_PANEL[] = {
+static const unsigned char seq_panel[] = {
 	0xcc, 0x02,
-	ENDDEF
 };
 
-const unsigned short SEQ_COL_MOD[] = {
+static const unsigned char seq_col_mod[] = {
 	0x3a, 0x77,
-	ENDDEF
 };
 
-const unsigned short SEQ_W_GAMMA[] = {
+static const unsigned char seq_w_gamma[] = {
 	0xe0, 0x00, 0x04, 0x09, 0x0f, 0x1f, 0x3f, 0x1f, 0x2f, 0x0a,
 	0x0f, 0x10, 0x16, 0x18, 0x16, 0x17, 0x0d, 0x15, 0x00, 0x04,
 	0x09, 0x0f, 0x38, 0x3f, 0x20, 0x39, 0x0a, 0x0f, 0x10, 0x16,
 	0x18, 0x16, 0x17, 0x0d, 0x15,
-	ENDDEF
 };
 
-const unsigned short SEQ_RGB_GAMMA[] = {
+static const unsigned char seq_rgb_gamma[] = {
 	0xc1, 0x01, 0x03, 0x07, 0x0f, 0x1a, 0x22, 0x2c, 0x33, 0x3c,
 	0x46, 0x4f, 0x58, 0x60, 0x69, 0x71, 0x79, 0x82, 0x89, 0x92,
 	0x9a, 0xa1, 0xa9, 0xb1, 0xb9, 0xc1, 0xc9, 0xcf, 0xd6, 0xde,
@@ -114,32 +91,26 @@ const unsigned short SEQ_RGB_GAMMA[] = {
 	0x6a, 0x73, 0x7a, 0x82, 0x8a, 0x91, 0x98, 0xa1, 0xa8, 0xb0,
 	0xb7, 0xc1, 0xc9, 0xcf, 0xd9, 0xe3, 0xea, 0xf4, 0xff, 0x00,
 	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-	ENDDEF
 };
 
-const unsigned short SEQ_UP_DN[] = {
+static const unsigned char seq_up_dn[] = {
 	0x36, 0x10,
-	ENDDEF
 };
 
-const unsigned short SEQ_SLEEP_IN[] = {
+static const unsigned char seq_sleep_in[] = {
 	0x10,
-	ENDDEF
 };
 
-const unsigned short SEQ_SLEEP_OUT[] = {
+static const unsigned char seq_sleep_out[] = {
 	0x11,
-	ENDDEF
 };
 
-const unsigned short SEQ_DISPLAY_ON[] = {
+static const unsigned char seq_display_on[] = {
 	0x29,
-	ENDDEF
 };
 
-const unsigned short SEQ_DISPLAY_OFF[] = {
+static const unsigned char seq_display_off[] = {
 	0x10,
-	ENDDEF
 };
 
 static int lms501kf03_spi_write_byte(struct lms501kf03 *lcd, int addr, int data)
@@ -148,8 +119,8 @@ static int lms501kf03_spi_write_byte(struct lms501kf03 *lcd, int addr, int data)
 	struct spi_message msg;
 
 	struct spi_transfer xfer = {
-		.len	= 2,
-		.tx_buf	= buf,
+		.len		= 2,
+		.tx_buf		= buf,
 	};
 
 	buf[0] = (addr << 8) | data;
@@ -161,127 +132,117 @@ static int lms501kf03_spi_write_byte(struct lms501kf03 *lcd, int addr, int data)
 }
 
 static int lms501kf03_spi_write(struct lms501kf03 *lcd, unsigned char address,
-	unsigned char command)
+				unsigned char command)
 {
-	int ret = 0;
-
-	ret = lms501kf03_spi_write_byte(lcd, address, command);
-
-	return ret;
+	return lms501kf03_spi_write_byte(lcd, address, command);
 }
 
 static int lms501kf03_panel_send_sequence(struct lms501kf03 *lcd,
-	const unsigned short *wbuf)
+					const unsigned char *wbuf,
+					unsigned int len)
 {
 	int ret = 0, i = 0;
 
-	while (wbuf[i] != ENDDEF) {
+	while (i < len) {
 		if (i == 0)
 			ret = lms501kf03_spi_write(lcd, COMMAND_ONLY, wbuf[i]);
 		else
 			ret = lms501kf03_spi_write(lcd, DATA_ONLY, wbuf[i]);
 		if (ret)
 			break;
-
-		udelay(100);
 		i += 1;
 	}
+
 	return ret;
 }
 
 static int lms501kf03_ldi_init(struct lms501kf03 *lcd)
 {
 	int ret, i;
-	const unsigned short *init_seq[] = {
-		SEQ_PASSWORD,
-		SEQ_POWER,
-		SEQ_DISPLAY,
-		SEQ_RGB_IF,
-		SEQ_DISPLAY_INV,
-		SEQ_VCOM,
-		SEQ_GATE,
-		SEQ_PANEL,
-		SEQ_COL_MOD,
-		SEQ_W_GAMMA,
-		SEQ_RGB_GAMMA,
-		SEQ_SLEEP_OUT,
+	static const unsigned char *init_seq[] = {
+		seq_password,
+		seq_power,
+		seq_display,
+		seq_rgb_if,
+		seq_display_inv,
+		seq_vcom,
+		seq_gate,
+		seq_panel,
+		seq_col_mod,
+		seq_w_gamma,
+		seq_rgb_gamma,
+		seq_sleep_out,
+	};
+
+	static const unsigned int size_seq[] = {
+		ARRAY_SIZE(seq_password),
+		ARRAY_SIZE(seq_power),
+		ARRAY_SIZE(seq_display),
+		ARRAY_SIZE(seq_rgb_if),
+		ARRAY_SIZE(seq_display_inv),
+		ARRAY_SIZE(seq_vcom),
+		ARRAY_SIZE(seq_gate),
+		ARRAY_SIZE(seq_panel),
+		ARRAY_SIZE(seq_col_mod),
+		ARRAY_SIZE(seq_w_gamma),
+		ARRAY_SIZE(seq_rgb_gamma),
+		ARRAY_SIZE(seq_sleep_out),
 	};
 
 	for (i = 0; i < ARRAY_SIZE(init_seq); i++) {
-		ret = lms501kf03_panel_send_sequence(lcd, init_seq[i]);
+		ret = lms501kf03_panel_send_sequence(lcd, init_seq[i],
+						size_seq[i]);
 		if (ret)
 			break;
 	}
-	mdelay(120);
+	/*
+	 * According to the datasheet, 120ms delay time is required.
+	 * After sleep out sequence, command is blocked for 120ms.
+	 * Thus, LDI should wait for 120ms.
+	 */
+	msleep(120);
 
 	return ret;
 }
 
 static int lms501kf03_ldi_enable(struct lms501kf03 *lcd)
 {
-	int ret, i;
-	const unsigned short *init_seq[] = {
-		SEQ_DISPLAY_ON,
-	};
-
-	for (i = 0; i < ARRAY_SIZE(init_seq); i++) {
-		ret = lms501kf03_panel_send_sequence(lcd, init_seq[i]);
-		if (ret)
-			break;
-	}
-
-	return ret;
+	return lms501kf03_panel_send_sequence(lcd, seq_display_on,
+					ARRAY_SIZE(seq_display_on));
 }
 
 static int lms501kf03_ldi_disable(struct lms501kf03 *lcd)
 {
-	int ret, i;
+	return lms501kf03_panel_send_sequence(lcd, seq_display_off,
+					ARRAY_SIZE(seq_display_off));
+}
 
-	const unsigned short *init_seq[] = {
-		SEQ_DISPLAY_OFF,
-	};
-
-	for (i = 0; i < ARRAY_SIZE(init_seq); i++) {
-		ret = lms501kf03_panel_send_sequence(lcd, init_seq[i]);
-		if (ret)
-			break;
-	}
-
-	return ret;
+static int lms501kf03_power_is_on(int power)
+{
+	return (power) <= FB_BLANK_NORMAL;
 }
 
 static int lms501kf03_power_on(struct lms501kf03 *lcd)
 {
 	int ret = 0;
-	struct lcd_platform_data *pd = NULL;
-	struct backlight_device *bd = NULL;
+	struct lcd_platform_data *pd;
 
 	pd = lcd->lcd_pd;
-	if (!pd) {
-		dev_err(lcd->dev, "platform data is NULL.\n");
-		return -EFAULT;
-	}
-
-	bd = lcd->bd;
-	if (!bd) {
-		dev_err(lcd->dev, "backlight device is NULL.\n");
-		return -EFAULT;
-	}
 
 	if (!pd->power_on) {
 		dev_err(lcd->dev, "power_on is NULL.\n");
-		return -EFAULT;
+		return -EINVAL;
 	} else {
 		pd->power_on(lcd->ld, 1);
-		mdelay(pd->power_on_delay);
+		msleep(pd->power_on_delay);
 	}
 
 	if (!pd->reset) {
 		dev_err(lcd->dev, "reset is NULL.\n");
-		return -EFAULT;
+		return -EINVAL;
 	} else {
 		pd->reset(lcd->ld);
-		mdelay(pd->reset_delay);
+		msleep(pd->reset_delay);
 	}
 
 	ret = lms501kf03_ldi_init(lcd);
@@ -302,13 +263,9 @@ static int lms501kf03_power_on(struct lms501kf03 *lcd)
 static int lms501kf03_power_off(struct lms501kf03 *lcd)
 {
 	int ret = 0;
-	struct lcd_platform_data *pd = NULL;
+	struct lcd_platform_data *pd;
 
 	pd = lcd->lcd_pd;
-	if (!pd) {
-		dev_err(lcd->dev, "platform data is NULL\n");
-		return -EFAULT;
-	}
 
 	ret = lms501kf03_ldi_disable(lcd);
 	if (ret) {
@@ -316,13 +273,9 @@ static int lms501kf03_power_off(struct lms501kf03 *lcd)
 		return -EIO;
 	}
 
-	mdelay(pd->power_off_delay);
+	msleep(pd->power_off_delay);
 
-	if (!pd->power_on) {
-		dev_err(lcd->dev, "power_on is NULL.\n");
-		return -EFAULT;
-	} else
-		pd->power_on(lcd->ld, 0);
+	pd->power_on(lcd->ld, 0);
 
 	return 0;
 }
@@ -331,9 +284,11 @@ static int lms501kf03_power(struct lms501kf03 *lcd, int power)
 {
 	int ret = 0;
 
-	if (POWER_IS_ON(power) && !POWER_IS_ON(lcd->power))
+	if (lms501kf03_power_is_on(power) &&
+		!lms501kf03_power_is_on(lcd->power))
 		ret = lms501kf03_power_on(lcd);
-	else if (!POWER_IS_ON(power) && POWER_IS_ON(lcd->power))
+	else if (!lms501kf03_power_is_on(power) &&
+		lms501kf03_power_is_on(lcd->power))
 		ret = lms501kf03_power_off(lcd);
 
 	if (!ret)
@@ -362,71 +317,18 @@ static int lms501kf03_set_power(struct lcd_device *ld, int power)
 	return lms501kf03_power(lcd, power);
 }
 
-static int lms501kf03_get_brightness(struct backlight_device *bd)
-{
-	return bd->props.brightness;
-}
-
-static int lms501kf03_set_brightness(struct backlight_device *bd)
-{
-	int ret = 0;
-	int brightness = bd->props.brightness;
-
-	if (brightness < MIN_BRIGHTNESS ||
-		brightness > bd->props.max_brightness) {
-		dev_err(&bd->dev, "lcd brightness should be %d to %d.\n",
-			MIN_BRIGHTNESS, MAX_BRIGHTNESS);
-		return -EINVAL;
-	}
-
-	return ret;
-}
-
 static struct lcd_ops lms501kf03_lcd_ops = {
 	.get_power = lms501kf03_get_power,
 	.set_power = lms501kf03_set_power,
 };
 
-static const struct backlight_ops lms501kf03_backlight_ops = {
-	.get_brightness = lms501kf03_get_brightness,
-	.update_status = lms501kf03_set_brightness,
-};
-
-#ifdef	CONFIG_HAS_EARLYSUSPEND
-unsigned int before_power;
-
-static void lms501kf03_early_suspend(struct early_suspend *handler)
+static int lms501kf03_probe(struct spi_device *spi)
 {
-	struct lms501kf03 *lcd = NULL;
-
-	lcd = container_of(handler, struct lms501kf03, early_suspend);
-
-	before_power = lcd->power;
-
-	lms501kf03_power(lcd, FB_BLANK_POWERDOWN);
-}
-
-static void lms501kf03_late_resume(struct early_suspend *handler)
-{
-	struct lms501kf03 *lcd = NULL;
-
-	lcd = container_of(handler, struct lms501kf03, early_suspend);
-
-	if (before_power == FB_BLANK_UNBLANK)
-		lcd->power = FB_BLANK_POWERDOWN;
-
-	lms501kf03_power(lcd, before_power);
-}
-#endif
-
-static int __init lms501kf03_probe(struct spi_device *spi)
-{
-	int ret = 0;
 	struct lms501kf03 *lcd = NULL;
 	struct lcd_device *ld = NULL;
-	struct backlight_device *bd = NULL;
+	int ret = 0;
 
-	lcd = kzalloc(sizeof(struct lms501kf03), GFP_KERNEL);
+	lcd = devm_kzalloc(&spi->dev, sizeof(struct lms501kf03), GFP_KERNEL);
 	if (!lcd)
 		return -ENOMEM;
 
@@ -436,38 +338,24 @@ static int __init lms501kf03_probe(struct spi_device *spi)
 	ret = spi_setup(spi);
 	if (ret < 0) {
 		dev_err(&spi->dev, "spi setup failed.\n");
-		goto out_free_lcd;
+		return ret;
 	}
 
 	lcd->spi = spi;
 	lcd->dev = &spi->dev;
 
-	lcd->lcd_pd = (struct lcd_platform_data *)spi->dev.platform_data;
+	lcd->lcd_pd = dev_get_platdata(&spi->dev);
 	if (!lcd->lcd_pd) {
 		dev_err(&spi->dev, "platform data is NULL\n");
-		goto out_free_lcd;
+		return -EINVAL;
 	}
 
-	ld = lcd_device_register("lms501kf03", &spi->dev, lcd,
-		&lms501kf03_lcd_ops);
-	if (IS_ERR(ld)) {
-		ret = PTR_ERR(ld);
-		goto out_free_lcd;
-	}
+	ld = devm_lcd_device_register(&spi->dev, "lms501kf03", &spi->dev, lcd,
+					&lms501kf03_lcd_ops);
+	if (IS_ERR(ld))
+		return PTR_ERR(ld);
 
 	lcd->ld = ld;
-
-	bd = backlight_device_register("lms501kf03-bl", &spi->dev, lcd,
-		&lms501kf03_backlight_ops, NULL);
-	if (IS_ERR(bd)) {
-		ret =  PTR_ERR(bd);
-		goto out_lcd_unregister;
-	}
-
-	bd->props.max_brightness = MAX_BRIGHTNESS;
-	bd->props.brightness = DEFAULT_BRIGHTNESS;
-	bd->props.type = BACKLIGHT_RAW;
-	lcd->bd = bd;
 
 	if (!lcd->lcd_pd->lcd_enabled) {
 		/*
@@ -478,89 +366,55 @@ static int __init lms501kf03_probe(struct spi_device *spi)
 		lcd->power = FB_BLANK_POWERDOWN;
 
 		lms501kf03_power(lcd, FB_BLANK_UNBLANK);
-	} else
+	} else {
 		lcd->power = FB_BLANK_UNBLANK;
+	}
 
-	dev_set_drvdata(&spi->dev, lcd);
+	spi_set_drvdata(spi, lcd);
 
-#ifdef CONFIG_HAS_EARLYSUSPEND
-	lcd->early_suspend.suspend = lms501kf03_early_suspend;
-	lcd->early_suspend.resume = lms501kf03_late_resume;
-	lcd->early_suspend.level = EARLY_SUSPEND_LEVEL_DISABLE_FB - 1;
-	register_early_suspend(&lcd->early_suspend);
-#endif
 	dev_info(&spi->dev, "lms501kf03 panel driver has been probed.\n");
 
 	return 0;
-
-out_lcd_unregister:
-	lcd_device_unregister(ld);
-out_free_lcd:
-	kfree(lcd);
-	return ret;
 }
 
-static int __devexit lms501kf03_remove(struct spi_device *spi)
+static int lms501kf03_remove(struct spi_device *spi)
 {
-	struct lms501kf03 *lcd = dev_get_drvdata(&spi->dev);
+	struct lms501kf03 *lcd = spi_get_drvdata(spi);
 
 	lms501kf03_power(lcd, FB_BLANK_POWERDOWN);
-	lcd_device_unregister(lcd->ld);
-	kfree(lcd);
-
 	return 0;
 }
 
-#if defined(CONFIG_PM)
-#ifndef CONFIG_HAS_EARLYSUSPEND
-unsigned int before_power;
-
-static int lms501kf03_suspend(struct spi_device *spi, pm_message_t mesg)
+#ifdef CONFIG_PM_SLEEP
+static int lms501kf03_suspend(struct device *dev)
 {
-	int ret = 0;
-	struct lms501kf03 *lcd = dev_get_drvdata(&spi->dev);
+	struct lms501kf03 *lcd = dev_get_drvdata(dev);
 
-	dev_dbg(&spi->dev, "lcd->power = %d\n", lcd->power);
-
-	before_power = lcd->power;
+	dev_dbg(dev, "lcd->power = %d\n", lcd->power);
 
 	/*
 	 * when lcd panel is suspend, lcd panel becomes off
 	 * regardless of status.
 	 */
-	ret = lms501kf03_power(lcd, FB_BLANK_POWERDOWN);
-
-	return ret;
+	return lms501kf03_power(lcd, FB_BLANK_POWERDOWN);
 }
 
-static int lms501kf03_resume(struct spi_device *spi)
+static int lms501kf03_resume(struct device *dev)
 {
-	int ret = 0;
-	struct lms501kf03 *lcd = dev_get_drvdata(&spi->dev);
+	struct lms501kf03 *lcd = dev_get_drvdata(dev);
 
-	/*
-	 * after suspended, if lcd panel status is FB_BLANK_UNBLANK
-	 * (at that time, before_power is FB_BLANK_UNBLANK) then
-	 * it changes that status to FB_BLANK_POWERDOWN to get lcd on.
-	 */
-	if (before_power == FB_BLANK_UNBLANK)
-		lcd->power = FB_BLANK_POWERDOWN;
+	lcd->power = FB_BLANK_POWERDOWN;
 
-	dev_dbg(&spi->dev, "before_power = %d\n", before_power);
-
-	ret = lms501kf03_power(lcd, before_power);
-
-	return ret;
+	return lms501kf03_power(lcd, FB_BLANK_UNBLANK);
 }
 #endif
-#else
-#define lms501kf03_suspend	NULL
-#define lms501kf03_resume	NULL
-#endif
 
-void lms501kf03_shutdown(struct spi_device *spi)
+static SIMPLE_DEV_PM_OPS(lms501kf03_pm_ops, lms501kf03_suspend,
+			lms501kf03_resume);
+
+static void lms501kf03_shutdown(struct spi_device *spi)
 {
-	struct lms501kf03 *lcd = dev_get_drvdata(&spi->dev);
+	struct lms501kf03 *lcd = spi_get_drvdata(spi);
 
 	lms501kf03_power(lcd, FB_BLANK_POWERDOWN);
 }
@@ -568,31 +422,16 @@ void lms501kf03_shutdown(struct spi_device *spi)
 static struct spi_driver lms501kf03_driver = {
 	.driver = {
 		.name	= "lms501kf03",
-		.bus	= &spi_bus_type,
 		.owner	= THIS_MODULE,
+		.pm	= &lms501kf03_pm_ops,
 	},
 	.probe		= lms501kf03_probe,
-	.remove		= __devexit_p(lms501kf03_remove),
+	.remove		= lms501kf03_remove,
 	.shutdown	= lms501kf03_shutdown,
-#ifndef CONFIG_HAS_EARLYSUSPEND
-	.suspend	= lms501kf03_suspend,
-	.resume		= lms501kf03_resume,
-#endif
 };
 
-static int __init lms501kf03_init(void)
-{
-	return spi_register_driver(&lms501kf03_driver);
-}
+module_spi_driver(lms501kf03_driver);
 
-static void __exit lms501kf03_exit(void)
-{
-	spi_unregister_driver(&lms501kf03_driver);
-}
-
-module_init(lms501kf03_init);
-module_exit(lms501kf03_exit);
-
-MODULE_AUTHOR("Ilho Lee <Ilho215.lee@samsung.com>");
+MODULE_AUTHOR("Jingoo Han <jg1.han@samsung.com>");
 MODULE_DESCRIPTION("lms501kf03 LCD Driver");
 MODULE_LICENSE("GPL");
