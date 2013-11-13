@@ -110,10 +110,23 @@ static int spear_ohci_hcd_drv_probe(struct platform_device *pdev)
 		goto fail_irq_get;
 	}
 
+<<<<<<< HEAD
 	if (*pdata >= 0)
 		sprintf(clk_name, "usbh.%01d_clk", *pdata);
 
 	usbh_clk = clk_get(NULL, clk_name);
+=======
+	/*
+	 * Right now device-tree probed devices don't get dma_mask set.
+	 * Since shared usb code relies on it, set it here for now.
+	 * Once we have dma capability bindings this can go away.
+	 */
+	retval = dma_coerce_mask_and_coherent(&pdev->dev, DMA_BIT_MASK(32));
+	if (retval)
+		goto fail;
+
+	usbh_clk = devm_clk_get(&pdev->dev, NULL);
+>>>>>>> 8ceafbf... Merge branch 'for-linus-dma-masks' of git://git.linaro.org/people/rmk/linux-arm
 	if (IS_ERR(usbh_clk)) {
 		dev_err(&pdev->dev, "Error getting interface clock\n");
 		retval = PTR_ERR(usbh_clk);

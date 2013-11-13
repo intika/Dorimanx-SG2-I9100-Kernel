@@ -123,6 +123,7 @@ static void disable_put_regulator(
  */
 static int ehci_hcd_omap_probe(struct platform_device *pdev)
 {
+<<<<<<< HEAD
 	struct device				*dev = &pdev->dev;
 	struct ehci_hcd_omap_platform_data	*pdata = dev->platform_data;
 	struct resource				*res;
@@ -133,6 +134,17 @@ static int ehci_hcd_omap_probe(struct platform_device *pdev)
 	int					irq;
 	int					i;
 	char					supply[7];
+=======
+	struct device *dev = &pdev->dev;
+	struct usbhs_omap_platform_data *pdata = dev_get_platdata(dev);
+	struct resource	*res;
+	struct usb_hcd	*hcd;
+	void __iomem *regs;
+	int ret;
+	int irq;
+	int i;
+	struct omap_hcd	*omap;
+>>>>>>> 8ceafbf... Merge branch 'for-linus-dma-masks' of git://git.linaro.org/people/rmk/linux-arm
 
 	if (usb_disabled())
 		return -ENODEV;
@@ -155,12 +167,24 @@ static int ehci_hcd_omap_probe(struct platform_device *pdev)
 		return -ENODEV;
 	}
 
+<<<<<<< HEAD
 	regs = ioremap(res->start, resource_size(res));
 	if (!regs) {
 		dev_err(dev, "UHH EHCI ioremap failed\n");
 		return -ENOMEM;
 	}
+=======
+	/*
+	 * Right now device-tree probed devices don't get dma_mask set.
+	 * Since shared usb code relies on it, set it here for now.
+	 * Once we have dma capability bindings this can go away.
+	 */
+	ret = dma_coerce_mask_and_coherent(dev, DMA_BIT_MASK(32));
+	if (ret)
+		return ret;
+>>>>>>> 8ceafbf... Merge branch 'for-linus-dma-masks' of git://git.linaro.org/people/rmk/linux-arm
 
+	ret = -ENODEV;
 	hcd = usb_create_hcd(&ehci_omap_hc_driver, dev,
 			dev_name(dev));
 	if (!hcd) {

@@ -1021,20 +1021,23 @@ static int __devinit e1000_probe(struct pci_dev *pdev,
 	 */
 	pci_using_dac = 0;
 	if ((hw->bus_type == e1000_bus_type_pcix) &&
+<<<<<<< HEAD
 	    !dma_set_mask(&pdev->dev, DMA_BIT_MASK(64))) {
 		/*
 		 * according to DMA-API-HOWTO, coherent calls will always
 		 * succeed if the set call did
 		 */
 		dma_set_coherent_mask(&pdev->dev, DMA_BIT_MASK(64));
+=======
+	    !dma_set_mask_and_coherent(&pdev->dev, DMA_BIT_MASK(64))) {
+>>>>>>> 8ceafbf... Merge branch 'for-linus-dma-masks' of git://git.linaro.org/people/rmk/linux-arm
 		pci_using_dac = 1;
 	} else {
-		err = dma_set_mask(&pdev->dev, DMA_BIT_MASK(32));
+		err = dma_set_mask_and_coherent(&pdev->dev, DMA_BIT_MASK(32));
 		if (err) {
 			pr_err("No usable DMA config, aborting\n");
 			goto err_dma;
 		}
-		dma_set_coherent_mask(&pdev->dev, DMA_BIT_MASK(32));
 	}
 
 	netdev->netdev_ops = &e1000_netdev_ops;

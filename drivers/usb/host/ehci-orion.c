@@ -223,6 +223,18 @@ static int __devinit ehci_orion_drv_probe(struct platform_device *pdev)
 		goto err1;
 	}
 
+<<<<<<< HEAD
+=======
+	/*
+	 * Right now device-tree probed devices don't get dma_mask
+	 * set. Since shared usb code relies on it, set it here for
+	 * now. Once we have dma capability bindings this can go away.
+	 */
+	err = dma_coerce_mask_and_coherent(&pdev->dev, DMA_BIT_MASK(32));
+	if (err)
+		goto err1;
+
+>>>>>>> 8ceafbf... Merge branch 'for-linus-dma-masks' of git://git.linaro.org/people/rmk/linux-arm
 	if (!request_mem_region(res->start, resource_size(res),
 				ehci_orion_hc_driver.description)) {
 		dev_dbg(&pdev->dev, "controller already in use\n");

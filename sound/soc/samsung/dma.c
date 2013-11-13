@@ -449,21 +449,18 @@ static void dma_free_dma_buffers(struct snd_pcm *pcm)
 	}
 }
 
-static u64 dma_mask = DMA_BIT_MASK(32);
-
 static int dma_new(struct snd_soc_pcm_runtime *rtd)
 {
 	struct snd_card *card = rtd->card->snd_card;
 	struct snd_soc_dai *dai = rtd->cpu_dai;
 	struct snd_pcm *pcm = rtd->pcm;
-	int ret = 0;
+	int ret;
 
 	pr_debug("Entered %s\n", __func__);
 
-	if (!card->dev->dma_mask)
-		card->dev->dma_mask = &dma_mask;
-	if (!card->dev->coherent_dma_mask)
-		card->dev->coherent_dma_mask = 0xffffffff;
+	ret = dma_coerce_mask_and_coherent(card->dev, DMA_BIT_MASK(32));
+	if (ret)
+		return ret;
 
 	if (dai->driver->playback.channels_min) {
 		ret = preallocate_dma_buffer(pcm,
