@@ -160,11 +160,9 @@ static unsigned int asv_3d_volt_8_table[ASV_8_LEVEL][MALI_DVFS_STEPS] = {
 /*dvfs status*/
 mali_dvfs_currentstatus maliDvfsStatus;
 int mali_dvfs_control = 0;
-
 u32 mali_dvfs_utilization = 255;
 
 static void mali_dvfs_work_handler(struct work_struct *w);
-
 static struct workqueue_struct *mali_dvfs_wq = 0;
 extern mali_io_address clk_register_map;
 extern _mali_osk_lock_t *mali_dvfs_lock;
@@ -605,10 +603,11 @@ mali_bool init_mali_dvfs_status(int step)
 
 void deinit_mali_dvfs_status(void)
 {
-	_mali_osk_atomic_term(&bottomlock_status);
-
 	if (mali_dvfs_wq)
 		destroy_workqueue(mali_dvfs_wq);
+
+	_mali_osk_atomic_term(&bottomlock_status);
+
 	mali_dvfs_wq = NULL;
 }
 

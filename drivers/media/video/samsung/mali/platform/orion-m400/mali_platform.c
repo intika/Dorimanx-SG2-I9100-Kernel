@@ -38,14 +38,13 @@
 #define FOUTVPLLCLK_NAME	"fout_vpll"
 #define SCLVPLLCLK_NAME		"sclk_vpll"
 #define GPUMOUT1CLK_NAME	"mout_g3d1"
-
 #define MPLLCLK_NAME		"mout_mpll"
 #define GPUMOUT0CLK_NAME	"mout_g3d0"
-#define GPUCLK_NAME			"sclk_g3d"
+#define GPUCLK_NAME		"sclk_g3d"
 #define CLK_DIV_STAT_G3D	0x1003C62C
-#define CLK_DESC			"clk-divider-status"
+#define CLK_DESC		"clk-divider-status"
 
-#define MALI_BOTTOMLOCK_VOL	800000
+#define MALI_BOTTOMLOCK_VOL	850000
 
 typedef struct mali_runtime_resumeTag{
 	int clk;
@@ -68,11 +67,10 @@ extern mali_bool set_mali_dvfs_current_step(unsigned int step);
 
 static struct clk *ext_xtal_clock	= NULL;
 static struct clk *vpll_src_clock	= NULL;
-static struct clk *fout_vpll_clock   = NULL;
-static struct clk *sclk_vpll_clock   = NULL;
-
+static struct clk *fout_vpll_clock	= NULL;
+static struct clk *sclk_vpll_clock	= NULL;
 static struct clk *mpll_clock		= NULL;
-static struct clk *mali_parent_clock = NULL;
+static struct clk *mali_parent_clock	= NULL;
 static struct clk *mali_clock		= NULL;
 
 /* Orion */
@@ -109,7 +107,7 @@ extern struct platform_device exynos4_device_pd[];
 
 mali_io_address clk_register_map = 0;
 
-_mali_osk_lock_t *mali_dvfs_lock;
+_mali_osk_lock_t *mali_dvfs_lock = 0;
 
 #ifdef CONFIG_REGULATOR
 int mali_regulator_get_usecount(void)
