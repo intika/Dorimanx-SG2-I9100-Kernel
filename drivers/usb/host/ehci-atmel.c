@@ -137,6 +137,17 @@ static int __devinit ehci_atmel_drv_probe(struct platform_device *pdev)
 		goto fail_create_hcd;
 	}
 
+<<<<<<< HEAD
+=======
+	/* Right now device-tree probed devices don't get dma_mask set.
+	 * Since shared usb code relies on it, set it here for now.
+	 * Once we have dma capability bindings this can go away.
+	 */
+	retval = dma_coerce_mask_and_coherent(&pdev->dev, DMA_BIT_MASK(32));
+	if (retval)
+		goto fail_create_hcd;
+
+>>>>>>> 8ceafbf... Merge branch 'for-linus-dma-masks' of git://git.linaro.org/people/rmk/linux-arm
 	hcd = usb_create_hcd(driver, &pdev->dev, dev_name(&pdev->dev));
 	if (!hcd) {
 		retval = -ENOMEM;

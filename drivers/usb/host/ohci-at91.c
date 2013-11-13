@@ -230,11 +230,61 @@ static const struct hc_driver ohci_at91_hc_driver = {
 	.product_desc =		"AT91 OHCI",
 	.hcd_priv_size =	sizeof(struct ohci_hcd),
 
+<<<<<<< HEAD
 	/*
 	 * generic hardware linkage
 	 */
 	.irq =			ohci_irq,
 	.flags =		HCD_USB11 | HCD_MEMORY,
+=======
+	val = gpio_get_value(gpio);
+
+	/* When notified of an over-current situation, disable power
+	   on the corresponding port, and mark this port in
+	   over-current. */
+	if (!val) {
+		ohci_at91_usb_set_power(pdata, port, 0);
+		pdata->overcurrent_status[port]  = 1;
+		pdata->overcurrent_changed[port] = 1;
+	}
+
+	dev_dbg(& pdev->dev, "overcurrent situation %s\n",
+		val ? "exited" : "notified");
+
+	return IRQ_HANDLED;
+}
+
+#ifdef CONFIG_OF
+static const struct of_device_id at91_ohci_dt_ids[] = {
+	{ .compatible = "atmel,at91rm9200-ohci" },
+	{ /* sentinel */ }
+};
+
+MODULE_DEVICE_TABLE(of, at91_ohci_dt_ids);
+
+static int ohci_at91_of_init(struct platform_device *pdev)
+{
+	struct device_node *np = pdev->dev.of_node;
+	int i, gpio, ret;
+	enum of_gpio_flags flags;
+	struct at91_usbh_data	*pdata;
+	u32 ports;
+
+	if (!np)
+		return 0;
+
+	/* Right now device-tree probed devices don't get dma_mask set.
+	 * Since shared usb code relies on it, set it here for now.
+	 * Once we have dma capability bindings this can go away.
+	 */
+	ret = dma_coerce_mask_and_coherent(&pdev->dev, DMA_BIT_MASK(32));
+	if (ret)
+		return ret;
+
+	pdata = devm_kzalloc(&pdev->dev, sizeof(*pdata), GFP_KERNEL);
+	if (!pdata)
+		return -ENOMEM;
+>>>>>>> 8ceafbf... Merge branch 'for-linus-dma-masks' of git://git.linaro.org/people/rmk/linux-arm
 
 	/*
 	 * basic lifecycle operations

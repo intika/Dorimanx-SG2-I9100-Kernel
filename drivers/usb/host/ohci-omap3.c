@@ -130,7 +130,7 @@ static int __devinit ohci_hcd_omap3_probe(struct platform_device *pdev)
 	struct usb_hcd		*hcd = NULL;
 	void __iomem		*regs = NULL;
 	struct resource		*res;
-	int			ret = -ENODEV;
+	int			ret;
 	int			irq;
 
 	if (usb_disabled())
@@ -160,7 +160,19 @@ static int __devinit ohci_hcd_omap3_probe(struct platform_device *pdev)
 		return -ENOMEM;
 	}
 
+<<<<<<< HEAD
+=======
+	/*
+	 * Right now device-tree probed devices don't get dma_mask set.
+	 * Since shared usb code relies on it, set it here for now.
+	 * Once we have dma capability bindings this can go away.
+	 */
+	ret = dma_coerce_mask_and_coherent(dev, DMA_BIT_MASK(32));
+	if (ret)
+		goto err_io;
+>>>>>>> 8ceafbf... Merge branch 'for-linus-dma-masks' of git://git.linaro.org/people/rmk/linux-arm
 
+	ret = -ENODEV;
 	hcd = usb_create_hcd(&ohci_omap3_hc_driver, dev,
 			dev_name(dev));
 	if (!hcd) {
