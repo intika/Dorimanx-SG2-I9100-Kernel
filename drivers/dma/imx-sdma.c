@@ -1310,6 +1310,10 @@ static int __init sdma_probe(struct platform_device *pdev)
 	struct sdma_engine *sdma;
 	s32 *saddr_arr;
 
+	ret = dma_coerce_mask_and_coherent(&pdev->dev, DMA_BIT_MASK(32));
+	if (ret)
+		return ret;
+
 	sdma = kzalloc(sizeof(*sdma), GFP_KERNEL);
 	if (!sdma)
 		return -ENOMEM;

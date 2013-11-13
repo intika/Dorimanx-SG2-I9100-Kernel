@@ -30,8 +30,11 @@ struct amba_device {
 	struct device		dev;
 	struct resource		res;
 	struct clk		*pclk;
+<<<<<<< HEAD
 	struct regulator	*vcore;
 	u64			dma_mask;
+=======
+>>>>>>> 8ceafbf... Merge branch 'for-linus-dma-masks' of git://git.linaro.org/people/rmk/linux-arm
 	unsigned int		periphid;
 	unsigned int		irq[AMBA_NR_IRQS];
 };
@@ -89,4 +92,48 @@ void amba_release_regions(struct amba_device *);
 #define amba_manf(d)	AMBA_MANF_BITS((d)->periphid)
 #define amba_part(d)	AMBA_PART_BITS((d)->periphid)
 
+<<<<<<< HEAD
+=======
+#define __AMBA_DEV(busid, data, mask)				\
+	{							\
+		.coherent_dma_mask = mask,			\
+		.init_name = busid,				\
+		.platform_data = data,				\
+	}
+
+/*
+ * APB devices do not themselves have the ability to address memory,
+ * so DMA masks should be zero (much like USB peripheral devices.)
+ * The DMA controller DMA masks should be used instead (much like
+ * USB host controllers in conventional PCs.)
+ */
+#define AMBA_APB_DEVICE(name, busid, id, base, irqs, data)	\
+struct amba_device name##_device = {				\
+	.dev = __AMBA_DEV(busid, data, 0),			\
+	.res = DEFINE_RES_MEM(base, SZ_4K),			\
+	.irq = irqs,						\
+	.periphid = id,						\
+}
+
+/*
+ * AHB devices are DMA capable, so set their DMA masks
+ */
+#define AMBA_AHB_DEVICE(name, busid, id, base, irqs, data)	\
+struct amba_device name##_device = {				\
+	.dev = __AMBA_DEV(busid, data, ~0ULL),			\
+	.res = DEFINE_RES_MEM(base, SZ_4K),			\
+	.irq = irqs,						\
+	.periphid = id,						\
+}
+
+/*
+ * module_amba_driver() - Helper macro for drivers that don't do anything
+ * special in module init/exit.  This eliminates a lot of boilerplate.  Each
+ * module may only use this macro once, and calling it replaces module_init()
+ * and module_exit()
+ */
+#define module_amba_driver(__amba_drv) \
+	module_driver(__amba_drv, amba_driver_register, amba_driver_unregister)
+
+>>>>>>> 8ceafbf... Merge branch 'for-linus-dma-masks' of git://git.linaro.org/people/rmk/linux-arm
 #endif

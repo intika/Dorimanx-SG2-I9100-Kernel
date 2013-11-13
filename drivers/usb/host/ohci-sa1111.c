@@ -127,7 +127,20 @@ int usb_hcd_sa1111_probe (const struct hc_driver *driver,
 	struct usb_hcd *hcd;
 	int retval;
 
+<<<<<<< HEAD
 	hcd = usb_create_hcd (driver, &dev->dev, "sa1111");
+=======
+	if (usb_disabled())
+		return -ENODEV;
+
+	/*
+	 * We don't call dma_set_mask_and_coherent() here because the
+	 * DMA mask has already been appropraitely setup by the core
+	 * SA-1111 bus code (which includes bug workarounds.)
+	 */
+
+	hcd = usb_create_hcd(&ohci_sa1111_hc_driver, &dev->dev, "sa1111");
+>>>>>>> 8ceafbf... Merge branch 'for-linus-dma-masks' of git://git.linaro.org/people/rmk/linux-arm
 	if (!hcd)
 		return -ENOMEM;
 	hcd->rsrc_start = dev->res.start;

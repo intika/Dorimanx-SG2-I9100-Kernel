@@ -271,6 +271,70 @@ static void pxa27x_stop_hc(struct pxa27x_ohci *ohci, struct device *dev)
 	clk_disable(ohci->clk);
 }
 
+<<<<<<< HEAD
+=======
+#ifdef CONFIG_OF
+static const struct of_device_id pxa_ohci_dt_ids[] = {
+	{ .compatible = "marvell,pxa-ohci" },
+	{ }
+};
+
+MODULE_DEVICE_TABLE(of, pxa_ohci_dt_ids);
+
+static int ohci_pxa_of_init(struct platform_device *pdev)
+{
+	struct device_node *np = pdev->dev.of_node;
+	struct pxaohci_platform_data *pdata;
+	u32 tmp;
+	int ret;
+
+	if (!np)
+		return 0;
+
+	/* Right now device-tree probed devices don't get dma_mask set.
+	 * Since shared usb code relies on it, set it here for now.
+	 * Once we have dma capability bindings this can go away.
+	 */
+	ret = dma_coerce_mask_and_coherent(&pdev->dev, DMA_BIT_MASK(32));
+	if (ret)
+		return ret;
+
+	pdata = devm_kzalloc(&pdev->dev, sizeof(*pdata), GFP_KERNEL);
+	if (!pdata)
+		return -ENOMEM;
+
+	if (of_get_property(np, "marvell,enable-port1", NULL))
+		pdata->flags |= ENABLE_PORT1;
+	if (of_get_property(np, "marvell,enable-port2", NULL))
+		pdata->flags |= ENABLE_PORT2;
+	if (of_get_property(np, "marvell,enable-port3", NULL))
+		pdata->flags |= ENABLE_PORT3;
+	if (of_get_property(np, "marvell,port-sense-low", NULL))
+		pdata->flags |= POWER_SENSE_LOW;
+	if (of_get_property(np, "marvell,power-control-low", NULL))
+		pdata->flags |= POWER_CONTROL_LOW;
+	if (of_get_property(np, "marvell,no-oc-protection", NULL))
+		pdata->flags |= NO_OC_PROTECTION;
+	if (of_get_property(np, "marvell,oc-mode-perport", NULL))
+		pdata->flags |= OC_MODE_PERPORT;
+	if (!of_property_read_u32(np, "marvell,power-on-delay", &tmp))
+		pdata->power_on_delay = tmp;
+	if (!of_property_read_u32(np, "marvell,port-mode", &tmp))
+		pdata->port_mode = tmp;
+	if (!of_property_read_u32(np, "marvell,power-budget", &tmp))
+		pdata->power_budget = tmp;
+
+	pdev->dev.platform_data = pdata;
+
+	return 0;
+}
+#else
+static int ohci_pxa_of_init(struct platform_device *pdev)
+{
+	return 0;
+}
+#endif
+>>>>>>> 8ceafbf... Merge branch 'for-linus-dma-masks' of git://git.linaro.org/people/rmk/linux-arm
 
 /*-------------------------------------------------------------------------*/
 
