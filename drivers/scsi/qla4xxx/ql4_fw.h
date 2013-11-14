@@ -434,6 +434,25 @@ struct qla_flt_region {
 #define ACB_STATE_VALID		0x05
 #define ACB_STATE_DISABLING	0x06
 
+<<<<<<< HEAD
+=======
+/* FLASH offsets */
+#define FLASH_SEGMENT_IFCB	0x04000000
+
+#define FLASH_OPT_RMW_HOLD	0
+#define FLASH_OPT_RMW_INIT	1
+#define FLASH_OPT_COMMIT	2
+#define FLASH_OPT_RMW_COMMIT	3
+
+/* Loopback type */
+#define ENABLE_INTERNAL_LOOPBACK	0x04
+#define ENABLE_EXTERNAL_LOOPBACK	0x08
+
+/* generic defines to enable/disable params */
+#define QL4_PARAM_DISABLE	0
+#define QL4_PARAM_ENABLE	1
+
+>>>>>>> 0d522ee... Merge tag 'scsi-for-linus' of git://git.kernel.org/pub/scm/linux/kernel/git/jejb/scsi
 /*************************************************************************/
 
 /* Host Adapter Initialization Control Block (from host) */

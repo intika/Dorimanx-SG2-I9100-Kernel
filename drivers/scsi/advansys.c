@@ -2528,8 +2528,8 @@ static void asc_prt_scsi_host(struct Scsi_Host *s)
 	struct asc_board *boardp = shost_priv(s);
 
 	printk("Scsi_Host at addr 0x%p, device %s\n", s, dev_name(boardp->dev));
-	printk(" host_busy %u, host_no %d, last_reset %d,\n",
-	       s->host_busy, s->host_no, (unsigned)s->last_reset);
+	printk(" host_busy %u, host_no %d,\n",
+	       s->host_busy, s->host_no);
 
 	printk(" base 0x%lx, io_port 0x%lx, irq %d,\n",
 	       (ulong)s->base, (ulong)s->io_port, boardp->irq);
@@ -3552,10 +3552,17 @@ static int asc_prt_driver_conf(struct Scsi_Host *shost, char *cp, int cplen)
 	leftlen = cplen;
 	totlen = len = 0;
 
+<<<<<<< HEAD
 	len = asc_prt_line(cp, leftlen,
 			   "\nLinux Driver Configuration and Information for AdvanSys SCSI Host %d:\n",
 			   shost->host_no);
 	ASC_PRT_NEXT();
+=======
+	seq_printf(m,
+		   " host_busy %u, max_id %u, max_lun %u, max_channel %u\n",
+		   shost->host_busy, shost->max_id,
+		   shost->max_lun, shost->max_channel);
+>>>>>>> 0d522ee... Merge tag 'scsi-for-linus' of git://git.kernel.org/pub/scm/linux/kernel/git/jejb/scsi
 
 	len = asc_prt_line(cp, leftlen,
 			   " host_busy %u, last_reset %u, max_id %u, max_lun %u, max_channel %u\n",

@@ -15,9 +15,14 @@
  * Costa Mesa, CA 92626
  */
 
+<<<<<<< HEAD
+=======
+#include <scsi/iscsi_proto.h>
+
+#include "be_main.h"
+>>>>>>> 0d522ee... Merge tag 'scsi-for-linus' of git://git.kernel.org/pub/scm/linux/kernel/git/jejb/scsi
 #include "be.h"
 #include "be_mgmt.h"
-#include "be_main.h"
 
 int beiscsi_pci_soft_reset(struct beiscsi_hba *phba)
 {
@@ -128,6 +133,111 @@ unsigned int alloc_mcc_tag(struct beiscsi_hba *phba)
 	return tag;
 }
 
+<<<<<<< HEAD
+=======
+/*
+ * beiscsi_mccq_compl()- Wait for completion of MBX
+ * @phba: Driver private structure
+ * @tag: Tag for the MBX Command
+ * @wrb: the WRB used for the MBX Command
+ * @cmd_hdr: IOCTL Hdr for the MBX Cmd
+ *
+ * Waits for MBX completion with the passed TAG.
+ *
+ * return
+ * Success: 0
+ * Failure: Non-Zero
+ **/
+int beiscsi_mccq_compl(struct beiscsi_hba *phba,
+		uint32_t tag, struct be_mcc_wrb **wrb,
+		void *cmd_hdr)
+{
+	int rc = 0;
+	uint32_t mcc_tag_response;
+	uint16_t status = 0, addl_status = 0, wrb_num = 0;
+	struct be_mcc_wrb *temp_wrb;
+	struct be_cmd_req_hdr *ioctl_hdr;
+	struct be_cmd_resp_hdr *ioctl_resp_hdr;
+	struct be_queue_info *mccq = &phba->ctrl.mcc_obj.q;
+
+	if (beiscsi_error(phba)) {
+		free_mcc_tag(&phba->ctrl, tag);
+		return -EIO;
+	}
+
+	/* wait for the mccq completion */
+	rc = wait_event_interruptible_timeout(
+				phba->ctrl.mcc_wait[tag],
+				phba->ctrl.mcc_numtag[tag],
+				msecs_to_jiffies(
+				BEISCSI_HOST_MBX_TIMEOUT));
+
+	if (rc <= 0) {
+		beiscsi_log(phba, KERN_ERR,
+			    BEISCSI_LOG_INIT | BEISCSI_LOG_EH |
+			    BEISCSI_LOG_CONFIG,
+			    "BC_%d : MBX Cmd Completion timed out\n");
+		rc = -EBUSY;
+
+		/* decrement the mccq used count */
+		atomic_dec(&phba->ctrl.mcc_obj.q.used);
+
+		goto release_mcc_tag;
+	} else
+		rc = 0;
+
+	mcc_tag_response = phba->ctrl.mcc_numtag[tag];
+	status = (mcc_tag_response & CQE_STATUS_MASK);
+	addl_status = ((mcc_tag_response & CQE_STATUS_ADDL_MASK) >>
+			CQE_STATUS_ADDL_SHIFT);
+
+	if (cmd_hdr) {
+		ioctl_hdr = (struct be_cmd_req_hdr *)cmd_hdr;
+	} else {
+		wrb_num = (mcc_tag_response & CQE_STATUS_WRB_MASK) >>
+			   CQE_STATUS_WRB_SHIFT;
+		temp_wrb = (struct be_mcc_wrb *)queue_get_wrb(mccq, wrb_num);
+		ioctl_hdr = embedded_payload(temp_wrb);
+
+		if (wrb)
+			*wrb = temp_wrb;
+	}
+
+	if (status || addl_status) {
+		beiscsi_log(phba, KERN_ERR,
+			    BEISCSI_LOG_INIT | BEISCSI_LOG_EH |
+			    BEISCSI_LOG_CONFIG,
+			    "BC_%d : MBX Cmd Failed for "
+			    "Subsys : %d Opcode : %d with "
+			    "Status : %d and Extd_Status : %d\n",
+			    ioctl_hdr->subsystem,
+			    ioctl_hdr->opcode,
+			    status, addl_status);
+
+		if (status == MCC_STATUS_INSUFFICIENT_BUFFER) {
+			ioctl_resp_hdr = (struct be_cmd_resp_hdr *) ioctl_hdr;
+			beiscsi_log(phba, KERN_WARNING,
+				    BEISCSI_LOG_INIT | BEISCSI_LOG_EH |
+				    BEISCSI_LOG_CONFIG,
+				    "BC_%d : Insufficent Buffer Error "
+				    "Resp_Len : %d Actual_Resp_Len : %d\n",
+				    ioctl_resp_hdr->response_length,
+				    ioctl_resp_hdr->actual_resp_len);
+
+			rc = -EAGAIN;
+			goto release_mcc_tag;
+		}
+		rc = -EIO;
+	}
+
+release_mcc_tag:
+	/* Release the MCC entry */
+	free_mcc_tag(&phba->ctrl, tag);
+
+	return rc;
+}
+
+>>>>>>> 0d522ee... Merge tag 'scsi-for-linus' of git://git.kernel.org/pub/scm/linux/kernel/git/jejb/scsi
 void free_mcc_tag(struct be_ctrl_info *ctrl, unsigned int tag)
 {
 	spin_lock(&ctrl->mbox_lock);
@@ -236,6 +346,7 @@ void beiscsi_async_link_state_process(struct beiscsi_hba *phba,
 		phba->state |= BE_ADAPTER_LINK_DOWN;
 		iscsi_host_for_each_session(phba->shost,
 					    be2iscsi_fail_session);
+<<<<<<< HEAD
 		break;
 	case ASYNC_EVENT_LINK_UP:
 		phba->state = BE_ADAPTER_UP;
@@ -247,6 +358,17 @@ void beiscsi_async_link_state_process(struct beiscsi_hba *phba,
 				    "Physical Port %d\n",
 				     evt->port_link_status,
 				     evt->physical_port);
+=======
+	} else if ((evt->port_link_status & ASYNC_EVENT_LINK_UP) ||
+		    ((evt->port_link_status & ASYNC_EVENT_LOGICAL) &&
+		     (evt->port_fault == BEISCSI_PHY_LINK_FAULT_NONE))) {
+		phba->state = BE_ADAPTER_LINK_UP;
+
+		beiscsi_log(phba, KERN_ERR,
+			    BEISCSI_LOG_CONFIG | BEISCSI_LOG_INIT,
+			    "BC_%d : Link UP on Port %d\n",
+			    evt->physical_port);
+>>>>>>> 0d522ee... Merge tag 'scsi-for-linus' of git://git.kernel.org/pub/scm/linux/kernel/git/jejb/scsi
 	}
 }
 
@@ -325,11 +447,22 @@ int be_mcc_notify_wait(struct beiscsi_hba *phba)
 
 static int be_mbox_db_ready_wait(struct be_ctrl_info *ctrl)
 {
+<<<<<<< HEAD
 #define long_delay 2000
 	void __iomem *db = ctrl->db + MPU_MAILBOX_DB_OFFSET;
 	int cnt = 0, wait = 5;	/* in usecs */
+=======
+#define BEISCSI_MBX_RDY_BIT_TIMEOUT	4000	/* 4sec */
+	void __iomem *db = ctrl->db + MPU_MAILBOX_DB_OFFSET;
+	struct beiscsi_hba *phba = pci_get_drvdata(ctrl->pdev);
+	unsigned long timeout;
+	bool read_flag = false;
+	int ret = 0, i;
+>>>>>>> 0d522ee... Merge tag 'scsi-for-linus' of git://git.kernel.org/pub/scm/linux/kernel/git/jejb/scsi
 	u32 ready;
+	DECLARE_WAIT_QUEUE_HEAD_ONSTACK(rdybit_check_q);
 
+<<<<<<< HEAD
 	do {
 		ready = ioread32(db) & MPU_MAILBOX_DB_RDY_MASK;
 		if (ready)
@@ -348,6 +481,40 @@ static int be_mbox_db_ready_wait(struct be_ctrl_info *ctrl)
 		cnt += wait;
 	} while (true);
 	return 0;
+=======
+	if (beiscsi_error(phba))
+		return -EIO;
+
+	timeout = jiffies + (HZ * 110);
+
+	do {
+		for (i = 0; i < BEISCSI_MBX_RDY_BIT_TIMEOUT; i++) {
+			ready = ioread32(db) & MPU_MAILBOX_DB_RDY_MASK;
+			if (ready) {
+				read_flag = true;
+				break;
+			}
+			mdelay(1);
+		}
+
+		if (!read_flag) {
+			wait_event_timeout(rdybit_check_q,
+					  (read_flag != true),
+					   HZ * 5);
+		}
+	} while ((time_before(jiffies, timeout)) && !read_flag);
+
+	if (!read_flag) {
+		beiscsi_log(phba, KERN_ERR,
+			    BEISCSI_LOG_CONFIG | BEISCSI_LOG_MBOX,
+			    "BC_%d : FW Timed Out\n");
+			phba->fw_timeout = true;
+			beiscsi_ue_detect(phba);
+			ret = -EBUSY;
+	}
+
+	return ret;
+>>>>>>> 0d522ee... Merge tag 'scsi-for-linus' of git://git.kernel.org/pub/scm/linux/kernel/git/jejb/scsi
 }
 
 int be_mbox_notify(struct be_ctrl_info *ctrl)
@@ -507,7 +674,7 @@ struct be_mcc_wrb *wrb_from_mccq(struct beiscsi_hba *phba)
 	struct be_queue_info *mccq = &phba->ctrl.mcc_obj.q;
 	struct be_mcc_wrb *wrb;
 
-	BUG_ON(atomic_read(&mccq->used) >= mccq->len);
+	WARN_ON(atomic_read(&mccq->used) >= mccq->len);
 	wrb = queue_head_node(mccq);
 	memset(wrb, 0, sizeof(*wrb));
 	wrb->tag0 = (mccq->head & 0x000000FF) << 16;
@@ -745,10 +912,29 @@ int beiscsi_cmd_q_destroy(struct be_ctrl_info *ctrl, struct be_queue_info *q,
 	return status;
 }
 
+/**
+ * be_cmd_create_default_pdu_queue()- Create DEFQ for the adapter
+ * @ctrl: ptr to ctrl_info
+ * @cq: Completion Queue
+ * @dq: Default Queue
+ * @lenght: ring size
+ * @entry_size: size of each entry in DEFQ
+ * @is_header: Header or Data DEFQ
+ * @ulp_num: Bind to which ULP
+ *
+ * Create HDR/Data DEFQ for the passed ULP. Unsol PDU are posted
+ * on this queue by the FW
+ *
+ * return
+ *	Success: 0
+ *	Failure: Non-Zero Value
+ *
+ **/
 int be_cmd_create_default_pdu_queue(struct be_ctrl_info *ctrl,
 				    struct be_queue_info *cq,
 				    struct be_queue_info *dq, int length,
-				    int entry_size)
+				    int entry_size, uint8_t is_header,
+				    uint8_t ulp_num)
 {
 	struct be_mcc_wrb *wrb = wrb_from_mbox(&ctrl->mbox_mem);
 	struct be_defq_create_req *req = embedded_payload(wrb);
@@ -766,6 +952,7 @@ int be_cmd_create_default_pdu_queue(struct be_ctrl_info *ctrl,
 			   OPCODE_COMMON_ISCSI_DEFQ_CREATE, sizeof(*req));
 
 	req->num_pages = PAGES_4K_SPANNED(q_mem->va, q_mem->size);
+<<<<<<< HEAD
 	AMAP_SET_BITS(struct amap_be_default_pdu_context, rx_pdid, ctxt, 0);
 	AMAP_SET_BITS(struct amap_be_default_pdu_context, rx_pdid_valid, ctxt,
 		      1);
@@ -777,6 +964,43 @@ int be_cmd_create_default_pdu_queue(struct be_ctrl_info *ctrl,
 		      ctxt, entry_size);
 	AMAP_SET_BITS(struct amap_be_default_pdu_context, cq_id_recv, ctxt,
 		      cq->id);
+=======
+	if (phba->fw_config.dual_ulp_aware) {
+		req->ulp_num = ulp_num;
+		req->dua_feature |= (1 << BEISCSI_DUAL_ULP_AWARE_BIT);
+		req->dua_feature |= (1 << BEISCSI_BIND_Q_TO_ULP_BIT);
+	}
+
+	if (is_chip_be2_be3r(phba)) {
+		AMAP_SET_BITS(struct amap_be_default_pdu_context,
+			      rx_pdid, ctxt, 0);
+		AMAP_SET_BITS(struct amap_be_default_pdu_context,
+			      rx_pdid_valid, ctxt, 1);
+		AMAP_SET_BITS(struct amap_be_default_pdu_context,
+			      pci_func_id, ctxt, PCI_FUNC(ctrl->pdev->devfn));
+		AMAP_SET_BITS(struct amap_be_default_pdu_context,
+			      ring_size, ctxt,
+			      be_encoded_q_len(length /
+			      sizeof(struct phys_addr)));
+		AMAP_SET_BITS(struct amap_be_default_pdu_context,
+			      default_buffer_size, ctxt, entry_size);
+		AMAP_SET_BITS(struct amap_be_default_pdu_context,
+			      cq_id_recv, ctxt,	cq->id);
+	} else {
+		AMAP_SET_BITS(struct amap_default_pdu_context_ext,
+			      rx_pdid, ctxt, 0);
+		AMAP_SET_BITS(struct amap_default_pdu_context_ext,
+			      rx_pdid_valid, ctxt, 1);
+		AMAP_SET_BITS(struct amap_default_pdu_context_ext,
+			      ring_size, ctxt,
+			      be_encoded_q_len(length /
+			      sizeof(struct phys_addr)));
+		AMAP_SET_BITS(struct amap_default_pdu_context_ext,
+			      default_buffer_size, ctxt, entry_size);
+		AMAP_SET_BITS(struct amap_default_pdu_context_ext,
+			      cq_id_recv, ctxt, cq->id);
+	}
+>>>>>>> 0d522ee... Merge tag 'scsi-for-linus' of git://git.kernel.org/pub/scm/linux/kernel/git/jejb/scsi
 
 	be_dws_cpu_to_le(ctxt, sizeof(req->context));
 
@@ -784,22 +1008,53 @@ int be_cmd_create_default_pdu_queue(struct be_ctrl_info *ctrl,
 
 	status = be_mbox_notify(ctrl);
 	if (!status) {
+		struct be_ring *defq_ring;
 		struct be_defq_create_resp *resp = embedded_payload(wrb);
 
 		dq->id = le16_to_cpu(resp->id);
 		dq->created = true;
+		if (is_header)
+			defq_ring = &phba->phwi_ctrlr->default_pdu_hdr[ulp_num];
+		else
+			defq_ring = &phba->phwi_ctrlr->
+				    default_pdu_data[ulp_num];
+
+		defq_ring->id = dq->id;
+
+		if (!phba->fw_config.dual_ulp_aware) {
+			defq_ring->ulp_num = BEISCSI_ULP0;
+			defq_ring->doorbell_offset = DB_RXULP0_OFFSET;
+		} else {
+			defq_ring->ulp_num = resp->ulp_num;
+			defq_ring->doorbell_offset = resp->doorbell_offset;
+		}
 	}
 	spin_unlock(&ctrl->mbox_lock);
 
 	return status;
 }
 
-int be_cmd_wrbq_create(struct be_ctrl_info *ctrl, struct be_dma_mem *q_mem,
-		       struct be_queue_info *wrbq)
+/**
+ * be_cmd_wrbq_create()- Create WRBQ
+ * @ctrl: ptr to ctrl_info
+ * @q_mem: memory details for the queue
+ * @wrbq: queue info
+ * @pwrb_context: ptr to wrb_context
+ * @ulp_num: ULP on which the WRBQ is to be created
+ *
+ * Create WRBQ on the passed ULP_NUM.
+ *
+ **/
+int be_cmd_wrbq_create(struct be_ctrl_info *ctrl,
+			struct be_dma_mem *q_mem,
+			struct be_queue_info *wrbq,
+			struct hwi_wrb_context *pwrb_context,
+			uint8_t ulp_num)
 {
 	struct be_mcc_wrb *wrb = wrb_from_mbox(&ctrl->mbox_mem);
 	struct be_wrbq_create_req *req = embedded_payload(wrb);
 	struct be_wrbq_create_resp *resp = embedded_payload(wrb);
+	struct beiscsi_hba *phba = pci_get_drvdata(ctrl->pdev);
 	int status;
 
 	spin_lock(&ctrl->mbox_lock);
@@ -810,13 +1065,74 @@ int be_cmd_wrbq_create(struct be_ctrl_info *ctrl, struct be_dma_mem *q_mem,
 	be_cmd_hdr_prepare(&req->hdr, CMD_SUBSYSTEM_ISCSI,
 		OPCODE_COMMON_ISCSI_WRBQ_CREATE, sizeof(*req));
 	req->num_pages = PAGES_4K_SPANNED(q_mem->va, q_mem->size);
+
+	if (phba->fw_config.dual_ulp_aware) {
+		req->ulp_num = ulp_num;
+		req->dua_feature |= (1 << BEISCSI_DUAL_ULP_AWARE_BIT);
+		req->dua_feature |= (1 << BEISCSI_BIND_Q_TO_ULP_BIT);
+	}
+
 	be_cmd_page_addrs_prepare(req->pages, ARRAY_SIZE(req->pages), q_mem);
 
 	status = be_mbox_notify(ctrl);
 	if (!status) {
 		wrbq->id = le16_to_cpu(resp->cid);
 		wrbq->created = true;
+
+		pwrb_context->cid = wrbq->id;
+		if (!phba->fw_config.dual_ulp_aware) {
+			pwrb_context->doorbell_offset = DB_TXULP0_OFFSET;
+			pwrb_context->ulp_num = BEISCSI_ULP0;
+		} else {
+			pwrb_context->ulp_num = resp->ulp_num;
+			pwrb_context->doorbell_offset = resp->doorbell_offset;
+		}
 	}
+	spin_unlock(&ctrl->mbox_lock);
+	return status;
+}
+
+int be_cmd_iscsi_post_template_hdr(struct be_ctrl_info *ctrl,
+				    struct be_dma_mem *q_mem)
+{
+	struct be_mcc_wrb *wrb = wrb_from_mbox(&ctrl->mbox_mem);
+	struct be_post_template_pages_req *req = embedded_payload(wrb);
+	int status;
+
+	spin_lock(&ctrl->mbox_lock);
+
+	memset(wrb, 0, sizeof(*wrb));
+	be_wrb_hdr_prepare(wrb, sizeof(*req), true, 0);
+	be_cmd_hdr_prepare(&req->hdr, CMD_SUBSYSTEM_COMMON,
+			   OPCODE_COMMON_ADD_TEMPLATE_HEADER_BUFFERS,
+			   sizeof(*req));
+
+	req->num_pages = PAGES_4K_SPANNED(q_mem->va, q_mem->size);
+	req->type = BEISCSI_TEMPLATE_HDR_TYPE_ISCSI;
+	be_cmd_page_addrs_prepare(req->pages, ARRAY_SIZE(req->pages), q_mem);
+
+	status = be_mbox_notify(ctrl);
+	spin_unlock(&ctrl->mbox_lock);
+	return status;
+}
+
+int be_cmd_iscsi_remove_template_hdr(struct be_ctrl_info *ctrl)
+{
+	struct be_mcc_wrb *wrb = wrb_from_mbox(&ctrl->mbox_mem);
+	struct be_remove_template_pages_req *req = embedded_payload(wrb);
+	int status;
+
+	spin_lock(&ctrl->mbox_lock);
+
+	memset(wrb, 0, sizeof(*wrb));
+	be_wrb_hdr_prepare(wrb, sizeof(*req), true, 0);
+	be_cmd_hdr_prepare(&req->hdr, CMD_SUBSYSTEM_COMMON,
+			   OPCODE_COMMON_REMOVE_TEMPLATE_HEADER_BUFFERS,
+			   sizeof(*req));
+
+	req->type = BEISCSI_TEMPLATE_HDR_TYPE_ISCSI;
+
+	status = be_mbox_notify(ctrl);
 	spin_unlock(&ctrl->mbox_lock);
 	return status;
 }

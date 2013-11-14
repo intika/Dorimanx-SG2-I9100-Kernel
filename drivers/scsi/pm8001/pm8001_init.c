@@ -45,7 +45,18 @@
 static struct scsi_transport_template *pm8001_stt;
 
 static const struct pm8001_chip_info pm8001_chips[] = {
+<<<<<<< HEAD
 	[chip_8001] = {  8, &pm8001_8001_dispatch,},
+=======
+	[chip_8001] = {0,  8, &pm8001_8001_dispatch,},
+	[chip_8008] = {0,  8, &pm8001_80xx_dispatch,},
+	[chip_8009] = {1,  8, &pm8001_80xx_dispatch,},
+	[chip_8018] = {0,  16, &pm8001_80xx_dispatch,},
+	[chip_8019] = {1,  16, &pm8001_80xx_dispatch,},
+	[chip_8074] = {0,  8, &pm8001_80xx_dispatch,},
+	[chip_8076] = {0,  16, &pm8001_80xx_dispatch,},
+	[chip_8077] = {0,  16, &pm8001_80xx_dispatch,},
+>>>>>>> 0d522ee... Merge tag 'scsi-for-linus' of git://git.kernel.org/pub/scm/linux/kernel/git/jejb/scsi
 };
 static int pm8001_id;
 
@@ -266,6 +277,16 @@ static int __devinit pm8001_alloc(struct pm8001_hba_info *pm8001_ha)
 	pm8001_ha->memoryMap.region[CCB_MEM].total_len = PM8001_MAX_CCB *
 		sizeof(struct pm8001_ccb_info);
 
+<<<<<<< HEAD
+=======
+	/* Memory region for fw flash */
+	pm8001_ha->memoryMap.region[FW_FLASH].total_len = 4096;
+
+	pm8001_ha->memoryMap.region[FORENSIC_MEM].num_elements = 1;
+	pm8001_ha->memoryMap.region[FORENSIC_MEM].total_len = 0x10000;
+	pm8001_ha->memoryMap.region[FORENSIC_MEM].element_size = 0x10000;
+	pm8001_ha->memoryMap.region[FORENSIC_MEM].alignment = 0x10000;
+>>>>>>> 0d522ee... Merge tag 'scsi-for-linus' of git://git.kernel.org/pub/scm/linux/kernel/git/jejb/scsi
 	for (i = 0; i < USI_MAX_MEMCNT; i++) {
 		if (pm8001_mem_alloc(pm8001_ha->pdev,
 			&pm8001_ha->memoryMap.region[i].virt_ptr,
@@ -542,6 +563,31 @@ static void pm8001_init_sas_add(struct pm8001_hba_info *pm8001_ha)
 #endif
 }
 
+/*
+ * pm8001_get_phy_settings_info : Read phy setting values.
+ * @pm8001_ha : our hba.
+ */
+void pm8001_get_phy_settings_info(struct pm8001_hba_info *pm8001_ha)
+{
+
+#ifdef PM8001_READ_VPD
+	/*OPTION ROM FLASH read for the SPC cards */
+	DECLARE_COMPLETION_ONSTACK(completion);
+	struct pm8001_ioctl_payload payload;
+
+	pm8001_ha->nvmd_completion = &completion;
+	/* SAS ADDRESS read from flash / EEPROM */
+	payload.minor_function = 6;
+	payload.offset = 0;
+	payload.length = 4096;
+	payload.func_specific = kzalloc(4096, GFP_KERNEL);
+	/* Read phy setting values from flash */
+	PM8001_CHIP_DISP->get_nvmd_req(pm8001_ha, &payload);
+	wait_for_completion(&completion);
+	pm8001_set_phy_profile(pm8001_ha, sizeof(u8), payload.func_specific);
+#endif
+}
+
 #ifdef PM8001_USE_MSIX
 /**
  * pm8001_setup_msix - enable MSI-X interrupt
@@ -686,6 +732,10 @@ static int __devinit pm8001_pci_probe(struct pci_dev *pdev,
 
 	PM8001_CHIP_DISP->interrupt_enable(pm8001_ha);
 	pm8001_init_sas_add(pm8001_ha);
+	/* phy setting support for motherboard controller */
+	if (pdev->subsystem_vendor != PCI_VENDOR_ID_ADAPTEC2 &&
+		pdev->subsystem_vendor != 0)
+		pm8001_get_phy_settings_info(pm8001_ha);
 	pm8001_post_sas_ha_init(shost, chip);
 	rc = sas_register_ha(SHOST_TO_SAS_HA(shost));
 	if (rc)
@@ -852,6 +902,63 @@ static struct pci_device_id __devinitdata pm8001_pci_table[] = {
 		PCI_DEVICE(0x117c, 0x0042),
 		.driver_data = chip_8001
 	},
+<<<<<<< HEAD
+=======
+	/* Support for SPC/SPCv/SPCve controllers */
+	{ PCI_VDEVICE(ADAPTEC2, 0x8001), chip_8001 },
+	{ PCI_VDEVICE(PMC_Sierra, 0x8008), chip_8008 },
+	{ PCI_VDEVICE(ADAPTEC2, 0x8008), chip_8008 },
+	{ PCI_VDEVICE(PMC_Sierra, 0x8018), chip_8018 },
+	{ PCI_VDEVICE(ADAPTEC2, 0x8018), chip_8018 },
+	{ PCI_VDEVICE(PMC_Sierra, 0x8009), chip_8009 },
+	{ PCI_VDEVICE(ADAPTEC2, 0x8009), chip_8009 },
+	{ PCI_VDEVICE(PMC_Sierra, 0x8019), chip_8019 },
+	{ PCI_VDEVICE(ADAPTEC2, 0x8019), chip_8019 },
+	{ PCI_VDEVICE(PMC_Sierra, 0x8074), chip_8074 },
+	{ PCI_VDEVICE(ADAPTEC2, 0x8074), chip_8074 },
+	{ PCI_VDEVICE(PMC_Sierra, 0x8076), chip_8076 },
+	{ PCI_VDEVICE(ADAPTEC2, 0x8076), chip_8076 },
+	{ PCI_VDEVICE(PMC_Sierra, 0x8077), chip_8077 },
+	{ PCI_VDEVICE(ADAPTEC2, 0x8077), chip_8077 },
+	{ PCI_VENDOR_ID_ADAPTEC2, 0x8081,
+		PCI_VENDOR_ID_ADAPTEC2, 0x0400, 0, 0, chip_8001 },
+	{ PCI_VENDOR_ID_ADAPTEC2, 0x8081,
+		PCI_VENDOR_ID_ADAPTEC2, 0x0800, 0, 0, chip_8001 },
+	{ PCI_VENDOR_ID_ADAPTEC2, 0x8088,
+		PCI_VENDOR_ID_ADAPTEC2, 0x0008, 0, 0, chip_8008 },
+	{ PCI_VENDOR_ID_ADAPTEC2, 0x8088,
+		PCI_VENDOR_ID_ADAPTEC2, 0x0800, 0, 0, chip_8008 },
+	{ PCI_VENDOR_ID_ADAPTEC2, 0x8089,
+		PCI_VENDOR_ID_ADAPTEC2, 0x0008, 0, 0, chip_8009 },
+	{ PCI_VENDOR_ID_ADAPTEC2, 0x8089,
+		PCI_VENDOR_ID_ADAPTEC2, 0x0800, 0, 0, chip_8009 },
+	{ PCI_VENDOR_ID_ADAPTEC2, 0x8088,
+		PCI_VENDOR_ID_ADAPTEC2, 0x0016, 0, 0, chip_8018 },
+	{ PCI_VENDOR_ID_ADAPTEC2, 0x8088,
+		PCI_VENDOR_ID_ADAPTEC2, 0x1600, 0, 0, chip_8018 },
+	{ PCI_VENDOR_ID_ADAPTEC2, 0x8089,
+		PCI_VENDOR_ID_ADAPTEC2, 0x0016, 0, 0, chip_8019 },
+	{ PCI_VENDOR_ID_ADAPTEC2, 0x8089,
+		PCI_VENDOR_ID_ADAPTEC2, 0x1600, 0, 0, chip_8019 },
+	{ PCI_VENDOR_ID_ADAPTEC2, 0x8074,
+		PCI_VENDOR_ID_ADAPTEC2, 0x0800, 0, 0, chip_8074 },
+	{ PCI_VENDOR_ID_ADAPTEC2, 0x8076,
+		PCI_VENDOR_ID_ADAPTEC2, 0x1600, 0, 0, chip_8076 },
+	{ PCI_VENDOR_ID_ADAPTEC2, 0x8077,
+		PCI_VENDOR_ID_ADAPTEC2, 0x1600, 0, 0, chip_8077 },
+	{ PCI_VENDOR_ID_ADAPTEC2, 0x8074,
+		PCI_VENDOR_ID_ADAPTEC2, 0x0008, 0, 0, chip_8074 },
+	{ PCI_VENDOR_ID_ADAPTEC2, 0x8076,
+		PCI_VENDOR_ID_ADAPTEC2, 0x0016, 0, 0, chip_8076 },
+	{ PCI_VENDOR_ID_ADAPTEC2, 0x8077,
+		PCI_VENDOR_ID_ADAPTEC2, 0x0016, 0, 0, chip_8077 },
+	{ PCI_VENDOR_ID_ADAPTEC2, 0x8076,
+		PCI_VENDOR_ID_ADAPTEC2, 0x0808, 0, 0, chip_8076 },
+	{ PCI_VENDOR_ID_ADAPTEC2, 0x8077,
+		PCI_VENDOR_ID_ADAPTEC2, 0x0808, 0, 0, chip_8077 },
+	{ PCI_VENDOR_ID_ADAPTEC2, 0x8074,
+		PCI_VENDOR_ID_ADAPTEC2, 0x0404, 0, 0, chip_8074 },
+>>>>>>> 0d522ee... Merge tag 'scsi-for-linus' of git://git.kernel.org/pub/scm/linux/kernel/git/jejb/scsi
 	{} /* terminate list */
 };
 
@@ -903,7 +1010,15 @@ module_init(pm8001_init);
 module_exit(pm8001_exit);
 
 MODULE_AUTHOR("Jack Wang <jack_wang@usish.com>");
+<<<<<<< HEAD
 MODULE_DESCRIPTION("PMC-Sierra PM8001 SAS/SATA controller driver");
+=======
+MODULE_AUTHOR("Anand Kumar Santhanam <AnandKumar.Santhanam@pmcs.com>");
+MODULE_AUTHOR("Sangeetha Gnanasekaran <Sangeetha.Gnanasekaran@pmcs.com>");
+MODULE_DESCRIPTION(
+		"PMC-Sierra PM8001/8081/8088/8089/8074/8076/8077 "
+		"SAS/SATA controller driver");
+>>>>>>> 0d522ee... Merge tag 'scsi-for-linus' of git://git.kernel.org/pub/scm/linux/kernel/git/jejb/scsi
 MODULE_VERSION(DRV_VERSION);
 MODULE_LICENSE("GPL");
 MODULE_DEVICE_TABLE(pci, pm8001_pci_table);

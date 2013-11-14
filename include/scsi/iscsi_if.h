@@ -59,6 +59,20 @@ enum iscsi_uevent_e {
 	ISCSI_UEVENT_TRANSPORT_EP_CONNECT_THROUGH_HOST	= UEVENT_BASE + 19,
 
 	ISCSI_UEVENT_PATH_UPDATE	= UEVENT_BASE + 20,
+<<<<<<< HEAD
+=======
+	ISCSI_UEVENT_SET_IFACE_PARAMS	= UEVENT_BASE + 21,
+	ISCSI_UEVENT_PING		= UEVENT_BASE + 22,
+	ISCSI_UEVENT_GET_CHAP		= UEVENT_BASE + 23,
+	ISCSI_UEVENT_DELETE_CHAP	= UEVENT_BASE + 24,
+	ISCSI_UEVENT_SET_FLASHNODE_PARAMS	= UEVENT_BASE + 25,
+	ISCSI_UEVENT_NEW_FLASHNODE	= UEVENT_BASE + 26,
+	ISCSI_UEVENT_DEL_FLASHNODE	= UEVENT_BASE + 27,
+	ISCSI_UEVENT_LOGIN_FLASHNODE	= UEVENT_BASE + 28,
+	ISCSI_UEVENT_LOGOUT_FLASHNODE	= UEVENT_BASE + 29,
+	ISCSI_UEVENT_LOGOUT_FLASHNODE_SID	= UEVENT_BASE + 30,
+	ISCSI_UEVENT_SET_CHAP		= UEVENT_BASE + 31,
+>>>>>>> 0d522ee... Merge tag 'scsi-for-linus' of git://git.kernel.org/pub/scm/linux/kernel/git/jejb/scsi
 
 	/* up events */
 	ISCSI_KEVENT_RECV_PDU		= KEVENT_BASE + 1,
@@ -214,6 +228,33 @@ struct iscsi_uevent {
 	} r;
 } __attribute__ ((aligned (sizeof(uint64_t))));
 
+<<<<<<< HEAD
+=======
+enum iscsi_param_type {
+	ISCSI_PARAM,		/* iscsi_param (session, conn, target, LU) */
+	ISCSI_HOST_PARAM,	/* iscsi_host_param */
+	ISCSI_NET_PARAM,	/* iscsi_net_param */
+	ISCSI_FLASHNODE_PARAM,	/* iscsi_flashnode_param */
+	ISCSI_CHAP_PARAM,	/* iscsi_chap_param */
+};
+
+/* structure for minimalist usecase */
+struct iscsi_param_info {
+	uint32_t len;		/* Actual length of the param value */
+	uint16_t param;		/* iscsi param */
+	uint8_t value[0];	/* length sized value follows */
+} __packed;
+
+struct iscsi_iface_param_info {
+	uint32_t iface_num;	/* iface number, 0 - n */
+	uint32_t len;		/* Actual length of the param */
+	uint16_t param;		/* iscsi param value */
+	uint8_t iface_type;	/* IPv4 or IPv6 */
+	uint8_t param_type;	/* iscsi_param_type */
+	uint8_t value[0];	/* length sized value follows */
+} __packed;
+
+>>>>>>> 0d522ee... Merge tag 'scsi-for-linus' of git://git.kernel.org/pub/scm/linux/kernel/git/jejb/scsi
 /*
  * To keep the struct iscsi_uevent size the same for userspace code
  * compatibility, the main structure for ISCSI_UEVENT_PATH_UPDATE and
@@ -452,4 +493,30 @@ struct iscsi_stats {
 		__attribute__ ((aligned (sizeof(uint64_t))));
 };
 
+<<<<<<< HEAD
+=======
+enum chap_type_e {
+	CHAP_TYPE_OUT,
+	CHAP_TYPE_IN,
+};
+
+enum iscsi_chap_param {
+	ISCSI_CHAP_PARAM_INDEX,
+	ISCSI_CHAP_PARAM_CHAP_TYPE,
+	ISCSI_CHAP_PARAM_USERNAME,
+	ISCSI_CHAP_PARAM_PASSWORD,
+	ISCSI_CHAP_PARAM_PASSWORD_LEN
+};
+
+#define ISCSI_CHAP_AUTH_NAME_MAX_LEN	256
+#define ISCSI_CHAP_AUTH_SECRET_MAX_LEN	256
+struct iscsi_chap_rec {
+	uint16_t chap_tbl_idx;
+	enum chap_type_e chap_type;
+	char username[ISCSI_CHAP_AUTH_NAME_MAX_LEN];
+	uint8_t password[ISCSI_CHAP_AUTH_SECRET_MAX_LEN];
+	uint8_t password_length;
+};
+
+>>>>>>> 0d522ee... Merge tag 'scsi-for-linus' of git://git.kernel.org/pub/scm/linux/kernel/git/jejb/scsi
 #endif

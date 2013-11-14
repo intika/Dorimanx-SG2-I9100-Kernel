@@ -43,6 +43,16 @@
 
 enum chip_flavors {
 	chip_8001,
+<<<<<<< HEAD
+=======
+	chip_8008,
+	chip_8009,
+	chip_8018,
+	chip_8019,
+	chip_8074,
+	chip_8076,
+	chip_8077
+>>>>>>> 0d522ee... Merge tag 'scsi-for-linus' of git://git.kernel.org/pub/scm/linux/kernel/git/jejb/scsi
 };
 #define USI_MAX_MEMCNT			9
 #define PM8001_MAX_DMA_SG		SG_ALL
@@ -85,6 +95,11 @@ enum memory_region_num {
 	NVMD,	    /* NVM device */
 	DEV_MEM,    /* memory for devices */
 	CCB_MEM,    /* memory for command control block */
+<<<<<<< HEAD
+=======
+	FW_FLASH,    /* memory for fw flash update */
+	FORENSIC_MEM  /* memory for fw forensic data */
+>>>>>>> 0d522ee... Merge tag 'scsi-for-linus' of git://git.kernel.org/pub/scm/linux/kernel/git/jejb/scsi
 };
 #define	PM8001_EVENT_LOG_SIZE	 (128 * 1024)
 

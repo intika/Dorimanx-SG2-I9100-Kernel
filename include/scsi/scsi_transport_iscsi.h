@@ -137,6 +137,36 @@ struct iscsi_transport {
 	int (*tgt_dscvr) (struct Scsi_Host *shost, enum iscsi_tgt_dscvr type,
 			  uint32_t enable, struct sockaddr *dst_addr);
 	int (*set_path) (struct Scsi_Host *shost, struct iscsi_path *params);
+<<<<<<< HEAD
+=======
+	int (*set_iface_param) (struct Scsi_Host *shost, void *data,
+				uint32_t len);
+	int (*get_iface_param) (struct iscsi_iface *iface,
+				enum iscsi_param_type param_type,
+				int param, char *buf);
+	umode_t (*attr_is_visible)(int param_type, int param);
+	int (*bsg_request)(struct bsg_job *job);
+	int (*send_ping) (struct Scsi_Host *shost, uint32_t iface_num,
+			  uint32_t iface_type, uint32_t payload_size,
+			  uint32_t pid, struct sockaddr *dst_addr);
+	int (*get_chap) (struct Scsi_Host *shost, uint16_t chap_tbl_idx,
+			 uint32_t *num_entries, char *buf);
+	int (*delete_chap) (struct Scsi_Host *shost, uint16_t chap_tbl_idx);
+	int (*set_chap) (struct Scsi_Host *shost, void *data, int len);
+	int (*get_flashnode_param) (struct iscsi_bus_flash_session *fnode_sess,
+				    int param, char *buf);
+	int (*set_flashnode_param) (struct iscsi_bus_flash_session *fnode_sess,
+				    struct iscsi_bus_flash_conn *fnode_conn,
+				    void *data, int len);
+	int (*new_flashnode) (struct Scsi_Host *shost, const char *buf,
+			      int len);
+	int (*del_flashnode) (struct iscsi_bus_flash_session *fnode_sess);
+	int (*login_flashnode) (struct iscsi_bus_flash_session *fnode_sess,
+				struct iscsi_bus_flash_conn *fnode_conn);
+	int (*logout_flashnode) (struct iscsi_bus_flash_session *fnode_sess,
+				 struct iscsi_bus_flash_conn *fnode_conn);
+	int (*logout_flashnode_sid) (struct iscsi_cls_session *cls_sess);
+>>>>>>> 0d522ee... Merge tag 'scsi-for-linus' of git://git.kernel.org/pub/scm/linux/kernel/git/jejb/scsi
 };
 
 /*

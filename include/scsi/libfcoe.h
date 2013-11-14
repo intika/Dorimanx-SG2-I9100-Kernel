@@ -89,6 +89,7 @@ enum fip_state {
  * @lp:		   &fc_lport: libfc local port.
  * @sel_fcf:	   currently selected FCF, or NULL.
  * @fcfs:	   list of discovered FCFs.
+ * @cdev:          (Optional) pointer to sysfs fcoe_ctlr_device.
  * @fcf_count:	   number of discovered FCF entries.
  * @sol_time:	   time when a multicast solicitation was last sent.
  * @sel_time:	   time after which to select an FCF.
@@ -126,6 +127,7 @@ struct fcoe_ctlr {
 	struct fc_lport *lp;
 	struct fcoe_fcf *sel_fcf;
 	struct list_head fcfs;
+	struct fcoe_ctlr_device *cdev;
 	u16 fcf_count;
 	unsigned long sol_time;
 	unsigned long sel_time;
@@ -158,6 +160,24 @@ struct fcoe_ctlr {
 };
 
 /**
+<<<<<<< HEAD
+=======
+ * fcoe_ctlr_priv() - Return the private data from a fcoe_ctlr
+ * @cltr: The fcoe_ctlr whose private data will be returned
+ */
+static inline void *fcoe_ctlr_priv(const struct fcoe_ctlr *ctlr)
+{
+	return (void *)(ctlr + 1);
+}
+
+/*
+ * This assumes that the fcoe_ctlr (x) is allocated with the fcoe_ctlr_device.
+ */
+#define fcoe_ctlr_to_ctlr_dev(x)					\
+	(x)->cdev
+
+/**
+>>>>>>> 0d522ee... Merge tag 'scsi-for-linus' of git://git.kernel.org/pub/scm/linux/kernel/git/jejb/scsi
  * struct fcoe_fcf - Fibre-Channel Forwarder
  * @list:	 list linkage
  * @time:	 system time (jiffies) when an advertisement was last received

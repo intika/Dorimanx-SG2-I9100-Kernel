@@ -508,7 +508,21 @@ static int alua_check_sense(struct scsi_device *sdev,
 			 * Power On, Reset, or Bus Device Reset, just retry.
 			 */
 			return ADD_TO_MLQUEUE;
+<<<<<<< HEAD
 		if (sense_hdr->asc == 0x2a && sense_hdr->ascq == 0x06) {
+=======
+		if (sense_hdr->asc == 0x29 && sense_hdr->ascq == 0x04)
+			/*
+			 * Device internal reset
+			 */
+			return ADD_TO_MLQUEUE;
+		if (sense_hdr->asc == 0x2a && sense_hdr->ascq == 0x01)
+			/*
+			 * Mode Parameters Changed
+			 */
+			return ADD_TO_MLQUEUE;
+		if (sense_hdr->asc == 0x2a && sense_hdr->ascq == 0x06)
+>>>>>>> 0d522ee... Merge tag 'scsi-for-linus' of git://git.kernel.org/pub/scm/linux/kernel/git/jejb/scsi
 			/*
 			 * ALUA state changed
 			 */
@@ -538,12 +552,13 @@ static int alua_check_sense(struct scsi_device *sdev,
 /*
  * alua_rtpg - Evaluate REPORT TARGET GROUP STATES
  * @sdev: the device to be evaluated.
+ * @wait_for_transition: if nonzero, wait ALUA_FAILOVER_TIMEOUT seconds for device to exit transitioning state
  *
  * Evaluate the Target Port Group State.
  * Returns SCSI_DH_DEV_OFFLINED if the path is
  * found to be unusable.
  */
-static int alua_rtpg(struct scsi_device *sdev, struct alua_dh_data *h)
+static int alua_rtpg(struct scsi_device *sdev, struct alua_dh_data *h, int wait_for_transition)
 {
 	struct scsi_sense_hdr sense_hdr;
 	int len, k, off, valid_states = 0;
@@ -587,7 +602,32 @@ static int alua_rtpg(struct scsi_device *sdev, struct alua_dh_data *h)
 		goto retry;
 	}
 
+<<<<<<< HEAD
 	for (k = 4, ucp = h->buff + 4; k < len; k += off, ucp += off) {
+=======
+	orig_transition_tmo = h->transition_tmo;
+	if ((h->buff[4] & RTPG_FMT_MASK) == RTPG_FMT_EXT_HDR && h->buff[5] != 0)
+		h->transition_tmo = h->buff[5];
+	else
+		h->transition_tmo = ALUA_FAILOVER_TIMEOUT;
+
+	if (wait_for_transition && (orig_transition_tmo != h->transition_tmo)) {
+		sdev_printk(KERN_INFO, sdev,
+			    "%s: transition timeout set to %d seconds\n",
+			    ALUA_DH_NAME, h->transition_tmo);
+		expiry = jiffies + h->transition_tmo * HZ;
+	}
+
+	if ((h->buff[4] & RTPG_FMT_MASK) == RTPG_FMT_EXT_HDR)
+		tpg_desc_tbl_off = 8;
+	else
+		tpg_desc_tbl_off = 4;
+
+	for (k = tpg_desc_tbl_off, ucp = h->buff + tpg_desc_tbl_off;
+	     k < len;
+	     k += off, ucp += off) {
+
+>>>>>>> 0d522ee... Merge tag 'scsi-for-linus' of git://git.kernel.org/pub/scm/linux/kernel/git/jejb/scsi
 		if (h->group_id == (ucp[2] << 8) + ucp[3]) {
 			h->state = ucp[0] & 0x0f;
 			valid_states = ucp[1];
@@ -608,14 +648,27 @@ static int alua_rtpg(struct scsi_device *sdev, struct alua_dh_data *h)
 
 	switch (h->state) {
 	case TPGS_STATE_TRANSITIONING:
+<<<<<<< HEAD
 		if (time_before(jiffies, expiry)) {
 			/* State transition, retry */
 			interval *= 10;
 			msleep(interval);
 			goto retry;
+=======
+		if (wait_for_transition) {
+			if (time_before(jiffies, expiry)) {
+				/* State transition, retry */
+				interval += 2000;
+				msleep(interval);
+				goto retry;
+			}
+			err = SCSI_DH_RETRY;
+		} else {
+			err = SCSI_DH_OK;
+>>>>>>> 0d522ee... Merge tag 'scsi-for-linus' of git://git.kernel.org/pub/scm/linux/kernel/git/jejb/scsi
 		}
+
 		/* Transitioning time exceeded, set port to standby */
-		err = SCSI_DH_RETRY;
 		h->state = TPGS_STATE_STANDBY;
 		break;
 	case TPGS_STATE_OFFLINE:
@@ -649,7 +702,7 @@ static int alua_initialize(struct scsi_device *sdev, struct alua_dh_data *h)
 	if (err != SCSI_DH_OK)
 		goto out;
 
-	err = alua_rtpg(sdev, h);
+	err = alua_rtpg(sdev, h, 0);
 	if (err != SCSI_DH_OK)
 		goto out;
 
@@ -673,10 +726,42 @@ static int alua_activate(struct scsi_device *sdev,
 	struct alua_dh_data *h = get_alua_data(sdev);
 	int err = SCSI_DH_OK;
 
+<<<<<<< HEAD
 	if (h->group_id != -1) {
 		err = alua_rtpg(sdev, h);
 		if (err != SCSI_DH_OK)
 			goto out;
+=======
+	err = alua_rtpg(sdev, h, 1);
+	if (err != SCSI_DH_OK)
+		goto out;
+
+	if (optimize_stpg)
+		h->flags |= ALUA_OPTIMIZE_STPG;
+
+	if (h->tpgs & TPGS_MODE_EXPLICIT) {
+		switch (h->state) {
+		case TPGS_STATE_NONOPTIMIZED:
+			stpg = 1;
+			if ((h->flags & ALUA_OPTIMIZE_STPG) &&
+			    (!h->pref) &&
+			    (h->tpgs & TPGS_MODE_IMPLICIT))
+				stpg = 0;
+			break;
+		case TPGS_STATE_STANDBY:
+		case TPGS_STATE_UNAVAILABLE:
+			stpg = 1;
+			break;
+		case TPGS_STATE_OFFLINE:
+			err = SCSI_DH_IO;
+			break;
+		case TPGS_STATE_TRANSITIONING:
+			err = SCSI_DH_RETRY;
+			break;
+		default:
+			break;
+		}
+>>>>>>> 0d522ee... Merge tag 'scsi-for-linus' of git://git.kernel.org/pub/scm/linux/kernel/git/jejb/scsi
 	}
 
 	if (h->tpgs & TPGS_MODE_EXPLICIT &&

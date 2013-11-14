@@ -403,6 +403,12 @@ struct fc_seq {
  * @fh_type:      The frame type
  * @class:        The class of service
  * @seq:          The sequence in use on this exchange
+ * @resp_active:  Number of tasks that are concurrently executing @resp().
+ * @resp_task:    If @resp_active > 0, either the task executing @resp(), the
+ *                task that has been interrupted to execute the soft-IRQ
+ *                executing @resp() or NULL if more than one task is executing
+ *                @resp concurrently.
+ * @resp_wq:      Waitqueue for the tasks waiting on @resp_active.
  * @resp:         Callback for responses on this exchange
  * @destructor:   Called when destroying the exchange
  * @arg:          Passed as a void pointer to the resp() callback
@@ -432,10 +438,17 @@ struct fc_exch {
 	u8		    seq_id;
 	u8		    encaps;
 	u32		    f_ctl;
+<<<<<<< HEAD
 	u8		    fh_type;
 	enum fc_class	    class;
 	struct fc_seq	    seq;
 
+=======
+	struct fc_seq       seq;
+	int		    resp_active;
+	struct task_struct  *resp_task;
+	wait_queue_head_t   resp_wq;
+>>>>>>> 0d522ee... Merge tag 'scsi-for-linus' of git://git.kernel.org/pub/scm/linux/kernel/git/jejb/scsi
 	void		    (*resp)(struct fc_seq *, struct fc_frame *, void *);
 	void		    *arg;
 

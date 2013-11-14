@@ -24,6 +24,12 @@
 #include <linux/pci.h>
 #include <linux/if_ether.h>
 #include <linux/in.h>
+<<<<<<< HEAD
+=======
+#include <linux/ctype.h>
+#include <linux/module.h>
+#include <linux/aer.h>
+>>>>>>> 0d522ee... Merge tag 'scsi-for-linus' of git://git.kernel.org/pub/scm/linux/kernel/git/jejb/scsi
 #include <scsi/scsi.h>
 #include <scsi/scsi_cmnd.h>
 #include <scsi/scsi_device.h>
@@ -32,11 +38,16 @@
 #include <scsi/libiscsi.h>
 #include <scsi/scsi_transport_iscsi.h>
 
-#include "be.h"
 #define DRV_NAME		"be2iscsi"
+<<<<<<< HEAD
 #define BUILD_STR		"2.103.298.0"
 #define BE_NAME			"ServerEngines BladeEngine2" \
 				"Linux iSCSI Driver version" BUILD_STR
+=======
+#define BUILD_STR		"10.0.659.0"
+#define BE_NAME			"Emulex OneConnect" \
+				"Open-iSCSI Driver version" BUILD_STR
+>>>>>>> 0d522ee... Merge tag 'scsi-for-linus' of git://git.kernel.org/pub/scm/linux/kernel/git/jejb/scsi
 #define DRV_DESC		BE_NAME " " "Driver"
 
 #define BE_VENDOR_ID		0x19A2
@@ -58,11 +69,20 @@
 #define BE2_DEFPDU_HDR_SZ	64
 #define BE2_DEFPDU_DATA_SZ	8192
 
+<<<<<<< HEAD
 #define MAX_CPUS		31
+=======
+#define MAX_CPUS		64
+#define BEISCSI_MAX_NUM_CPUS	7
+
+#define BEISCSI_VER_STRLEN 32
+
+>>>>>>> 0d522ee... Merge tag 'scsi-for-linus' of git://git.kernel.org/pub/scm/linux/kernel/git/jejb/scsi
 #define BEISCSI_SGLIST_ELEMENTS	30
 
 #define BEISCSI_CMD_PER_LUN	128	/* scsi_host->cmd_per_lun */
 #define BEISCSI_MAX_SECTORS	2048	/* scsi_host->max_sectors */
+#define BEISCSI_TEMPLATE_HDR_PER_CXN_SIZE 128 /* Template size per cxn */
 
 #define BEISCSI_MAX_CMD_LEN	16	/* scsi_host->max_cmd_len */
 #define BEISCSI_NUM_MAX_LUN	256	/* scsi_host->max_lun */
@@ -102,14 +122,19 @@ do {							\
 	}						\
 } while (0);
 
-#define BE_ADAPTER_UP		0x00000000
-#define BE_ADAPTER_LINK_DOWN	0x00000001
+#define BE_ADAPTER_LINK_UP	0x001
+#define BE_ADAPTER_LINK_DOWN	0x002
+#define BE_ADAPTER_PCI_ERR	0x004
+
+#define BEISCSI_CLEAN_UNLOAD	0x01
+#define BEISCSI_EEH_UNLOAD	0x02
 /**
  * hardware needs the async PDU buffers to be posted in multiples of 8
  * So have atleast 8 of them by default
  */
 
-#define HWI_GET_ASYNC_PDU_CTX(phwi)	(phwi->phwi_ctxt->pasync_ctx)
+#define HWI_GET_ASYNC_PDU_CTX(phwi, ulp_num)	\
+	(phwi->phwi_ctxt->pasync_ctx[ulp_num])
 
 /********* Memory BAR register ************/
 #define PCICFG_MEMBAR_CTRL_INT_CTRL_OFFSET	0xfc
@@ -154,27 +179,44 @@ do {							\
 #define DB_CQ_REARM_SHIFT		(29)	/* bit 29 */
 
 #define GET_HWI_CONTROLLER_WS(pc)	(pc->phwi_ctrlr)
-#define HWI_GET_DEF_BUFQ_ID(pc) (((struct hwi_controller *)\
-		(GET_HWI_CONTROLLER_WS(pc)))->default_pdu_data.id)
-#define HWI_GET_DEF_HDRQ_ID(pc) (((struct hwi_controller *)\
-		(GET_HWI_CONTROLLER_WS(pc)))->default_pdu_hdr.id)
+#define HWI_GET_DEF_BUFQ_ID(pc, ulp_num) (((struct hwi_controller *)\
+		(GET_HWI_CONTROLLER_WS(pc)))->default_pdu_data[ulp_num].id)
+#define HWI_GET_DEF_HDRQ_ID(pc, ulp_num) (((struct hwi_controller *)\
+		(GET_HWI_CONTROLLER_WS(pc)))->default_pdu_hdr[ulp_num].id)
 
 #define PAGES_REQUIRED(x) \
 	((x < PAGE_SIZE) ? 1 :  ((x + PAGE_SIZE - 1) / PAGE_SIZE))
 
+<<<<<<< HEAD
+=======
+#define BEISCSI_MSI_NAME 20 /* size of msi_name string */
+
+#define MEM_DESCR_OFFSET 8
+#define BEISCSI_DEFQ_HDR 1
+#define BEISCSI_DEFQ_DATA 0
+>>>>>>> 0d522ee... Merge tag 'scsi-for-linus' of git://git.kernel.org/pub/scm/linux/kernel/git/jejb/scsi
 enum be_mem_enum {
 	HWI_MEM_ADDN_CONTEXT,
 	HWI_MEM_WRB,
 	HWI_MEM_WRBH,
 	HWI_MEM_SGLH,
 	HWI_MEM_SGE,
-	HWI_MEM_ASYNC_HEADER_BUF,	/* 5 */
-	HWI_MEM_ASYNC_DATA_BUF,
-	HWI_MEM_ASYNC_HEADER_RING,
-	HWI_MEM_ASYNC_DATA_RING,
-	HWI_MEM_ASYNC_HEADER_HANDLE,
-	HWI_MEM_ASYNC_DATA_HANDLE,	/* 10 */
-	HWI_MEM_ASYNC_PDU_CONTEXT,
+	HWI_MEM_TEMPLATE_HDR_ULP0,
+	HWI_MEM_ASYNC_HEADER_BUF_ULP0,	/* 6 */
+	HWI_MEM_ASYNC_DATA_BUF_ULP0,
+	HWI_MEM_ASYNC_HEADER_RING_ULP0,
+	HWI_MEM_ASYNC_DATA_RING_ULP0,
+	HWI_MEM_ASYNC_HEADER_HANDLE_ULP0,
+	HWI_MEM_ASYNC_DATA_HANDLE_ULP0,	/* 11 */
+	HWI_MEM_ASYNC_PDU_CONTEXT_ULP0,
+	HWI_MEM_TEMPLATE_HDR_ULP1,
+	HWI_MEM_ASYNC_HEADER_BUF_ULP1,	/* 14 */
+	HWI_MEM_ASYNC_DATA_BUF_ULP1,
+	HWI_MEM_ASYNC_HEADER_RING_ULP1,
+	HWI_MEM_ASYNC_DATA_RING_ULP1,
+	HWI_MEM_ASYNC_HEADER_HANDLE_ULP1,
+	HWI_MEM_ASYNC_DATA_HANDLE_ULP1,	/* 19 */
+	HWI_MEM_ASYNC_PDU_CONTEXT_ULP1,
 	ISCSI_MEM_GLOBAL_HEADER,
 	SE_MEM_MAX
 };
@@ -269,6 +311,52 @@ struct invalidate_command_table {
 	unsigned short cid;
 } __packed;
 
+<<<<<<< HEAD
+=======
+#define BEISCSI_GET_ULP_FROM_CRI(phwi_ctrlr, cri) \
+	(phwi_ctrlr->wrb_context[cri].ulp_num)
+struct hwi_wrb_context {
+	struct list_head wrb_handle_list;
+	struct list_head wrb_handle_drvr_list;
+	struct wrb_handle **pwrb_handle_base;
+	struct wrb_handle **pwrb_handle_basestd;
+	struct iscsi_wrb *plast_wrb;
+	unsigned short alloc_index;
+	unsigned short free_index;
+	unsigned short wrb_handles_available;
+	unsigned short cid;
+	uint8_t ulp_num;	/* ULP to which CID binded */
+	uint16_t register_set;
+	uint16_t doorbell_format;
+	uint32_t doorbell_offset;
+};
+
+struct ulp_cid_info {
+	unsigned short *cid_array;
+	unsigned short avlbl_cids;
+	unsigned short cid_alloc;
+	unsigned short cid_free;
+};
+
+#include "be.h"
+#define chip_be2(phba)      (phba->generation == BE_GEN2)
+#define chip_be3_r(phba)    (phba->generation == BE_GEN3)
+#define is_chip_be2_be3r(phba) (chip_be3_r(phba) || (chip_be2(phba)))
+
+#define BEISCSI_ULP0    0
+#define BEISCSI_ULP1    1
+#define BEISCSI_ULP_COUNT   2
+#define BEISCSI_ULP0_LOADED 0x01
+#define BEISCSI_ULP1_LOADED 0x02
+
+#define BEISCSI_ULP_AVLBL_CID(phba, ulp_num) \
+	(((struct ulp_cid_info *)phba->cid_array_info[ulp_num])->avlbl_cids)
+#define BEISCSI_ULP0_AVLBL_CID(phba) \
+	BEISCSI_ULP_AVLBL_CID(phba, BEISCSI_ULP0)
+#define BEISCSI_ULP1_AVLBL_CID(phba) \
+	BEISCSI_ULP_AVLBL_CID(phba, BEISCSI_ULP1)
+
+>>>>>>> 0d522ee... Merge tag 'scsi-for-linus' of git://git.kernel.org/pub/scm/linux/kernel/git/jejb/scsi
 struct beiscsi_hba {
 	struct hba_parameters params;
 	struct hwi_controller *phwi_ctrlr;
@@ -303,13 +391,24 @@ struct beiscsi_hba {
 	spinlock_t io_sgl_lock;
 	spinlock_t mgmt_sgl_lock;
 	spinlock_t isr_lock;
+	spinlock_t async_pdu_lock;
 	unsigned int age;
+<<<<<<< HEAD
 	unsigned short avlbl_cids;
 	unsigned short cid_alloc;
 	unsigned short cid_free;
 	struct beiscsi_conn *conn_table[BE2_MAX_SESSIONS * 2];
 	struct list_head hba_queue;
 	unsigned short *cid_array;
+=======
+	struct list_head hba_queue;
+#define BE_MAX_SESSION 2048
+#define BE_SET_CID_TO_CRI(cri_index, cid) \
+			  (phba->cid_to_cri_map[cid] = cri_index)
+#define BE_GET_CRI_FROM_CID(cid) (phba->cid_to_cri_map[cid])
+	unsigned short cid_to_cri_map[BE_MAX_SESSION];
+	struct ulp_cid_info *cid_array_info[BEISCSI_ULP_COUNT];
+>>>>>>> 0d522ee... Merge tag 'scsi-for-linus' of git://git.kernel.org/pub/scm/linux/kernel/git/jejb/scsi
 	struct iscsi_endpoint **ep_array;
 	struct iscsi_boot_kset *boot_kset;
 	struct Scsi_Host *shost;
@@ -318,22 +417,32 @@ struct beiscsi_hba {
 		 * group together since they are used most frequently
 		 * for cid to cri conversion
 		 */
-		unsigned int iscsi_cid_start;
 		unsigned int phys_port;
+		unsigned int eqid_count;
+		unsigned int cqid_count;
+		unsigned int iscsi_cid_start[BEISCSI_ULP_COUNT];
+#define BEISCSI_GET_CID_COUNT(phba, ulp_num) \
+		(phba->fw_config.iscsi_cid_count[ulp_num])
+		unsigned int iscsi_cid_count[BEISCSI_ULP_COUNT];
+		unsigned int iscsi_icd_count[BEISCSI_ULP_COUNT];
+		unsigned int iscsi_icd_start[BEISCSI_ULP_COUNT];
+		unsigned int iscsi_chain_start[BEISCSI_ULP_COUNT];
+		unsigned int iscsi_chain_count[BEISCSI_ULP_COUNT];
 
-		unsigned int isr_offset;
-		unsigned int iscsi_icd_start;
-		unsigned int iscsi_cid_count;
-		unsigned int iscsi_icd_count;
-		unsigned int pci_function;
-
-		unsigned short cid_alloc;
-		unsigned short cid_free;
-		unsigned short avlbl_cids;
 		unsigned short iscsi_features;
-		spinlock_t cid_lock;
+		uint16_t dual_ulp_aware;
+		unsigned long ulp_supported;
 	} fw_config;
 
+<<<<<<< HEAD
+=======
+	unsigned int state;
+	bool fw_timeout;
+	bool ue_detected;
+	struct delayed_work beiscsi_hw_check_task;
+
+	bool mac_addr_set;
+>>>>>>> 0d522ee... Merge tag 'scsi-for-linus' of git://git.kernel.org/pub/scm/linux/kernel/git/jejb/scsi
 	u8 mac_address[ETH_ALEN];
 	unsigned short todo_cq;
 	unsigned short todo_mcc_cq;
@@ -359,6 +468,7 @@ struct beiscsi_conn {
 	struct iscsi_conn *conn;
 	struct beiscsi_hba *phba;
 	u32 exp_statsn;
+	u32 doorbell_offset;
 	u32 beiscsi_conn_cid;
 	struct beiscsi_endpoint *ep;
 	unsigned short login_in_progress;
@@ -456,7 +566,7 @@ struct amap_iscsi_sge {
 };
 
 struct beiscsi_offload_params {
-	u32 dw[5];
+	u32 dw[6];
 };
 
 #define OFFLD_PARAMS_ERL	0x00000003
@@ -480,6 +590,7 @@ struct amap_beiscsi_offload_params {
 	u8 imd[1];
 	u8 pad[26];
 	u8 exp_statsn[32];
+	u8 max_recv_data_segment_length[32];
 };
 
 /* void hwi_complete_drvr_msgs(struct beiscsi_conn *beiscsi_conn,
@@ -545,6 +656,13 @@ struct hwi_async_pdu_context {
 		unsigned int num_entries;
 	} async_data;
 
+<<<<<<< HEAD
+=======
+	unsigned int buffer_size;
+	unsigned int num_entries;
+#define BE_GET_ASYNC_CRI_FROM_CID(cid) (pasync_ctx->cid_to_async_cri_map[cid])
+	unsigned short cid_to_async_cri_map[BE_MAX_SESSION];
+>>>>>>> 0d522ee... Merge tag 'scsi-for-linus' of git://git.kernel.org/pub/scm/linux/kernel/git/jejb/scsi
 	/**
 	 * This is a varying size list! Do not add anything
 	 * after this entry!!
@@ -781,6 +899,52 @@ struct amap_iscsi_target_context_update_wrb {
 
 } __packed;
 
+<<<<<<< HEAD
+=======
+#define BEISCSI_MAX_RECV_DATASEG_LEN    (64 * 1024)
+#define BEISCSI_MAX_CXNS    1
+struct amap_iscsi_target_context_update_wrb_v2 {
+	u8 max_burst_length[24];    /* DWORD 0 */
+	u8 rsvd0[3];    /* DWORD 0 */
+	u8 type[5];     /* DWORD 0 */
+	u8 ptr2nextwrb[8];  /* DWORD 1 */
+	u8 wrb_idx[8];      /* DWORD 1 */
+	u8 rsvd1[16];       /* DWORD 1 */
+	u8 max_send_data_segment_length[24];    /* DWORD 2 */
+	u8 rsvd2[8];    /* DWORD 2 */
+	u8 first_burst_length[24]; /* DWORD 3 */
+	u8 rsvd3[8]; /* DOWRD 3 */
+	u8 max_r2t[16]; /* DWORD 4 */
+	u8 rsvd4;       /* DWORD 4 */
+	u8 hde;         /* DWORD 4 */
+	u8 dde;         /* DWORD 4 */
+	u8 erl[2];      /* DWORD 4 */
+	u8 rsvd5[6];    /* DWORD 4 */
+	u8 imd;         /* DWORD 4 */
+	u8 ir2t;        /* DWORD 4 */
+	u8 rsvd6[3];    /* DWORD 4 */
+	u8 stat_sn[32];     /* DWORD 5 */
+	u8 rsvd7[32];   /* DWORD 6 */
+	u8 rsvd8[32];   /* DWORD 7 */
+	u8 max_recv_dataseg_len[24];    /* DWORD 8 */
+	u8 rsvd9[8]; /* DWORD 8 */
+	u8 rsvd10[32];   /* DWORD 9 */
+	u8 rsvd11[32];   /* DWORD 10 */
+	u8 max_cxns[16]; /* DWORD 11 */
+	u8 rsvd12[11]; /* DWORD  11*/
+	u8 invld; /* DWORD 11 */
+	u8 rsvd13;/* DWORD 11*/
+	u8 dmsg; /* DWORD 11 */
+	u8 data_seq_inorder; /* DWORD 11 */
+	u8 pdu_seq_inorder; /* DWORD 11 */
+	u8 rsvd14[32]; /*DWORD 12 */
+	u8 rsvd15[32]; /* DWORD 13 */
+	u8 rsvd16[32]; /* DWORD 14 */
+	u8 rsvd17[32]; /* DWORD 15 */
+} __packed;
+
+
+>>>>>>> 0d522ee... Merge tag 'scsi-for-linus' of git://git.kernel.org/pub/scm/linux/kernel/git/jejb/scsi
 struct be_ring {
 	u32 pages;		/* queue size in pages */
 	u32 id;			/* queue id assigned by beklib */
@@ -788,23 +952,15 @@ struct be_ring {
 	u32 cidx;		/* consumer index */
 	u32 pidx;		/* producer index -- not used by most rings */
 	u32 item_size;		/* size in bytes of one object */
+	u8 ulp_num;	/* ULP to which CID binded */
+	u16 register_set;
+	u16 doorbell_format;
+	u32 doorbell_offset;
 
 	void *va;		/* The virtual address of the ring.  This
 				 * should be last to allow 32 & 64 bit debugger
 				 * extensions to work.
 				 */
-};
-
-struct hwi_wrb_context {
-	struct list_head wrb_handle_list;
-	struct list_head wrb_handle_drvr_list;
-	struct wrb_handle **pwrb_handle_base;
-	struct wrb_handle **pwrb_handle_basestd;
-	struct iscsi_wrb *plast_wrb;
-	unsigned short alloc_index;
-	unsigned short free_index;
-	unsigned short wrb_handles_available;
-	unsigned short cid;
 };
 
 struct hwi_controller {
@@ -815,8 +971,8 @@ struct hwi_controller {
 
 	struct hwi_wrb_context wrb_context[BE2_MAX_SESSIONS * 2];
 	struct mcc_wrb *pmcc_wrb_base;
-	struct be_ring default_pdu_hdr;
-	struct be_ring default_pdu_data;
+	struct be_ring default_pdu_hdr[BEISCSI_ULP_COUNT];
+	struct be_ring default_pdu_data[BEISCSI_ULP_COUNT];
 	struct hwi_context_memory *phwi_ctxt;
 };
 
@@ -847,6 +1003,7 @@ struct hwi_context_memory {
 	struct be_eq_obj be_eq[MAX_CPUS];
 	struct be_queue_info be_cq[MAX_CPUS];
 
+<<<<<<< HEAD
 	struct be_queue_info be_def_hdrq;
 	struct be_queue_info be_def_dataq;
 
@@ -856,4 +1013,29 @@ struct hwi_context_memory {
 	struct hwi_async_pdu_context *pasync_ctx;
 };
 
+=======
+	struct be_queue_info *be_wrbq;
+	struct be_queue_info be_def_hdrq[BEISCSI_ULP_COUNT];
+	struct be_queue_info be_def_dataq[BEISCSI_ULP_COUNT];
+	struct hwi_async_pdu_context *pasync_ctx[BEISCSI_ULP_COUNT];
+};
+
+/* Logging related definitions */
+#define BEISCSI_LOG_INIT	0x0001	/* Initialization events */
+#define BEISCSI_LOG_MBOX	0x0002	/* Mailbox Events */
+#define BEISCSI_LOG_MISC	0x0004	/* Miscllaneous Events */
+#define BEISCSI_LOG_EH		0x0008	/* Error Handler */
+#define BEISCSI_LOG_IO		0x0010	/* IO Code Path */
+#define BEISCSI_LOG_CONFIG	0x0020	/* CONFIG Code Path */
+#define BEISCSI_LOG_ISCSI	0x0040	/* SCSI/iSCSI Protocol related Logs */
+
+#define beiscsi_log(phba, level, mask, fmt, arg...) \
+do { \
+	uint32_t log_value = phba->attr_log_enable; \
+		if (((mask) & log_value) || (level[1] <= '3')) \
+			shost_printk(level, phba->shost, \
+				     fmt, __LINE__, ##arg); \
+} while (0)
+
+>>>>>>> 0d522ee... Merge tag 'scsi-for-linus' of git://git.kernel.org/pub/scm/linux/kernel/git/jejb/scsi
 #endif

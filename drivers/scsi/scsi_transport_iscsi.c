@@ -1231,6 +1231,7 @@ iscsi_if_get_stats(struct iscsi_transport *transport, struct nlmsghdr *nlh)
 	return err;
 }
 
+<<<<<<< HEAD
 /**
  * iscsi_session_event - send session destr. completion event
  * @session: iscsi class session
@@ -1238,6 +1239,32 @@ iscsi_if_get_stats(struct iscsi_transport *transport, struct nlmsghdr *nlh)
  */
 int iscsi_session_event(struct iscsi_cls_session *session,
 			enum iscsi_uevent_e event)
+=======
+static int iscsi_set_chap(struct iscsi_transport *transport,
+			  struct iscsi_uevent *ev, uint32_t len)
+{
+	char *data = (char *)ev + sizeof(*ev);
+	struct Scsi_Host *shost;
+	int err = 0;
+
+	if (!transport->set_chap)
+		return -ENOSYS;
+
+	shost = scsi_host_lookup(ev->u.set_path.host_no);
+	if (!shost) {
+		pr_err("%s could not find host no %u\n",
+		       __func__, ev->u.set_path.host_no);
+		return -ENODEV;
+	}
+
+	err = transport->set_chap(shost, data, len);
+	scsi_host_put(shost);
+	return err;
+}
+
+static int iscsi_delete_chap(struct iscsi_transport *transport,
+			     struct iscsi_uevent *ev)
+>>>>>>> 0d522ee... Merge tag 'scsi-for-linus' of git://git.kernel.org/pub/scm/linux/kernel/git/jejb/scsi
 {
 	struct iscsi_internal *priv;
 	struct Scsi_Host *shost;
@@ -1696,6 +1723,47 @@ iscsi_if_recv_msg(struct sk_buff *skb, struct nlmsghdr *nlh, uint32_t *group)
 	case ISCSI_UEVENT_PATH_UPDATE:
 		err = iscsi_set_path(transport, ev);
 		break;
+<<<<<<< HEAD
+=======
+	case ISCSI_UEVENT_SET_IFACE_PARAMS:
+		err = iscsi_set_iface_params(transport, ev,
+					     nlmsg_attrlen(nlh, sizeof(*ev)));
+		break;
+	case ISCSI_UEVENT_PING:
+		err = iscsi_send_ping(transport, ev);
+		break;
+	case ISCSI_UEVENT_GET_CHAP:
+		err = iscsi_get_chap(transport, nlh);
+		break;
+	case ISCSI_UEVENT_DELETE_CHAP:
+		err = iscsi_delete_chap(transport, ev);
+		break;
+	case ISCSI_UEVENT_SET_FLASHNODE_PARAMS:
+		err = iscsi_set_flashnode_param(transport, ev,
+						nlmsg_attrlen(nlh,
+							      sizeof(*ev)));
+		break;
+	case ISCSI_UEVENT_NEW_FLASHNODE:
+		err = iscsi_new_flashnode(transport, ev,
+					  nlmsg_attrlen(nlh, sizeof(*ev)));
+		break;
+	case ISCSI_UEVENT_DEL_FLASHNODE:
+		err = iscsi_del_flashnode(transport, ev);
+		break;
+	case ISCSI_UEVENT_LOGIN_FLASHNODE:
+		err = iscsi_login_flashnode(transport, ev);
+		break;
+	case ISCSI_UEVENT_LOGOUT_FLASHNODE:
+		err = iscsi_logout_flashnode(transport, ev);
+		break;
+	case ISCSI_UEVENT_LOGOUT_FLASHNODE_SID:
+		err = iscsi_logout_flashnode_sid(transport, ev);
+		break;
+	case ISCSI_UEVENT_SET_CHAP:
+		err = iscsi_set_chap(transport, ev,
+				     nlmsg_attrlen(nlh, sizeof(*ev)));
+		break;
+>>>>>>> 0d522ee... Merge tag 'scsi-for-linus' of git://git.kernel.org/pub/scm/linux/kernel/git/jejb/scsi
 	default:
 		err = -ENOSYS;
 		break;

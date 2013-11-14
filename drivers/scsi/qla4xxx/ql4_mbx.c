@@ -1135,12 +1135,383 @@ static int qla4xxx_req_ddb_entry(struct scsi_qla_host *ha, uint32_t *ddb_index)
 	memset(&mbox_sts, 0, sizeof(mbox_sts));
 
 	mbox_cmd[0] = MBOX_CMD_REQUEST_DATABASE_ENTRY;
+<<<<<<< HEAD
 	mbox_cmd[1] = MAX_PRST_DEV_DB_ENTRIES;
 
 	if (qla4xxx_mailbox_command(ha, MBOX_REG_COUNT, 3, &mbox_cmd[0], &mbox_sts[0]) !=
 	    QLA_SUCCESS) {
 		if (mbox_sts[0] == MBOX_STS_COMMAND_ERROR) {
 			*ddb_index = mbox_sts[2];
+=======
+	mbox_cmd[1] = ddb_index;
+
+	status = qla4xxx_mailbox_command(ha, MBOX_REG_COUNT, 1, &mbox_cmd[0],
+					 &mbox_sts[0]);
+	if (status != QLA_SUCCESS) {
+		DEBUG2(ql4_printk(KERN_ERR, ha, "%s: failed status %04X\n",
+				   __func__, mbox_sts[0]));
+	}
+
+	*mbx_sts = mbox_sts[0];
+	return status;
+}
+
+int qla4xxx_clear_ddb_entry(struct scsi_qla_host *ha, uint32_t ddb_index)
+{
+	int status;
+	uint32_t mbox_cmd[MBOX_REG_COUNT];
+	uint32_t mbox_sts[MBOX_REG_COUNT];
+
+	memset(&mbox_cmd, 0, sizeof(mbox_cmd));
+	memset(&mbox_sts, 0, sizeof(mbox_sts));
+
+	mbox_cmd[0] = MBOX_CMD_CLEAR_DATABASE_ENTRY;
+	mbox_cmd[1] = ddb_index;
+
+	status = qla4xxx_mailbox_command(ha, 2, 1, &mbox_cmd[0],
+					 &mbox_sts[0]);
+	if (status != QLA_SUCCESS) {
+		DEBUG2(ql4_printk(KERN_ERR, ha, "%s: failed status %04X\n",
+				   __func__, mbox_sts[0]));
+	}
+
+	return status;
+}
+
+int qla4xxx_set_flash(struct scsi_qla_host *ha, dma_addr_t dma_addr,
+		      uint32_t offset, uint32_t length, uint32_t options)
+{
+	uint32_t mbox_cmd[MBOX_REG_COUNT];
+	uint32_t mbox_sts[MBOX_REG_COUNT];
+	int status = QLA_SUCCESS;
+
+	memset(&mbox_cmd, 0, sizeof(mbox_cmd));
+	memset(&mbox_sts, 0, sizeof(mbox_sts));
+
+	mbox_cmd[0] = MBOX_CMD_WRITE_FLASH;
+	mbox_cmd[1] = LSDW(dma_addr);
+	mbox_cmd[2] = MSDW(dma_addr);
+	mbox_cmd[3] = offset;
+	mbox_cmd[4] = length;
+	mbox_cmd[5] = options;
+
+	status = qla4xxx_mailbox_command(ha, 6, 2, &mbox_cmd[0], &mbox_sts[0]);
+	if (status != QLA_SUCCESS) {
+		DEBUG2(ql4_printk(KERN_WARNING, ha, "%s: MBOX_CMD_WRITE_FLASH "
+				  "failed w/ status %04X, mbx1 %04X\n",
+				  __func__, mbox_sts[0], mbox_sts[1]));
+	}
+	return status;
+}
+
+int qla4xxx_bootdb_by_index(struct scsi_qla_host *ha,
+			    struct dev_db_entry *fw_ddb_entry,
+			    dma_addr_t fw_ddb_entry_dma, uint16_t ddb_index)
+{
+	uint32_t dev_db_start_offset = FLASH_OFFSET_DB_INFO;
+	uint32_t dev_db_end_offset;
+	int status = QLA_ERROR;
+
+	memset(fw_ddb_entry, 0, sizeof(*fw_ddb_entry));
+
+	dev_db_start_offset += (ddb_index * sizeof(*fw_ddb_entry));
+	dev_db_end_offset = FLASH_OFFSET_DB_END;
+
+	if (dev_db_start_offset > dev_db_end_offset) {
+		DEBUG2(ql4_printk(KERN_ERR, ha,
+				  "%s:Invalid DDB index %d", __func__,
+				  ddb_index));
+		goto exit_bootdb_failed;
+	}
+
+	if (qla4xxx_get_flash(ha, fw_ddb_entry_dma, dev_db_start_offset,
+			      sizeof(*fw_ddb_entry)) != QLA_SUCCESS) {
+		ql4_printk(KERN_ERR, ha, "scsi%ld: %s: Get Flash"
+			   "failed\n", ha->host_no, __func__);
+		goto exit_bootdb_failed;
+	}
+
+	if (fw_ddb_entry->cookie == DDB_VALID_COOKIE)
+		status = QLA_SUCCESS;
+
+exit_bootdb_failed:
+	return status;
+}
+
+int qla4xxx_flashdb_by_index(struct scsi_qla_host *ha,
+			     struct dev_db_entry *fw_ddb_entry,
+			     dma_addr_t fw_ddb_entry_dma, uint16_t ddb_index)
+{
+	uint32_t dev_db_start_offset;
+	uint32_t dev_db_end_offset;
+	int status = QLA_ERROR;
+
+	memset(fw_ddb_entry, 0, sizeof(*fw_ddb_entry));
+
+	if (is_qla40XX(ha)) {
+		dev_db_start_offset = FLASH_OFFSET_DB_INFO;
+		dev_db_end_offset = FLASH_OFFSET_DB_END;
+	} else {
+		dev_db_start_offset = FLASH_RAW_ACCESS_ADDR +
+				      (ha->hw.flt_region_ddb << 2);
+		/* flt_ddb_size is DDB table size for both ports
+		 * so divide it by 2 to calculate the offset for second port
+		 */
+		if (ha->port_num == 1)
+			dev_db_start_offset += (ha->hw.flt_ddb_size / 2);
+
+		dev_db_end_offset = dev_db_start_offset +
+				    (ha->hw.flt_ddb_size / 2);
+	}
+
+	dev_db_start_offset += (ddb_index * sizeof(*fw_ddb_entry));
+
+	if (dev_db_start_offset > dev_db_end_offset) {
+		DEBUG2(ql4_printk(KERN_ERR, ha,
+				  "%s:Invalid DDB index %d", __func__,
+				  ddb_index));
+		goto exit_fdb_failed;
+	}
+
+	if (qla4xxx_get_flash(ha, fw_ddb_entry_dma, dev_db_start_offset,
+			      sizeof(*fw_ddb_entry)) != QLA_SUCCESS) {
+		ql4_printk(KERN_ERR, ha, "scsi%ld: %s: Get Flash failed\n",
+			   ha->host_no, __func__);
+		goto exit_fdb_failed;
+	}
+
+	if (fw_ddb_entry->cookie == DDB_VALID_COOKIE)
+		status = QLA_SUCCESS;
+
+exit_fdb_failed:
+	return status;
+}
+
+int qla4xxx_get_chap(struct scsi_qla_host *ha, char *username, char *password,
+		     uint16_t idx)
+{
+	int ret = 0;
+	int rval = QLA_ERROR;
+	uint32_t offset = 0, chap_size;
+	struct ql4_chap_table *chap_table;
+	dma_addr_t chap_dma;
+
+	chap_table = dma_pool_alloc(ha->chap_dma_pool, GFP_KERNEL, &chap_dma);
+	if (chap_table == NULL)
+		return -ENOMEM;
+
+	chap_size = sizeof(struct ql4_chap_table);
+	memset(chap_table, 0, chap_size);
+
+	if (is_qla40XX(ha))
+		offset = FLASH_CHAP_OFFSET | (idx * chap_size);
+	else {
+		offset = FLASH_RAW_ACCESS_ADDR + (ha->hw.flt_region_chap << 2);
+		/* flt_chap_size is CHAP table size for both ports
+		 * so divide it by 2 to calculate the offset for second port
+		 */
+		if (ha->port_num == 1)
+			offset += (ha->hw.flt_chap_size / 2);
+		offset += (idx * chap_size);
+	}
+
+	rval = qla4xxx_get_flash(ha, chap_dma, offset, chap_size);
+	if (rval != QLA_SUCCESS) {
+		ret = -EINVAL;
+		goto exit_get_chap;
+	}
+
+	DEBUG2(ql4_printk(KERN_INFO, ha, "Chap Cookie: x%x\n",
+		__le16_to_cpu(chap_table->cookie)));
+
+	if (__le16_to_cpu(chap_table->cookie) != CHAP_VALID_COOKIE) {
+		ql4_printk(KERN_ERR, ha, "No valid chap entry found\n");
+		goto exit_get_chap;
+	}
+
+	strncpy(password, chap_table->secret, QL4_CHAP_MAX_SECRET_LEN);
+	strncpy(username, chap_table->name, QL4_CHAP_MAX_NAME_LEN);
+	chap_table->cookie = __constant_cpu_to_le16(CHAP_VALID_COOKIE);
+
+exit_get_chap:
+	dma_pool_free(ha->chap_dma_pool, chap_table, chap_dma);
+	return ret;
+}
+
+/**
+ * qla4xxx_set_chap - Make a chap entry at the given index
+ * @ha: pointer to adapter structure
+ * @username: CHAP username to set
+ * @password: CHAP password to set
+ * @idx: CHAP index at which to make the entry
+ * @bidi: type of chap entry (chap_in or chap_out)
+ *
+ * Create chap entry at the given index with the information provided.
+ *
+ * Note: Caller should acquire the chap lock before getting here.
+ **/
+int qla4xxx_set_chap(struct scsi_qla_host *ha, char *username, char *password,
+		     uint16_t idx, int bidi)
+{
+	int ret = 0;
+	int rval = QLA_ERROR;
+	uint32_t offset = 0;
+	struct ql4_chap_table *chap_table;
+	uint32_t chap_size = 0;
+	dma_addr_t chap_dma;
+
+	chap_table = dma_pool_alloc(ha->chap_dma_pool, GFP_KERNEL, &chap_dma);
+	if (chap_table == NULL) {
+		ret =  -ENOMEM;
+		goto exit_set_chap;
+	}
+
+	memset(chap_table, 0, sizeof(struct ql4_chap_table));
+	if (bidi)
+		chap_table->flags |= BIT_6; /* peer */
+	else
+		chap_table->flags |= BIT_7; /* local */
+	chap_table->secret_len = strlen(password);
+	strncpy(chap_table->secret, password, MAX_CHAP_SECRET_LEN);
+	strncpy(chap_table->name, username, MAX_CHAP_NAME_LEN);
+	chap_table->cookie = __constant_cpu_to_le16(CHAP_VALID_COOKIE);
+
+	if (is_qla40XX(ha)) {
+		chap_size = MAX_CHAP_ENTRIES_40XX * sizeof(*chap_table);
+		offset = FLASH_CHAP_OFFSET;
+	} else { /* Single region contains CHAP info for both ports which is
+		  * divided into half for each port.
+		  */
+		chap_size = ha->hw.flt_chap_size / 2;
+		offset = FLASH_RAW_ACCESS_ADDR + (ha->hw.flt_region_chap << 2);
+		if (ha->port_num == 1)
+			offset += chap_size;
+	}
+
+	offset += (idx * sizeof(struct ql4_chap_table));
+	rval = qla4xxx_set_flash(ha, chap_dma, offset,
+				sizeof(struct ql4_chap_table),
+				FLASH_OPT_RMW_COMMIT);
+
+	if (rval == QLA_SUCCESS && ha->chap_list) {
+		/* Update ha chap_list cache */
+		memcpy((struct ql4_chap_table *)ha->chap_list + idx,
+		       chap_table, sizeof(struct ql4_chap_table));
+	}
+	dma_pool_free(ha->chap_dma_pool, chap_table, chap_dma);
+	if (rval != QLA_SUCCESS)
+		ret =  -EINVAL;
+
+exit_set_chap:
+	return ret;
+}
+
+
+int qla4xxx_get_uni_chap_at_index(struct scsi_qla_host *ha, char *username,
+				  char *password, uint16_t chap_index)
+{
+	int rval = QLA_ERROR;
+	struct ql4_chap_table *chap_table = NULL;
+	int max_chap_entries;
+
+	if (!ha->chap_list) {
+		ql4_printk(KERN_ERR, ha, "Do not have CHAP table cache\n");
+		rval = QLA_ERROR;
+		goto exit_uni_chap;
+	}
+
+	if (!username || !password) {
+		ql4_printk(KERN_ERR, ha, "No memory for username & secret\n");
+		rval = QLA_ERROR;
+		goto exit_uni_chap;
+	}
+
+	if (is_qla80XX(ha))
+		max_chap_entries = (ha->hw.flt_chap_size / 2) /
+				   sizeof(struct ql4_chap_table);
+	else
+		max_chap_entries = MAX_CHAP_ENTRIES_40XX;
+
+	if (chap_index > max_chap_entries) {
+		ql4_printk(KERN_ERR, ha, "Invalid Chap index\n");
+		rval = QLA_ERROR;
+		goto exit_uni_chap;
+	}
+
+	mutex_lock(&ha->chap_sem);
+	chap_table = (struct ql4_chap_table *)ha->chap_list + chap_index;
+	if (chap_table->cookie != __constant_cpu_to_le16(CHAP_VALID_COOKIE)) {
+		rval = QLA_ERROR;
+		goto exit_unlock_uni_chap;
+	}
+
+	if (!(chap_table->flags & BIT_7)) {
+		ql4_printk(KERN_ERR, ha, "Unidirectional entry not set\n");
+		rval = QLA_ERROR;
+		goto exit_unlock_uni_chap;
+	}
+
+	strncpy(password, chap_table->secret, MAX_CHAP_SECRET_LEN);
+	strncpy(username, chap_table->name, MAX_CHAP_NAME_LEN);
+
+	rval = QLA_SUCCESS;
+
+exit_unlock_uni_chap:
+	mutex_unlock(&ha->chap_sem);
+exit_uni_chap:
+	return rval;
+}
+
+/**
+ * qla4xxx_get_chap_index - Get chap index given username and secret
+ * @ha: pointer to adapter structure
+ * @username: CHAP username to be searched
+ * @password: CHAP password to be searched
+ * @bidi: Is this a BIDI CHAP
+ * @chap_index: CHAP index to be returned
+ *
+ * Match the username and password in the chap_list, return the index if a
+ * match is found. If a match is not found then add the entry in FLASH and
+ * return the index at which entry is written in the FLASH.
+ **/
+int qla4xxx_get_chap_index(struct scsi_qla_host *ha, char *username,
+			   char *password, int bidi, uint16_t *chap_index)
+{
+	int i, rval;
+	int free_index = -1;
+	int found_index = 0;
+	int max_chap_entries = 0;
+	struct ql4_chap_table *chap_table;
+
+	if (is_qla80XX(ha))
+		max_chap_entries = (ha->hw.flt_chap_size / 2) /
+						sizeof(struct ql4_chap_table);
+	else
+		max_chap_entries = MAX_CHAP_ENTRIES_40XX;
+
+	if (!ha->chap_list) {
+		ql4_printk(KERN_ERR, ha, "Do not have CHAP table cache\n");
+		return QLA_ERROR;
+	}
+
+	if (!username || !password) {
+		ql4_printk(KERN_ERR, ha, "Do not have username and psw\n");
+		return QLA_ERROR;
+	}
+
+	mutex_lock(&ha->chap_sem);
+	for (i = 0; i < max_chap_entries; i++) {
+		chap_table = (struct ql4_chap_table *)ha->chap_list + i;
+		if (chap_table->cookie !=
+		    __constant_cpu_to_le16(CHAP_VALID_COOKIE)) {
+			if (i > MAX_RESRV_CHAP_IDX && free_index == -1)
+				free_index = i;
+			continue;
+		}
+		if (bidi) {
+			if (chap_table->flags & BIT_7)
+				continue;
+>>>>>>> 0d522ee... Merge tag 'scsi-for-linus' of git://git.kernel.org/pub/scm/linux/kernel/git/jejb/scsi
 		} else {
 			DEBUG2(printk("scsi%ld: %s: failed status %04X\n",
 			     ha->host_no, __func__, mbox_sts[0]));

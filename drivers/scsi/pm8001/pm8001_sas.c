@@ -464,7 +464,6 @@ static int pm8001_task_exec(struct sas_task *task, const int num,
 			break;
 		case SAS_PROTOCOL_SATA:
 		case SAS_PROTOCOL_STP:
-		case SAS_PROTOCOL_SATA | SAS_PROTOCOL_STP:
 			rc = pm8001_task_prep_ata(pm8001_ha, ccb);
 			break;
 		default:
@@ -726,6 +725,8 @@ static int pm8001_exec_internal_tmf_task(struct domain_device *dev,
 	int res, retry;
 	struct sas_task *task = NULL;
 	struct pm8001_hba_info *pm8001_ha = pm8001_find_ha_by_dev(dev);
+	struct pm8001_device *pm8001_dev = dev->lldd_dev;
+	DECLARE_COMPLETION_ONSTACK(completion_setstate);
 
 	for (retry = 0; retry < 3; retry++) {
 		task = pm8001_alloc_task();
@@ -750,7 +751,17 @@ static int pm8001_exec_internal_tmf_task(struct domain_device *dev,
 				"failed\n"));
 			goto ex_err;
 		}
+<<<<<<< HEAD
 		wait_for_completion(&task->completion);
+=======
+		wait_for_completion(&task->slow_task->completion);
+		if (pm8001_ha->chip_id != chip_8001) {
+			pm8001_dev->setds_completion = &completion_setstate;
+				PM8001_CHIP_DISP->set_dev_state_req(pm8001_ha,
+					pm8001_dev, 0x01);
+			wait_for_completion(&completion_setstate);
+		}
+>>>>>>> 0d522ee... Merge tag 'scsi-for-linus' of git://git.kernel.org/pub/scm/linux/kernel/git/jejb/scsi
 		res = -TMF_RESP_FUNC_FAILED;
 		/* Even TMF timed out, return direct. */
 		if ((task->task_state_flags & SAS_TASK_STATE_ABORTED)) {

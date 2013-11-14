@@ -248,4 +248,68 @@ unsigned int mgmt_invalidate_connection(struct beiscsi_hba *phba,
 					 unsigned short issue_reset,
 					 unsigned short savecfg_flag);
 
+<<<<<<< HEAD
+=======
+int mgmt_set_ip(struct beiscsi_hba *phba,
+		struct iscsi_iface_param_info *ip_param,
+		struct iscsi_iface_param_info *subnet_param,
+		uint32_t boot_proto);
+
+unsigned int mgmt_get_boot_target(struct beiscsi_hba *phba);
+
+unsigned int mgmt_reopen_session(struct beiscsi_hba *phba,
+				  unsigned int reopen_type,
+				  unsigned sess_handle);
+
+unsigned int mgmt_get_session_info(struct beiscsi_hba *phba,
+				   u32 boot_session_handle,
+				   struct be_dma_mem *nonemb_cmd);
+
+int mgmt_get_nic_conf(struct beiscsi_hba *phba,
+		      struct be_cmd_get_nic_conf_resp *mac);
+
+int mgmt_get_if_info(struct beiscsi_hba *phba, int ip_type,
+		     struct be_cmd_get_if_info_resp **if_info);
+
+int mgmt_get_gateway(struct beiscsi_hba *phba, int ip_type,
+		     struct be_cmd_get_def_gateway_resp *gateway);
+
+int mgmt_set_gateway(struct beiscsi_hba *phba,
+		     struct iscsi_iface_param_info *gateway_param);
+
+int be_mgmt_get_boot_shandle(struct beiscsi_hba *phba,
+			      unsigned int *s_handle);
+
+unsigned int mgmt_get_all_if_id(struct beiscsi_hba *phba);
+
+int mgmt_set_vlan(struct beiscsi_hba *phba, uint16_t vlan_tag);
+
+ssize_t beiscsi_drvr_ver_disp(struct device *dev,
+			       struct device_attribute *attr, char *buf);
+
+ssize_t beiscsi_fw_ver_disp(struct device *dev,
+			     struct device_attribute *attr, char *buf);
+
+ssize_t beiscsi_active_session_disp(struct device *dev,
+				     struct device_attribute *attr, char *buf);
+
+ssize_t beiscsi_adap_family_disp(struct device *dev,
+				  struct device_attribute *attr, char *buf);
+
+
+ssize_t beiscsi_free_session_disp(struct device *dev,
+				   struct device_attribute *attr, char *buf);
+
+ssize_t beiscsi_phys_port_disp(struct device *dev,
+				struct device_attribute *attr, char *buf);
+
+void beiscsi_offload_cxn_v0(struct beiscsi_offload_params *params,
+			     struct wrb_handle *pwrb_handle,
+			     struct be_mem_descriptor *mem_descr);
+
+void beiscsi_offload_cxn_v2(struct beiscsi_offload_params *params,
+			     struct wrb_handle *pwrb_handle);
+void beiscsi_ue_detect(struct beiscsi_hba *phba);
+
+>>>>>>> 0d522ee... Merge tag 'scsi-for-linus' of git://git.kernel.org/pub/scm/linux/kernel/git/jejb/scsi
 #endif
