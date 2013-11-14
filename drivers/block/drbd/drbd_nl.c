@@ -668,11 +668,39 @@ enum determine_dev_size drbd_determine_dev_size(struct drbd_conf *mdev, enum dds
 			 la_size_changed && md_moved ? "size changed and md moved" :
 			 la_size_changed ? "size changed" : "md moved");
 		/* next line implicitly does drbd_suspend_io()+drbd_resume_io() */
+<<<<<<< HEAD
 		err = drbd_bitmap_io(mdev, &drbd_bm_write,
 				"size changed", BM_LOCKED_MASK);
 		if (err) {
 			rv = dev_size_error;
 			goto out;
+=======
+		drbd_bitmap_io(mdev, md_moved ? &drbd_bm_write_all : &drbd_bm_write,
+			       "size changed", BM_LOCKED_MASK);
+		drbd_initialize_al(mdev, buffer);
+
+		md->flags = prev_flags;
+		drbd_md_write(mdev, buffer);
+
+		if (rs)
+			dev_info(DEV, "Changed AL layout to al-stripes = %d, al-stripe-size-kB = %d\n",
+				 md->al_stripes, md->al_stripe_size_4k * 4);
+	}
+
+	if (size > la_size_sect)
+		rv = la_size_sect ? DS_GREW : DS_GREW_FROM_ZERO;
+	if (size < la_size_sect)
+		rv = DS_SHRUNK;
+
+	if (0) {
+	err_out:
+		if (rs) {
+			md->al_stripes = prev_al_stripes;
+			md->al_stripe_size_4k = prev_al_stripe_size_4k;
+			md->al_size_4k = (u64)prev_al_stripes * prev_al_stripe_size_4k;
+
+			drbd_md_set_sector_offsets(mdev, mdev->ldev);
+>>>>>>> 5eea9be8... Merge branch 'for-3.13/drivers' of git://git.kernel.dk/linux-block
 		}
 		drbd_md_mark_dirty(mdev);
 	}
@@ -844,10 +872,18 @@ void drbd_reconsider_max_bio_size(struct drbd_conf *mdev)
 	/* We may ignore peer limits if the peer is modern enough.
 	   Because new from 8.3.8 onwards the peer can use multiple
 	   BIOs for a single peer_request */
+<<<<<<< HEAD
 	if (mdev->state.conn >= C_CONNECTED) {
 		if (mdev->agreed_pro_version < 94)
 			peer = mdev->peer_max_bio_size;
 		else if (mdev->agreed_pro_version == 94)
+=======
+	if (mdev->state.conn >= C_WF_REPORT_PARAMS) {
+		if (mdev->tconn->agreed_pro_version < 94)
+			peer = min(mdev->peer_max_bio_size, DRBD_MAX_SIZE_H80_PACKET);
+			/* Correct old drbd (up to 8.3.7) if it believes it can do more than 32KiB */
+		else if (mdev->tconn->agreed_pro_version == 94)
+>>>>>>> 5eea9be8... Merge branch 'for-3.13/drivers' of git://git.kernel.dk/linux-block
 			peer = DRBD_MAX_SIZE_H80_PACKET;
 		else /* drbd 8.3.8 onwards */
 			peer = DRBD_MAX_BIO_SIZE;
