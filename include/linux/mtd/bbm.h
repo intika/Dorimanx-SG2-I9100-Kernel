@@ -86,10 +86,20 @@ struct nand_bbt_descr {
 #define NAND_BBT_VERSION	0x00000100
 /* Create a bbt if none exists */
 #define NAND_BBT_CREATE		0x00000200
+<<<<<<< HEAD
 /* Search good / bad pattern through all pages of a block */
 #define NAND_BBT_SCANALLPAGES	0x00000400
 /* Scan block empty during good / bad block scan */
 #define NAND_BBT_SCANEMPTY	0x00000800
+=======
+/*
+ * Create an empty BBT with no vendor information. Vendor's information may be
+ * unavailable, for example, if the NAND controller has a different data and OOB
+ * layout or if this information is already purged. Must be used in conjunction
+ * with NAND_BBT_CREATE.
+ */
+#define NAND_BBT_CREATE_EMPTY	0x00000400
+>>>>>>> 82cb6ac... Merge tag 'for-linus-20131112' of git://git.infradead.org/linux-mtd
 /* Write bbt if neccecary */
 #define NAND_BBT_WRITE		0x00001000
 /* Read and write back block contents when writing bbt */
