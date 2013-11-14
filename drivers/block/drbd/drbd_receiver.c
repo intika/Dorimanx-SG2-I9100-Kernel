@@ -1551,6 +1551,7 @@ static int e_end_block(struct drbd_conf *mdev, struct drbd_work *w, int cancel)
 	}
 	/* we delete from the conflict detection hash _after_ we sent out the
 	 * P_WRITE_ACK / P_NEG_ACK, to get the sequence number right.  */
+<<<<<<< HEAD
 	if (mdev->net_conf->two_primaries) {
 		spin_lock_irq(&mdev->req_lock);
 		D_ASSERT(!hlist_unhashed(&e->collision));
@@ -1566,12 +1567,84 @@ static int e_end_block(struct drbd_conf *mdev, struct drbd_work *w, int cancel)
 }
 
 static int e_send_discard_ack(struct drbd_conf *mdev, struct drbd_work *w, int unused)
+=======
+	if (peer_req->flags & EE_IN_INTERVAL_TREE) {
+		spin_lock_irq(&mdev->tconn->req_lock);
+		D_ASSERT(!drbd_interval_empty(&peer_req->i));
+		drbd_remove_epoch_entry_interval(mdev, peer_req);
+		if (peer_req->flags & EE_RESTART_REQUESTS)
+			restart_conflicting_writes(mdev, sector, peer_req->i.size);
+		spin_unlock_irq(&mdev->tconn->req_lock);
+	} else
+		D_ASSERT(drbd_interval_empty(&peer_req->i));
+
+	drbd_may_finish_epoch(mdev->tconn, peer_req->epoch, EV_PUT + (cancel ? EV_CLEANUP : 0));
+
+	return err;
+}
+
+static int e_send_ack(struct drbd_work *w, enum drbd_packet ack)
+{
+	struct drbd_conf *mdev = w->mdev;
+	struct drbd_peer_request *peer_req =
+		container_of(w, struct drbd_peer_request, w);
+	int err;
+
+	err = drbd_send_ack(mdev, ack, peer_req);
+	dec_unacked(mdev);
+
+	return err;
+}
+
+static int e_send_superseded(struct drbd_work *w, int unused)
+{
+	return e_send_ack(w, P_SUPERSEDED);
+}
+
+static int e_send_retry_write(struct drbd_work *w, int unused)
+{
+	struct drbd_tconn *tconn = w->mdev->tconn;
+
+	return e_send_ack(w, tconn->agreed_pro_version >= 100 ?
+			     P_RETRY_WRITE : P_SUPERSEDED);
+}
+
+static bool seq_greater(u32 a, u32 b)
+{
+	/*
+	 * We assume 32-bit wrap-around here.
+	 * For 24-bit wrap-around, we would have to shift:
+	 *  a <<= 8; b <<= 8;
+	 */
+	return (s32)a - (s32)b > 0;
+}
+
+static u32 seq_max(u32 a, u32 b)
+{
+	return seq_greater(a, b) ? a : b;
+}
+
+static void update_peer_seq(struct drbd_conf *mdev, unsigned int peer_seq)
+>>>>>>> 5eea9be8... Merge branch 'for-3.13/drivers' of git://git.kernel.dk/linux-block
 {
 	struct drbd_epoch_entry *e = (struct drbd_epoch_entry *)w;
 	int ok = 1;
 
+<<<<<<< HEAD
 	D_ASSERT(mdev->net_conf->wire_protocol == DRBD_PROT_C);
 	ok = drbd_send_ack(mdev, P_DISCARD_ACK, e);
+=======
+	if (test_bit(RESOLVE_CONFLICTS, &mdev->tconn->flags)) {
+		spin_lock(&mdev->peer_seq_lock);
+		newest_peer_seq = seq_max(mdev->peer_seq, peer_seq);
+		mdev->peer_seq = newest_peer_seq;
+		spin_unlock(&mdev->peer_seq_lock);
+		/* wake up only if we actually changed mdev->peer_seq */
+		if (peer_seq == newest_peer_seq)
+			wake_up(&mdev->seq_wait);
+	}
+}
+>>>>>>> 5eea9be8... Merge branch 'for-3.13/drivers' of git://git.kernel.dk/linux-block
 
 	spin_lock_irq(&mdev->req_lock);
 	D_ASSERT(!hlist_unhashed(&e->collision));
@@ -1609,17 +1682,45 @@ static int drbd_wait_peer_seq(struct drbd_conf *mdev, const u32 packet_seq)
 	DEFINE_WAIT(wait);
 	unsigned int p_seq;
 	long timeout;
+<<<<<<< HEAD
 	int ret = 0;
 	spin_lock(&mdev->peer_seq_lock);
 	for (;;) {
 		prepare_to_wait(&mdev->seq_wait, &wait, TASK_INTERRUPTIBLE);
 		if (seq_le(packet_seq, mdev->peer_seq+1))
 			break;
+=======
+	int ret = 0, tp;
+
+	if (!test_bit(RESOLVE_CONFLICTS, &mdev->tconn->flags))
+		return 0;
+
+	spin_lock(&mdev->peer_seq_lock);
+	for (;;) {
+		if (!seq_greater(peer_seq - 1, mdev->peer_seq)) {
+			mdev->peer_seq = seq_max(mdev->peer_seq, peer_seq);
+			break;
+		}
+
+>>>>>>> 5eea9be8... Merge branch 'for-3.13/drivers' of git://git.kernel.dk/linux-block
 		if (signal_pending(current)) {
 			ret = -ERESTARTSYS;
 			break;
 		}
+<<<<<<< HEAD
 		p_seq = mdev->peer_seq;
+=======
+
+		rcu_read_lock();
+		tp = rcu_dereference(mdev->tconn->net_conf)->two_primaries;
+		rcu_read_unlock();
+
+		if (!tp)
+			break;
+
+		/* Only need to wait if two_primaries is enabled */
+		prepare_to_wait(&mdev->seq_wait, &wait, TASK_INTERRUPTIBLE);
+>>>>>>> 5eea9be8... Merge branch 'for-3.13/drivers' of git://git.kernel.dk/linux-block
 		spin_unlock(&mdev->peer_seq_lock);
 		timeout = schedule_timeout(30*HZ);
 		spin_lock(&mdev->peer_seq_lock);
@@ -1797,6 +1898,7 @@ static int receive_Data(struct drbd_conf *mdev, enum drbd_packets cmd, unsigned 
 				finish_wait(&mdev->misc_wait, &wait);
 				return true;
 			}
+<<<<<<< HEAD
 
 			if (signal_pending(current)) {
 				hlist_del_init(&e->collision);
@@ -1819,6 +1921,29 @@ static int receive_Data(struct drbd_conf *mdev, enum drbd_packets cmd, unsigned 
 			}
 			schedule();
 			spin_lock_irq(&mdev->req_lock);
+=======
+			goto out_interrupted;
+		}
+	} else {
+		update_peer_seq(mdev, peer_seq);
+		spin_lock_irq(&mdev->tconn->req_lock);
+	}
+	list_add(&peer_req->w.list, &mdev->active_ee);
+	spin_unlock_irq(&mdev->tconn->req_lock);
+
+	if (mdev->state.conn == C_SYNC_TARGET)
+		wait_event(mdev->ee_wait, !overlapping_resync_write(mdev, peer_req));
+
+	if (mdev->tconn->agreed_pro_version < 100) {
+		rcu_read_lock();
+		switch (rcu_dereference(mdev->tconn->net_conf)->wire_protocol) {
+		case DRBD_PROT_C:
+			dp_flags |= DP_SEND_WRITE_ACK;
+			break;
+		case DRBD_PROT_B:
+			dp_flags |= DP_SEND_RECEIVE_ACK;
+			break;
+>>>>>>> 5eea9be8... Merge branch 'for-3.13/drivers' of git://git.kernel.dk/linux-block
 		}
 		finish_wait(&mdev->misc_wait, &wait);
 	}
@@ -3412,7 +3537,11 @@ recv_bm_rle_bits(struct drbd_conf *mdev,
 				(unsigned int)bs.buf_len);
 			return -EIO;
 		}
-		look_ahead >>= bits;
+		/* if we consumed all 64 bits, assign 0; >> 64 is "undefined"; */
+		if (likely(bits < 64))
+			look_ahead >>= bits;
+		else
+			look_ahead = 0;
 		have -= bits;
 
 		bits = bitstream_get_bits(&bs, &tmp, 64 - have);

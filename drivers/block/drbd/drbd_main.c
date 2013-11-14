@@ -3735,6 +3735,15 @@ int __init drbd_init(void)
 	if (!minor_table)
 		goto Enomem;
 
+	rwlock_init(&global_state_lock);
+	INIT_LIST_HEAD(&drbd_tconns);
+
+	err = drbd_genl_register();
+	if (err) {
+		printk(KERN_ERR "drbd: unable to register generic netlink family\n");
+		goto fail;
+	}
+
 	err = drbd_create_mempools();
 	if (err)
 		goto Enomem;
@@ -3745,7 +3754,18 @@ int __init drbd_init(void)
 		goto Enomem;
 	}
 
+<<<<<<< HEAD
 	rwlock_init(&global_state_lock);
+=======
+	retry.wq = create_singlethread_workqueue("drbd-reissue");
+	if (!retry.wq) {
+		printk(KERN_ERR "drbd: unable to create retry workqueue\n");
+		goto fail;
+	}
+	INIT_WORK(&retry.worker, do_retry);
+	spin_lock_init(&retry.lock);
+	INIT_LIST_HEAD(&retry.writes);
+>>>>>>> 5eea9be8... Merge branch 'for-3.13/drivers' of git://git.kernel.dk/linux-block
 
 	printk(KERN_INFO "drbd: initialized. "
 	       "Version: " REL_VERSION " (api:%d/proto:%d-%d)\n",
