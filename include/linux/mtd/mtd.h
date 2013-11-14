@@ -29,10 +29,14 @@
 
 #include <asm/div64.h>
 
+<<<<<<< HEAD
 #define MTD_CHAR_MAJOR 90
 #define MTD_BLOCK_MAJOR 31
 
 #define MTD_ERASE_PENDING      	0x01
+=======
+#define MTD_ERASE_PENDING	0x01
+>>>>>>> 82cb6ac... Merge tag 'for-linus-20131112' of git://git.infradead.org/linux-mtd
 #define MTD_ERASING		0x02
 #define MTD_ERASE_SUSPEND	0x04
 #define MTD_ERASE_DONE          0x08
@@ -321,6 +325,24 @@ static inline uint32_t mtd_mod_by_ws(uint64_t sz, struct mtd_info *mtd)
 	return do_div(sz, mtd->writesize);
 }
 
+<<<<<<< HEAD
+=======
+static inline int mtd_has_oob(const struct mtd_info *mtd)
+{
+	return mtd->_read_oob && mtd->_write_oob;
+}
+
+static inline int mtd_type_is_nand(const struct mtd_info *mtd)
+{
+	return mtd->type == MTD_NANDFLASH || mtd->type == MTD_MLCNANDFLASH;
+}
+
+static inline int mtd_can_have_bb(const struct mtd_info *mtd)
+{
+	return !!mtd->_block_isbad;
+}
+
+>>>>>>> 82cb6ac... Merge tag 'for-linus-20131112' of git://git.infradead.org/linux-mtd
 	/* Kernel-side ioctl definitions */
 
 struct mtd_partition;

@@ -911,56 +911,28 @@ static void atmel_pmecc_core_init(struct mtd_info *mtd)
 }
 
 /*
- * Get ECC requirement in ONFI parameters, returns -1 if ONFI
- * parameters is not supported.
- * return 0 if success to get the ECC requirement.
- */
-static int get_onfi_ecc_param(struct nand_chip *chip,
-		int *ecc_bits, int *sector_size)
-{
-	*ecc_bits = *sector_size = 0;
-
-	if (chip->onfi_params.ecc_bits == 0xff)
-		/* TODO: the sector_size and ecc_bits need to be find in
-		 * extended ecc parameter, currently we don't support it.
-		 */
-		return -1;
-
-	*ecc_bits = chip->onfi_params.ecc_bits;
-
-	/* The default sector size (ecc codeword size) is 512 */
-	*sector_size = 512;
-
-	return 0;
-}
-
-/*
- * Get ecc requirement from ONFI parameters ecc requirement.
+ * Get minimum ecc requirements from NAND.
  * If pmecc-cap, pmecc-sector-size in DTS are not specified, this function
- * will set them according to ONFI ecc requirement. Otherwise, use the
+ * will set them according to minimum ecc requirement. Otherwise, use the
  * value in DTS file.
  * return 0 if success. otherwise return error code.
  */
 static int pmecc_choose_ecc(struct atmel_nand_host *host,
 		int *cap, int *sector_size)
 {
-	/* Get ECC requirement from ONFI parameters */
-	*cap = *sector_size = 0;
-	if (host->nand_chip.onfi_version) {
-		if (!get_onfi_ecc_param(&host->nand_chip, cap, sector_size))
-			dev_info(host->dev, "ONFI params, minimum required ECC: %d bits in %d bytes\n",
+	/* Get minimum ECC requirements */
+	if (host->nand_chip.ecc_strength_ds) {
+		*cap = host->nand_chip.ecc_strength_ds;
+		*sector_size = host->nand_chip.ecc_step_ds;
+		dev_info(host->dev, "minimum ECC: %d bits in %d bytes\n",
 				*cap, *sector_size);
-		else
-			dev_info(host->dev, "NAND chip ECC reqirement is in Extended ONFI parameter, we don't support yet.\n");
 	} else {
-		dev_info(host->dev, "NAND chip is not ONFI compliant, assume ecc_bits is 2 in 512 bytes");
-	}
-	if (*cap == 0 && *sector_size == 0) {
 		*cap = 2;
 		*sector_size = 512;
+		dev_info(host->dev, "can't detect min. ECC, assume 2 bits in 512 bytes\n");
 	}
 
-	/* If dts file doesn't specify then use the one in ONFI parameters */
+	/* If device tree doesn't specify, use NAND's minimum ECC parameters */
 	if (host->pmecc_corr_cap == 0) {
 		/* use the most fitable ecc bits (the near bigger one ) */
 		if (*cap <= 2)
@@ -1305,7 +1277,6 @@ static void atmel_nand_hwctl(struct mtd_info *mtd, int mode)
 	}
 }
 
-#if defined(CONFIG_OF)
 static int atmel_of_init_port(struct atmel_nand_host *host,
 			      struct device_node *np)
 {
@@ -1313,7 +1284,7 @@ static int atmel_of_init_port(struct atmel_nand_host *host,
 	u32 offset[2];
 	int ecc_mode;
 	struct atmel_nand_data *board = &host->board;
-	enum of_gpio_flags flags;
+	enum of_gpio_flags flags = 0;
 
 	if (of_property_read_u32(np, "atmel,nand-addr-offset", &val) == 0) {
 		if (val >= 32) {
@@ -1391,13 +1362,6 @@ static int atmel_of_init_port(struct atmel_nand_host *host,
 
 	return 0;
 }
-#else
-static int atmel_of_init_port(struct atmel_nand_host *host,
-			      struct device_node *np)
-{
-	return -EINVAL;
-}
-#endif
 
 static int __init atmel_hw_nand_init_params(struct platform_device *pdev,
 					 struct atmel_nand_host *host)
@@ -1497,7 +1461,8 @@ static int __init atmel_nand_probe(struct platform_device *pdev)
 	mtd = &host->mtd;
 	nand_chip = &host->nand_chip;
 	host->dev = &pdev->dev;
-	if (pdev->dev.of_node) {
+	if (IS_ENABLED(CONFIG_OF) && pdev->dev.of_node) {
+		/* Only when CONFIG_OF is enabled of_node can be parsed */
 		res = atmel_of_init_port(host, pdev->dev.of_node);
 		if (res)
 			goto err_ecc_ioremap;
@@ -1671,7 +1636,10 @@ err_no_card:
 err_ecc_ioremap:
 	iounmap(host->io_base);
 err_nand_ioremap:
+<<<<<<< HEAD
 	kfree(host);
+=======
+>>>>>>> 82cb6ac... Merge tag 'for-linus-20131112' of git://git.infradead.org/linux-mtd
 	return res;
 }
 
@@ -1719,15 +1687,68 @@ static int __exit atmel_nand_remove(struct platform_device *pdev)
 	return 0;
 }
 
-#if defined(CONFIG_OF)
 static const struct of_device_id atmel_nand_dt_ids[] = {
 	{ .compatible = "atmel,at91rm9200-nand" },
 	{ /* sentinel */ }
 };
 
 MODULE_DEVICE_TABLE(of, atmel_nand_dt_ids);
-#endif
 
+<<<<<<< HEAD
+=======
+static int atmel_nand_nfc_probe(struct platform_device *pdev)
+{
+	struct atmel_nfc *nfc = &nand_nfc;
+	struct resource *nfc_cmd_regs, *nfc_hsmc_regs, *nfc_sram;
+
+	nfc_cmd_regs = platform_get_resource(pdev, IORESOURCE_MEM, 0);
+	nfc->base_cmd_regs = devm_ioremap_resource(&pdev->dev, nfc_cmd_regs);
+	if (IS_ERR(nfc->base_cmd_regs))
+		return PTR_ERR(nfc->base_cmd_regs);
+
+	nfc_hsmc_regs = platform_get_resource(pdev, IORESOURCE_MEM, 1);
+	nfc->hsmc_regs = devm_ioremap_resource(&pdev->dev, nfc_hsmc_regs);
+	if (IS_ERR(nfc->hsmc_regs))
+		return PTR_ERR(nfc->hsmc_regs);
+
+	nfc_sram = platform_get_resource(pdev, IORESOURCE_MEM, 2);
+	if (nfc_sram) {
+		nfc->sram_bank0 = devm_ioremap_resource(&pdev->dev, nfc_sram);
+		if (IS_ERR(nfc->sram_bank0)) {
+			dev_warn(&pdev->dev, "Fail to ioremap the NFC sram with error: %ld. So disable NFC sram.\n",
+					PTR_ERR(nfc->sram_bank0));
+		} else {
+			nfc->use_nfc_sram = true;
+			nfc->sram_bank0_phys = (dma_addr_t)nfc_sram->start;
+
+			if (pdev->dev.of_node)
+				nfc->write_by_sram = of_property_read_bool(
+						pdev->dev.of_node,
+						"atmel,write-by-sram");
+		}
+	}
+
+	nfc->is_initialized = true;
+	dev_info(&pdev->dev, "NFC is probed.\n");
+	return 0;
+}
+
+static const struct of_device_id atmel_nand_nfc_match[] = {
+	{ .compatible = "atmel,sama5d3-nfc" },
+	{ /* sentinel */ }
+};
+MODULE_DEVICE_TABLE(of, atmel_nand_nfc_match);
+
+static struct platform_driver atmel_nand_nfc_driver = {
+	.driver = {
+		.name = "atmel_nand_nfc",
+		.owner = THIS_MODULE,
+		.of_match_table = of_match_ptr(atmel_nand_nfc_match),
+	},
+	.probe = atmel_nand_nfc_probe,
+};
+
+>>>>>>> 82cb6ac... Merge tag 'for-linus-20131112' of git://git.infradead.org/linux-mtd
 static struct platform_driver atmel_nand_driver = {
 	.remove		= __exit_p(atmel_nand_remove),
 	.driver		= {

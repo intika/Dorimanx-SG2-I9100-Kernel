@@ -364,7 +364,7 @@ static int sst25l_probe(struct spi_device *spi)
 	if (!flash_info)
 		return -ENODEV;
 
-	flash = kzalloc(sizeof(struct sst25l_flash), GFP_KERNEL);
+	flash = devm_kzalloc(&spi->dev, sizeof(*flash), GFP_KERNEL);
 	if (!flash)
 		return -ENOMEM;
 
@@ -402,24 +402,28 @@ static int sst25l_probe(struct spi_device *spi)
 	ret = mtd_device_parse_register(&flash->mtd, NULL, NULL,
 					data ? data->parts : NULL,
 					data ? data->nr_parts : 0);
+<<<<<<< HEAD
 	if (ret) {
 		kfree(flash);
 		dev_set_drvdata(&spi->dev, NULL);
+=======
+	if (ret)
+>>>>>>> 82cb6ac... Merge tag 'for-linus-20131112' of git://git.infradead.org/linux-mtd
 		return -ENODEV;
-	}
 
 	return 0;
 }
 
 static int sst25l_remove(struct spi_device *spi)
 {
+<<<<<<< HEAD
 	struct sst25l_flash *flash = dev_get_drvdata(&spi->dev);
 	int ret;
+=======
+	struct sst25l_flash *flash = spi_get_drvdata(spi);
+>>>>>>> 82cb6ac... Merge tag 'for-linus-20131112' of git://git.infradead.org/linux-mtd
 
-	ret = mtd_device_unregister(&flash->mtd);
-	if (ret == 0)
-		kfree(flash);
-	return ret;
+	return mtd_device_unregister(&flash->mtd);
 }
 
 static struct spi_driver sst25l_driver = {
