@@ -2259,7 +2259,7 @@ static int lpfcdiag_loop_get_xri(struct lpfc_hba *phba, uint16_t rpi,
 				rspiocbq,
 				(phba->fc_ratov * 2)
 				+ LPFC_DRVR_TIMEOUT);
-	if (iocb_stat) {
+	if ((iocb_stat != IOCB_SUCCESS) || (rsp->ulpStatus != IOSTAT_SUCCESS)) {
 		ret_val = -EIO;
 		goto err_get_xri_exit;
 	}
@@ -2821,7 +2821,16 @@ lpfc_bsg_diag_loopback_run(struct fc_bsg_job *job)
 					     rspiocbq, (phba->fc_ratov * 2) +
 					     LPFC_DRVR_TIMEOUT);
 
+<<<<<<< HEAD
 	if ((iocb_stat != IOCB_SUCCESS) || (rsp->ulpStatus != IOCB_SUCCESS)) {
+=======
+	if ((iocb_stat != IOCB_SUCCESS) ||
+	    ((phba->sli_rev < LPFC_SLI_REV4) &&
+	     (rsp->ulpStatus != IOSTAT_SUCCESS))) {
+		lpfc_printf_log(phba, KERN_ERR, LOG_LIBDFC,
+				"3126 Failed loopback test issue iocb: "
+				"iocb_stat:x%x\n", iocb_stat);
+>>>>>>> 0d522ee... Merge tag 'scsi-for-linus' of git://git.kernel.org/pub/scm/linux/kernel/git/jejb/scsi
 		rc = -EIO;
 		goto err_loopback_test_exit;
 	}

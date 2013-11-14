@@ -1677,7 +1677,7 @@ reject:
  * @rdata: The remote port that sent the PRLI request
  * @rx_fp: The PRLI request frame
  *
- * Locking Note: The rport lock is exected to be held before calling
+ * Locking Note: The rport lock is expected to be held before calling
  * this function.
  */
 static void fc_rport_recv_prli_req(struct fc_rport_priv *rdata,
@@ -1796,7 +1796,7 @@ drop:
  * @rdata: The remote port that sent the PRLO request
  * @rx_fp: The PRLO request frame
  *
- * Locking Note: The rport lock is exected to be held before calling
+ * Locking Note: The rport lock is expected to be held before calling
  * this function.
  */
 static void fc_rport_recv_prlo_req(struct fc_rport_priv *rdata,
@@ -1867,7 +1867,7 @@ drop:
  * @lport: The local port that received the LOGO request
  * @fp:	   The LOGO request frame
  *
- * Locking Note: The rport lock is exected to be held before calling
+ * Locking Note: The rport lock is expected to be held before calling
  * this function.
  */
 static void fc_rport_recv_logo_req(struct fc_lport *lport, struct fc_frame *fp)

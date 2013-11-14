@@ -82,6 +82,42 @@ static int qla4xxx_host_get_param(struct Scsi_Host *shost,
 				  enum iscsi_host_param param, char *buf);
 static void qla4xxx_recovery_timedout(struct iscsi_cls_session *session);
 static enum blk_eh_timer_return qla4xxx_eh_cmd_timed_out(struct scsi_cmnd *sc);
+<<<<<<< HEAD
+=======
+static struct iscsi_endpoint *qla4xxx_ep_connect(struct Scsi_Host *shost,
+						 struct sockaddr *dst_addr,
+						 int non_blocking);
+static int qla4xxx_ep_poll(struct iscsi_endpoint *ep, int timeout_ms);
+static void qla4xxx_ep_disconnect(struct iscsi_endpoint *ep);
+static int qla4xxx_get_ep_param(struct iscsi_endpoint *ep,
+				enum iscsi_param param, char *buf);
+static int qla4xxx_conn_start(struct iscsi_cls_conn *conn);
+static struct iscsi_cls_conn *
+qla4xxx_conn_create(struct iscsi_cls_session *cls_sess, uint32_t conn_idx);
+static int qla4xxx_conn_bind(struct iscsi_cls_session *cls_session,
+			     struct iscsi_cls_conn *cls_conn,
+			     uint64_t transport_fd, int is_leading);
+static void qla4xxx_conn_destroy(struct iscsi_cls_conn *conn);
+static struct iscsi_cls_session *
+qla4xxx_session_create(struct iscsi_endpoint *ep, uint16_t cmds_max,
+			uint16_t qdepth, uint32_t initial_cmdsn);
+static void qla4xxx_session_destroy(struct iscsi_cls_session *sess);
+static void qla4xxx_task_work(struct work_struct *wdata);
+static int qla4xxx_alloc_pdu(struct iscsi_task *, uint8_t);
+static int qla4xxx_task_xmit(struct iscsi_task *);
+static void qla4xxx_task_cleanup(struct iscsi_task *);
+static void qla4xxx_fail_session(struct iscsi_cls_session *cls_session);
+static void qla4xxx_conn_get_stats(struct iscsi_cls_conn *cls_conn,
+				   struct iscsi_stats *stats);
+static int qla4xxx_send_ping(struct Scsi_Host *shost, uint32_t iface_num,
+			     uint32_t iface_type, uint32_t payload_size,
+			     uint32_t pid, struct sockaddr *dst_addr);
+static int qla4xxx_get_chap_list(struct Scsi_Host *shost, uint16_t chap_tbl_idx,
+				 uint32_t *num_entries, char *buf);
+static int qla4xxx_delete_chap(struct Scsi_Host *shost, uint16_t chap_tbl_idx);
+static int qla4xxx_set_chap_entry(struct Scsi_Host *shost, void  *data,
+				  int len);
+>>>>>>> 0d522ee... Merge tag 'scsi-for-linus' of git://git.kernel.org/pub/scm/linux/kernel/git/jejb/scsi
 
 /*
  * SCSI host template entry points
@@ -147,7 +183,24 @@ static struct iscsi_transport qla4xxx_iscsi_transport = {
 	.get_conn_param		= qla4xxx_conn_get_param,
 	.get_session_param	= qla4xxx_sess_get_param,
 	.get_host_param		= qla4xxx_host_get_param,
+<<<<<<< HEAD
 	.session_recovery_timedout = qla4xxx_recovery_timedout,
+=======
+	.set_iface_param	= qla4xxx_iface_set_param,
+	.get_iface_param	= qla4xxx_get_iface_param,
+	.bsg_request		= qla4xxx_bsg_request,
+	.send_ping		= qla4xxx_send_ping,
+	.get_chap		= qla4xxx_get_chap_list,
+	.delete_chap		= qla4xxx_delete_chap,
+	.set_chap		= qla4xxx_set_chap_entry,
+	.get_flashnode_param	= qla4xxx_sysfs_ddb_get_param,
+	.set_flashnode_param	= qla4xxx_sysfs_ddb_set_param,
+	.new_flashnode		= qla4xxx_sysfs_ddb_add,
+	.del_flashnode		= qla4xxx_sysfs_ddb_delete,
+	.login_flashnode	= qla4xxx_sysfs_ddb_login,
+	.logout_flashnode	= qla4xxx_sysfs_ddb_logout,
+	.logout_flashnode_sid	= qla4xxx_sysfs_ddb_logout_sid,
+>>>>>>> 0d522ee... Merge tag 'scsi-for-linus' of git://git.kernel.org/pub/scm/linux/kernel/git/jejb/scsi
 };
 
 static struct scsi_transport_template *qla4xxx_scsi_transport;
@@ -186,8 +239,102 @@ static void qla4xxx_recovery_timedout(struct iscsi_cls_session *session)
 	}
 }
 
+<<<<<<< HEAD
 static int qla4xxx_host_get_param(struct Scsi_Host *shost,
 				  enum iscsi_host_param param, char *buf)
+=======
+static int qla4xxx_get_chap_by_index(struct scsi_qla_host *ha,
+				     int16_t chap_index,
+				     struct ql4_chap_table **chap_entry)
+{
+	int rval = QLA_ERROR;
+	int max_chap_entries;
+
+	if (!ha->chap_list) {
+		ql4_printk(KERN_ERR, ha, "CHAP table cache is empty!\n");
+		rval = QLA_ERROR;
+		goto exit_get_chap;
+	}
+
+	if (is_qla80XX(ha))
+		max_chap_entries = (ha->hw.flt_chap_size / 2) /
+				   sizeof(struct ql4_chap_table);
+	else
+		max_chap_entries = MAX_CHAP_ENTRIES_40XX;
+
+	if (chap_index > max_chap_entries) {
+		ql4_printk(KERN_ERR, ha, "Invalid Chap index\n");
+		rval = QLA_ERROR;
+		goto exit_get_chap;
+	}
+
+	*chap_entry = (struct ql4_chap_table *)ha->chap_list + chap_index;
+	if ((*chap_entry)->cookie !=
+	     __constant_cpu_to_le16(CHAP_VALID_COOKIE)) {
+		rval = QLA_ERROR;
+		*chap_entry = NULL;
+	} else {
+		rval = QLA_SUCCESS;
+	}
+
+exit_get_chap:
+	return rval;
+}
+
+/**
+ * qla4xxx_find_free_chap_index - Find the first free chap index
+ * @ha: pointer to adapter structure
+ * @chap_index: CHAP index to be returned
+ *
+ * Find the first free chap index available in the chap table
+ *
+ * Note: Caller should acquire the chap lock before getting here.
+ **/
+static int qla4xxx_find_free_chap_index(struct scsi_qla_host *ha,
+					uint16_t *chap_index)
+{
+	int i, rval;
+	int free_index = -1;
+	int max_chap_entries = 0;
+	struct ql4_chap_table *chap_table;
+
+	if (is_qla80XX(ha))
+		max_chap_entries = (ha->hw.flt_chap_size / 2) /
+						sizeof(struct ql4_chap_table);
+	else
+		max_chap_entries = MAX_CHAP_ENTRIES_40XX;
+
+	if (!ha->chap_list) {
+		ql4_printk(KERN_ERR, ha, "CHAP table cache is empty!\n");
+		rval = QLA_ERROR;
+		goto exit_find_chap;
+	}
+
+	for (i = 0; i < max_chap_entries; i++) {
+		chap_table = (struct ql4_chap_table *)ha->chap_list + i;
+
+		if ((chap_table->cookie !=
+		    __constant_cpu_to_le16(CHAP_VALID_COOKIE)) &&
+		   (i > MAX_RESRV_CHAP_IDX)) {
+				free_index = i;
+				break;
+		}
+	}
+
+	if (free_index != -1) {
+		*chap_index = free_index;
+		rval = QLA_SUCCESS;
+	} else {
+		rval = QLA_ERROR;
+	}
+
+exit_find_chap:
+	return rval;
+}
+
+static int qla4xxx_get_chap_list(struct Scsi_Host *shost, uint16_t chap_tbl_idx,
+				  uint32_t *num_entries, char *buf)
+>>>>>>> 0d522ee... Merge tag 'scsi-for-linus' of git://git.kernel.org/pub/scm/linux/kernel/git/jejb/scsi
 {
 	struct scsi_qla_host *ha = to_qla_host(shost);
 	int len;
@@ -332,7 +479,118 @@ int qla4xxx_add_sess(struct ddb_entry *ddb_entry)
 	return 0;
 }
 
+<<<<<<< HEAD
 struct ddb_entry *qla4xxx_alloc_sess(struct scsi_qla_host *ha)
+=======
+/**
+ * qla4xxx_set_chap_entry - Make chap entry with given information
+ * @shost: pointer to host
+ * @data: chap info - credentials, index and type to make chap entry
+ * @len: length of data
+ *
+ * Add or update chap entry with the given information
+ **/
+static int qla4xxx_set_chap_entry(struct Scsi_Host *shost, void *data, int len)
+{
+	struct scsi_qla_host *ha = to_qla_host(shost);
+	struct iscsi_chap_rec chap_rec;
+	struct ql4_chap_table *chap_entry = NULL;
+	struct iscsi_param_info *param_info;
+	struct nlattr *attr;
+	int max_chap_entries = 0;
+	int type;
+	int rem = len;
+	int rc = 0;
+
+	memset(&chap_rec, 0, sizeof(chap_rec));
+
+	nla_for_each_attr(attr, data, len, rem) {
+		param_info = nla_data(attr);
+
+		switch (param_info->param) {
+		case ISCSI_CHAP_PARAM_INDEX:
+			chap_rec.chap_tbl_idx = *(uint16_t *)param_info->value;
+			break;
+		case ISCSI_CHAP_PARAM_CHAP_TYPE:
+			chap_rec.chap_type = param_info->value[0];
+			break;
+		case ISCSI_CHAP_PARAM_USERNAME:
+			memcpy(chap_rec.username, param_info->value,
+			       param_info->len);
+			break;
+		case ISCSI_CHAP_PARAM_PASSWORD:
+			memcpy(chap_rec.password, param_info->value,
+			       param_info->len);
+			break;
+		case ISCSI_CHAP_PARAM_PASSWORD_LEN:
+			chap_rec.password_length = param_info->value[0];
+			break;
+		default:
+			ql4_printk(KERN_ERR, ha,
+				   "%s: No such sysfs attribute\n", __func__);
+			rc = -ENOSYS;
+			goto exit_set_chap;
+		};
+	}
+
+	if (chap_rec.chap_type == CHAP_TYPE_IN)
+		type = BIDI_CHAP;
+	else
+		type = LOCAL_CHAP;
+
+	if (is_qla80XX(ha))
+		max_chap_entries = (ha->hw.flt_chap_size / 2) /
+				   sizeof(struct ql4_chap_table);
+	else
+		max_chap_entries = MAX_CHAP_ENTRIES_40XX;
+
+	mutex_lock(&ha->chap_sem);
+	if (chap_rec.chap_tbl_idx < max_chap_entries) {
+		rc = qla4xxx_get_chap_by_index(ha, chap_rec.chap_tbl_idx,
+					       &chap_entry);
+		if (!rc) {
+			if (!(type == qla4xxx_get_chap_type(chap_entry))) {
+				ql4_printk(KERN_INFO, ha,
+					   "Type mismatch for CHAP entry %d\n",
+					   chap_rec.chap_tbl_idx);
+				rc = -EINVAL;
+				goto exit_unlock_chap;
+			}
+
+			/* If chap index is in use then don't modify it */
+			rc = qla4xxx_is_chap_active(shost,
+						    chap_rec.chap_tbl_idx);
+			if (rc) {
+				ql4_printk(KERN_INFO, ha,
+					   "CHAP entry %d is in use\n",
+					   chap_rec.chap_tbl_idx);
+				rc = -EBUSY;
+				goto exit_unlock_chap;
+			}
+		}
+	} else {
+		rc = qla4xxx_find_free_chap_index(ha, &chap_rec.chap_tbl_idx);
+		if (rc) {
+			ql4_printk(KERN_INFO, ha, "CHAP entry not available\n");
+			rc = -EBUSY;
+			goto exit_unlock_chap;
+		}
+	}
+
+	rc = qla4xxx_set_chap(ha, chap_rec.username, chap_rec.password,
+			      chap_rec.chap_tbl_idx, type);
+
+exit_unlock_chap:
+	mutex_unlock(&ha->chap_sem);
+
+exit_set_chap:
+	return rc;
+}
+
+static int qla4xxx_get_iface_param(struct iscsi_iface *iface,
+				   enum iscsi_param_type param_type,
+				   int param, char *buf)
+>>>>>>> 0d522ee... Merge tag 'scsi-for-linus' of git://git.kernel.org/pub/scm/linux/kernel/git/jejb/scsi
 {
 	struct ddb_entry *ddb_entry;
 	struct iscsi_cls_session *sess;
@@ -552,6 +810,7 @@ qc_fail_command:
  **/
 static void qla4xxx_mem_free(struct scsi_qla_host *ha)
 {
+<<<<<<< HEAD
 	if (ha->queues)
 		dma_free_coherent(&ha->pdev->dev, ha->queues_len, ha->queues,
 				  ha->queues_dma);
@@ -565,6 +824,71 @@ static void qla4xxx_mem_free(struct scsi_qla_host *ha)
 	ha->response_dma = 0;
 	ha->shadow_regs = NULL;
 	ha->shadow_regs_dma = 0;
+=======
+	struct iscsi_session *sess = cls_sess->dd_data;
+	struct ddb_entry *ddb_entry = sess->dd_data;
+	struct scsi_qla_host *ha = ddb_entry->ha;
+	struct iscsi_cls_conn *cls_conn = ddb_entry->conn;
+	struct ql4_chap_table chap_tbl;
+	int rval, len;
+	uint16_t idx;
+
+	memset(&chap_tbl, 0, sizeof(chap_tbl));
+	switch (param) {
+	case ISCSI_PARAM_CHAP_IN_IDX:
+		rval = qla4xxx_get_chap_index(ha, sess->username_in,
+					      sess->password_in, BIDI_CHAP,
+					      &idx);
+		if (rval)
+			len = sprintf(buf, "\n");
+		else
+			len = sprintf(buf, "%hu\n", idx);
+		break;
+	case ISCSI_PARAM_CHAP_OUT_IDX:
+		if (ddb_entry->ddb_type == FLASH_DDB) {
+			if (ddb_entry->chap_tbl_idx != INVALID_ENTRY) {
+				idx = ddb_entry->chap_tbl_idx;
+				rval = QLA_SUCCESS;
+			} else {
+				rval = QLA_ERROR;
+			}
+		} else {
+			rval = qla4xxx_get_chap_index(ha, sess->username,
+						      sess->password,
+						      LOCAL_CHAP, &idx);
+		}
+		if (rval)
+			len = sprintf(buf, "\n");
+		else
+			len = sprintf(buf, "%hu\n", idx);
+		break;
+	case ISCSI_PARAM_USERNAME:
+	case ISCSI_PARAM_PASSWORD:
+		/* First, populate session username and password for FLASH DDB,
+		 * if not already done. This happens when session login fails
+		 * for a FLASH DDB.
+		 */
+		if (ddb_entry->ddb_type == FLASH_DDB &&
+		    ddb_entry->chap_tbl_idx != INVALID_ENTRY &&
+		    !sess->username && !sess->password) {
+			idx = ddb_entry->chap_tbl_idx;
+			rval = qla4xxx_get_uni_chap_at_index(ha, chap_tbl.name,
+							    chap_tbl.secret,
+							    idx);
+			if (!rval) {
+				iscsi_set_param(cls_conn, ISCSI_PARAM_USERNAME,
+						(char *)chap_tbl.name,
+						strlen((char *)chap_tbl.name));
+				iscsi_set_param(cls_conn, ISCSI_PARAM_PASSWORD,
+						(char *)chap_tbl.secret,
+						chap_tbl.secret_len);
+			}
+		}
+		/* allow fall-through */
+	default:
+		return iscsi_session_get_param(cls_sess, param, buf);
+	}
+>>>>>>> 0d522ee... Merge tag 'scsi-for-linus' of git://git.kernel.org/pub/scm/linux/kernel/git/jejb/scsi
 
 	/* Free srb pool. */
 	if (ha->srb_mempool)
@@ -1198,6 +1522,7 @@ static void qla4xxx_mem_free(struct scsi_qla_host *ha)
 		dma_free_coherent(&ha->pdev->dev, ha->queues_len, ha->queues,
 				  ha->queues_dma);
 
+<<<<<<< HEAD
 	ha->queues_len = 0;
 	ha->queues = NULL;
 	ha->queues_dma = 0;
@@ -1207,6 +1532,40 @@ static void qla4xxx_mem_free(struct scsi_qla_host *ha)
 	ha->response_dma = 0;
 	ha->shadow_regs = NULL;
 	ha->shadow_regs_dma = 0;
+=======
+	conn->max_recv_dlength = BYTE_UNITS *
+			  le16_to_cpu(fw_ddb_entry->iscsi_max_rcv_data_seg_len);
+	conn->max_xmit_dlength = BYTE_UNITS *
+			  le16_to_cpu(fw_ddb_entry->iscsi_max_snd_data_seg_len);
+	sess->max_r2t = le16_to_cpu(fw_ddb_entry->iscsi_max_outsnd_r2t);
+	sess->first_burst = BYTE_UNITS *
+			       le16_to_cpu(fw_ddb_entry->iscsi_first_burst_len);
+	sess->max_burst = BYTE_UNITS *
+				 le16_to_cpu(fw_ddb_entry->iscsi_max_burst_len);
+	sess->time2wait = le16_to_cpu(fw_ddb_entry->iscsi_def_time2wait);
+	sess->time2retain = le16_to_cpu(fw_ddb_entry->iscsi_def_time2retain);
+	sess->tpgt = le32_to_cpu(fw_ddb_entry->tgt_portal_grp);
+	conn->max_segment_size = le16_to_cpu(fw_ddb_entry->mss);
+	conn->tcp_xmit_wsf = fw_ddb_entry->tcp_xmt_wsf;
+	conn->tcp_recv_wsf = fw_ddb_entry->tcp_rcv_wsf;
+	conn->ipv4_tos = fw_ddb_entry->ipv4_tos;
+	conn->keepalive_tmo = le16_to_cpu(fw_ddb_entry->ka_timeout);
+	conn->local_port = le16_to_cpu(fw_ddb_entry->lcl_port);
+	conn->statsn = le32_to_cpu(fw_ddb_entry->stat_sn);
+	conn->exp_statsn = le32_to_cpu(fw_ddb_entry->exp_stat_sn);
+	sess->tsid = le16_to_cpu(fw_ddb_entry->tsid);
+	COPY_ISID(sess->isid, fw_ddb_entry->isid);
+
+	ddb_link = le16_to_cpu(fw_ddb_entry->ddb_link);
+	if (ddb_link == DDB_ISNS)
+		disc_parent = ISCSI_DISC_PARENT_ISNS;
+	else if (ddb_link == DDB_NO_LINK)
+		disc_parent = ISCSI_DISC_PARENT_UNKNOWN;
+	else if (ddb_link < MAX_DDB_ENTRIES)
+		disc_parent = ISCSI_DISC_PARENT_SENDTGT;
+	else
+		disc_parent = ISCSI_DISC_PARENT_UNKNOWN;
+>>>>>>> 0d522ee... Merge tag 'scsi-for-linus' of git://git.kernel.org/pub/scm/linux/kernel/git/jejb/scsi
 
 	/* Free srb pool. */
 	if (ha->srb_mempool)
@@ -1214,12 +1573,32 @@ static void qla4xxx_mem_free(struct scsi_qla_host *ha)
 
 	ha->srb_mempool = NULL;
 
+<<<<<<< HEAD
 	if (ha->chap_dma_pool)
 		dma_pool_destroy(ha->chap_dma_pool);
 
 	if (ha->chap_list)
 		vfree(ha->chap_list);
 	ha->chap_list = NULL;
+=======
+static void qla4xxx_copy_fwddb_param(struct scsi_qla_host *ha,
+				     struct dev_db_entry *fw_ddb_entry,
+				     struct iscsi_cls_session *cls_sess,
+				     struct iscsi_cls_conn *cls_conn)
+{
+	int buflen = 0;
+	struct iscsi_session *sess;
+	struct ddb_entry *ddb_entry;
+	struct ql4_chap_table chap_tbl;
+	struct iscsi_conn *conn;
+	char ip_addr[DDB_IPADDR_LEN];
+	uint16_t options = 0;
+
+	sess = cls_sess->dd_data;
+	ddb_entry = sess->dd_data;
+	conn = cls_conn->dd_data;
+	memset(&chap_tbl, 0, sizeof(chap_tbl));
+>>>>>>> 0d522ee... Merge tag 'scsi-for-linus' of git://git.kernel.org/pub/scm/linux/kernel/git/jejb/scsi
 
 	if (ha->fw_ddb_dma_pool)
 		dma_pool_destroy(ha->fw_ddb_dma_pool);
@@ -1261,6 +1640,7 @@ static int qla4xxx_mem_alloc(struct scsi_qla_host *ha)
 	}
 	memset(ha->queues, 0, ha->queues_len);
 
+<<<<<<< HEAD
 	/*
 	 * As per RISC alignment requirements -- the bus-address must be a
 	 * multiple of the request-ring size (in bytes).
@@ -1269,6 +1649,28 @@ static int qla4xxx_mem_alloc(struct scsi_qla_host *ha)
 	if ((unsigned long)ha->queues_dma & (MEM_ALIGN_VALUE - 1))
 		align = MEM_ALIGN_VALUE - ((unsigned long)ha->queues_dma &
 					   (MEM_ALIGN_VALUE - 1));
+=======
+	iscsi_set_param(cls_conn, ISCSI_PARAM_PERSISTENT_ADDRESS,
+			(char *)ip_addr, buflen);
+	iscsi_set_param(cls_conn, ISCSI_PARAM_TARGET_NAME,
+			(char *)fw_ddb_entry->iscsi_name, buflen);
+	iscsi_set_param(cls_conn, ISCSI_PARAM_INITIATOR_NAME,
+			(char *)ha->name_string, buflen);
+
+	if (ddb_entry->chap_tbl_idx != INVALID_ENTRY) {
+		if (!qla4xxx_get_uni_chap_at_index(ha, chap_tbl.name,
+						   chap_tbl.secret,
+						   ddb_entry->chap_tbl_idx)) {
+			iscsi_set_param(cls_conn, ISCSI_PARAM_USERNAME,
+					(char *)chap_tbl.name,
+					strlen((char *)chap_tbl.name));
+			iscsi_set_param(cls_conn, ISCSI_PARAM_PASSWORD,
+					(char *)chap_tbl.secret,
+					chap_tbl.secret_len);
+		}
+	}
+}
+>>>>>>> 0d522ee... Merge tag 'scsi-for-linus' of git://git.kernel.org/pub/scm/linux/kernel/git/jejb/scsi
 
 	/* Update request and response queue pointers. */
 	ha->request_dma = ha->queues_dma + align;
@@ -1872,6 +2274,7 @@ recover_ha_init_adapter:
 			set_bit(DPC_RETRY_RESET_HA, &ha->dpc_flags);
 			status = QLA_ERROR;
 		} else {
+<<<<<<< HEAD
 			if (ha->retry_reset_ha_cnt > 0) {
 				/* Schedule another Reset HA--DPC will retry */
 				ha->retry_reset_ha_cnt--;
@@ -1881,6 +2284,597 @@ recover_ha_init_adapter:
 					      ha->retry_reset_ha_cnt));
 				status = QLA_ERROR;
 			}
+=======
+			ret = QLA_ERROR;
+			goto exit_boot_info;
+		}
+
+		/* Check Boot Mode */
+		val = rd_nvram_byte(ha, addr);
+		if (!(val & 0x07)) {
+			DEBUG2(ql4_printk(KERN_INFO, ha, "%s: Adapter boot "
+					  "options : 0x%x\n", __func__, val));
+			ret = QLA_ERROR;
+			goto exit_boot_info;
+		}
+
+		/* get primary valid target index */
+		val = rd_nvram_byte(ha, pri_addr);
+		if (val & BIT_7)
+			ddb_index[0] = (val & 0x7f);
+
+		/* get secondary valid target index */
+		val = rd_nvram_byte(ha, sec_addr);
+		if (val & BIT_7)
+			ddb_index[1] = (val & 0x7f);
+
+	} else if (is_qla80XX(ha)) {
+		buf = dma_alloc_coherent(&ha->pdev->dev, size,
+					 &buf_dma, GFP_KERNEL);
+		if (!buf) {
+			DEBUG2(ql4_printk(KERN_ERR, ha,
+					  "%s: Unable to allocate dma buffer\n",
+					   __func__));
+			ret = QLA_ERROR;
+			goto exit_boot_info;
+		}
+
+		if (ha->port_num == 0)
+			offset = BOOT_PARAM_OFFSET_PORT0;
+		else if (ha->port_num == 1)
+			offset = BOOT_PARAM_OFFSET_PORT1;
+		else {
+			ret = QLA_ERROR;
+			goto exit_boot_info_free;
+		}
+		addr = FLASH_RAW_ACCESS_ADDR + (ha->hw.flt_iscsi_param * 4) +
+		       offset;
+		if (qla4xxx_get_flash(ha, buf_dma, addr,
+				      13 * sizeof(uint8_t)) != QLA_SUCCESS) {
+			DEBUG2(ql4_printk(KERN_ERR, ha, "scsi%ld: %s: Get Flash"
+					  " failed\n", ha->host_no, __func__));
+			ret = QLA_ERROR;
+			goto exit_boot_info_free;
+		}
+		/* Check Boot Mode */
+		if (!(buf[1] & 0x07)) {
+			DEBUG2(ql4_printk(KERN_INFO, ha, "Firmware boot options"
+					  " : 0x%x\n", buf[1]));
+			ret = QLA_ERROR;
+			goto exit_boot_info_free;
+		}
+
+		/* get primary valid target index */
+		if (buf[2] & BIT_7)
+			ddb_index[0] = buf[2] & 0x7f;
+
+		/* get secondary valid target index */
+		if (buf[11] & BIT_7)
+			ddb_index[1] = buf[11] & 0x7f;
+	} else {
+		ret = QLA_ERROR;
+		goto exit_boot_info;
+	}
+
+	DEBUG2(ql4_printk(KERN_INFO, ha, "%s: Primary target ID %d, Secondary"
+			  " target ID %d\n", __func__, ddb_index[0],
+			  ddb_index[1]));
+
+exit_boot_info_free:
+	dma_free_coherent(&ha->pdev->dev, size, buf, buf_dma);
+exit_boot_info:
+	ha->pri_ddb_idx = ddb_index[0];
+	ha->sec_ddb_idx = ddb_index[1];
+	return ret;
+}
+
+/**
+ * qla4xxx_get_bidi_chap - Get a BIDI CHAP user and password
+ * @ha: pointer to adapter structure
+ * @username: CHAP username to be returned
+ * @password: CHAP password to be returned
+ *
+ * If a boot entry has BIDI CHAP enabled then we need to set the BIDI CHAP
+ * user and password in the sysfs entry in /sys/firmware/iscsi_boot#/.
+ * So from the CHAP cache find the first BIDI CHAP entry and set it
+ * to the boot record in sysfs.
+ **/
+static int qla4xxx_get_bidi_chap(struct scsi_qla_host *ha, char *username,
+			    char *password)
+{
+	int i, ret = -EINVAL;
+	int max_chap_entries = 0;
+	struct ql4_chap_table *chap_table;
+
+	if (is_qla80XX(ha))
+		max_chap_entries = (ha->hw.flt_chap_size / 2) /
+						sizeof(struct ql4_chap_table);
+	else
+		max_chap_entries = MAX_CHAP_ENTRIES_40XX;
+
+	if (!ha->chap_list) {
+		ql4_printk(KERN_ERR, ha, "Do not have CHAP table cache\n");
+		return ret;
+	}
+
+	mutex_lock(&ha->chap_sem);
+	for (i = 0; i < max_chap_entries; i++) {
+		chap_table = (struct ql4_chap_table *)ha->chap_list + i;
+		if (chap_table->cookie !=
+		    __constant_cpu_to_le16(CHAP_VALID_COOKIE)) {
+			continue;
+		}
+
+		if (chap_table->flags & BIT_7) /* local */
+			continue;
+
+		if (!(chap_table->flags & BIT_6)) /* Not BIDI */
+			continue;
+
+		strncpy(password, chap_table->secret, QL4_CHAP_MAX_SECRET_LEN);
+		strncpy(username, chap_table->name, QL4_CHAP_MAX_NAME_LEN);
+		ret = 0;
+		break;
+	}
+	mutex_unlock(&ha->chap_sem);
+
+	return ret;
+}
+
+
+static int qla4xxx_get_boot_target(struct scsi_qla_host *ha,
+				   struct ql4_boot_session_info *boot_sess,
+				   uint16_t ddb_index)
+{
+	struct ql4_conn_info *boot_conn = &boot_sess->conn_list[0];
+	struct dev_db_entry *fw_ddb_entry;
+	dma_addr_t fw_ddb_entry_dma;
+	uint16_t idx;
+	uint16_t options;
+	int ret = QLA_SUCCESS;
+
+	fw_ddb_entry = dma_alloc_coherent(&ha->pdev->dev, sizeof(*fw_ddb_entry),
+					  &fw_ddb_entry_dma, GFP_KERNEL);
+	if (!fw_ddb_entry) {
+		DEBUG2(ql4_printk(KERN_ERR, ha,
+				  "%s: Unable to allocate dma buffer.\n",
+				  __func__));
+		ret = QLA_ERROR;
+		return ret;
+	}
+
+	if (qla4xxx_bootdb_by_index(ha, fw_ddb_entry,
+				   fw_ddb_entry_dma, ddb_index)) {
+		DEBUG2(ql4_printk(KERN_INFO, ha, "%s: No Flash DDB found at "
+				  "index [%d]\n", __func__, ddb_index));
+		ret = QLA_ERROR;
+		goto exit_boot_target;
+	}
+
+	/* Update target name and IP from DDB */
+	memcpy(boot_sess->target_name, fw_ddb_entry->iscsi_name,
+	       min(sizeof(boot_sess->target_name),
+		   sizeof(fw_ddb_entry->iscsi_name)));
+
+	options = le16_to_cpu(fw_ddb_entry->options);
+	if (options & DDB_OPT_IPV6_DEVICE) {
+		memcpy(&boot_conn->dest_ipaddr.ip_address,
+		       &fw_ddb_entry->ip_addr[0], IPv6_ADDR_LEN);
+	} else {
+		boot_conn->dest_ipaddr.ip_type = 0x1;
+		memcpy(&boot_conn->dest_ipaddr.ip_address,
+		       &fw_ddb_entry->ip_addr[0], IP_ADDR_LEN);
+	}
+
+	boot_conn->dest_port = le16_to_cpu(fw_ddb_entry->port);
+
+	/* update chap information */
+	idx = __le16_to_cpu(fw_ddb_entry->chap_tbl_idx);
+
+	if (BIT_7 & le16_to_cpu(fw_ddb_entry->iscsi_options))	{
+
+		DEBUG2(ql4_printk(KERN_INFO, ha, "Setting chap\n"));
+
+		ret = qla4xxx_get_chap(ha, (char *)&boot_conn->chap.
+				       target_chap_name,
+				       (char *)&boot_conn->chap.target_secret,
+				       idx);
+		if (ret) {
+			ql4_printk(KERN_ERR, ha, "Failed to set chap\n");
+			ret = QLA_ERROR;
+			goto exit_boot_target;
+		}
+
+		boot_conn->chap.target_chap_name_length = QL4_CHAP_MAX_NAME_LEN;
+		boot_conn->chap.target_secret_length = QL4_CHAP_MAX_SECRET_LEN;
+	}
+
+	if (BIT_4 & le16_to_cpu(fw_ddb_entry->iscsi_options)) {
+
+		DEBUG2(ql4_printk(KERN_INFO, ha, "Setting BIDI chap\n"));
+
+		ret = qla4xxx_get_bidi_chap(ha,
+				    (char *)&boot_conn->chap.intr_chap_name,
+				    (char *)&boot_conn->chap.intr_secret);
+
+		if (ret) {
+			ql4_printk(KERN_ERR, ha, "Failed to set BIDI chap\n");
+			ret = QLA_ERROR;
+			goto exit_boot_target;
+		}
+
+		boot_conn->chap.intr_chap_name_length = QL4_CHAP_MAX_NAME_LEN;
+		boot_conn->chap.intr_secret_length = QL4_CHAP_MAX_SECRET_LEN;
+	}
+
+exit_boot_target:
+	dma_free_coherent(&ha->pdev->dev, sizeof(*fw_ddb_entry),
+			  fw_ddb_entry, fw_ddb_entry_dma);
+	return ret;
+}
+
+static int qla4xxx_get_boot_info(struct scsi_qla_host *ha)
+{
+	uint16_t ddb_index[2];
+	int ret = QLA_ERROR;
+	int rval;
+
+	memset(ddb_index, 0, sizeof(ddb_index));
+	ddb_index[0] = 0xffff;
+	ddb_index[1] = 0xffff;
+	ret = get_fw_boot_info(ha, ddb_index);
+	if (ret != QLA_SUCCESS) {
+		DEBUG2(ql4_printk(KERN_INFO, ha,
+				"%s: No boot target configured.\n", __func__));
+		return ret;
+	}
+
+	if (ql4xdisablesysfsboot)
+		return QLA_SUCCESS;
+
+	if (ddb_index[0] == 0xffff)
+		goto sec_target;
+
+	rval = qla4xxx_get_boot_target(ha, &(ha->boot_tgt.boot_pri_sess),
+				      ddb_index[0]);
+	if (rval != QLA_SUCCESS) {
+		DEBUG2(ql4_printk(KERN_INFO, ha, "%s: Primary boot target not "
+				  "configured\n", __func__));
+	} else
+		ret = QLA_SUCCESS;
+
+sec_target:
+	if (ddb_index[1] == 0xffff)
+		goto exit_get_boot_info;
+
+	rval = qla4xxx_get_boot_target(ha, &(ha->boot_tgt.boot_sec_sess),
+				      ddb_index[1]);
+	if (rval != QLA_SUCCESS) {
+		DEBUG2(ql4_printk(KERN_INFO, ha, "%s: Secondary boot target not"
+				  " configured\n", __func__));
+	} else
+		ret = QLA_SUCCESS;
+
+exit_get_boot_info:
+	return ret;
+}
+
+static int qla4xxx_setup_boot_info(struct scsi_qla_host *ha)
+{
+	struct iscsi_boot_kobj *boot_kobj;
+
+	if (qla4xxx_get_boot_info(ha) != QLA_SUCCESS)
+		return QLA_ERROR;
+
+	if (ql4xdisablesysfsboot) {
+		ql4_printk(KERN_INFO, ha,
+			   "%s: syfsboot disabled - driver will trigger login "
+			   "and publish session for discovery .\n", __func__);
+		return QLA_SUCCESS;
+	}
+
+
+	ha->boot_kset = iscsi_boot_create_host_kset(ha->host->host_no);
+	if (!ha->boot_kset)
+		goto kset_free;
+
+	if (!scsi_host_get(ha->host))
+		goto kset_free;
+	boot_kobj = iscsi_boot_create_target(ha->boot_kset, 0, ha,
+					     qla4xxx_show_boot_tgt_pri_info,
+					     qla4xxx_tgt_get_attr_visibility,
+					     qla4xxx_boot_release);
+	if (!boot_kobj)
+		goto put_host;
+
+	if (!scsi_host_get(ha->host))
+		goto kset_free;
+	boot_kobj = iscsi_boot_create_target(ha->boot_kset, 1, ha,
+					     qla4xxx_show_boot_tgt_sec_info,
+					     qla4xxx_tgt_get_attr_visibility,
+					     qla4xxx_boot_release);
+	if (!boot_kobj)
+		goto put_host;
+
+	if (!scsi_host_get(ha->host))
+		goto kset_free;
+	boot_kobj = iscsi_boot_create_initiator(ha->boot_kset, 0, ha,
+					       qla4xxx_show_boot_ini_info,
+					       qla4xxx_ini_get_attr_visibility,
+					       qla4xxx_boot_release);
+	if (!boot_kobj)
+		goto put_host;
+
+	if (!scsi_host_get(ha->host))
+		goto kset_free;
+	boot_kobj = iscsi_boot_create_ethernet(ha->boot_kset, 0, ha,
+					       qla4xxx_show_boot_eth_info,
+					       qla4xxx_eth_get_attr_visibility,
+					       qla4xxx_boot_release);
+	if (!boot_kobj)
+		goto put_host;
+
+	return QLA_SUCCESS;
+
+put_host:
+	scsi_host_put(ha->host);
+kset_free:
+	iscsi_boot_destroy_kset(ha->boot_kset);
+	return -ENOMEM;
+}
+
+
+/**
+ * qla4xxx_create chap_list - Create CHAP list from FLASH
+ * @ha: pointer to adapter structure
+ *
+ * Read flash and make a list of CHAP entries, during login when a CHAP entry
+ * is received, it will be checked in this list. If entry exist then the CHAP
+ * entry index is set in the DDB. If CHAP entry does not exist in this list
+ * then a new entry is added in FLASH in CHAP table and the index obtained is
+ * used in the DDB.
+ **/
+static void qla4xxx_create_chap_list(struct scsi_qla_host *ha)
+{
+	int rval = 0;
+	uint8_t *chap_flash_data = NULL;
+	uint32_t offset;
+	dma_addr_t chap_dma;
+	uint32_t chap_size = 0;
+
+	if (is_qla40XX(ha))
+		chap_size = MAX_CHAP_ENTRIES_40XX  *
+					sizeof(struct ql4_chap_table);
+	else	/* Single region contains CHAP info for both
+		 * ports which is divided into half for each port.
+		 */
+		chap_size = ha->hw.flt_chap_size / 2;
+
+	chap_flash_data = dma_alloc_coherent(&ha->pdev->dev, chap_size,
+					  &chap_dma, GFP_KERNEL);
+	if (!chap_flash_data) {
+		ql4_printk(KERN_ERR, ha, "No memory for chap_flash_data\n");
+		return;
+	}
+	if (is_qla40XX(ha))
+		offset = FLASH_CHAP_OFFSET;
+	else {
+		offset = FLASH_RAW_ACCESS_ADDR + (ha->hw.flt_region_chap << 2);
+		if (ha->port_num == 1)
+			offset += chap_size;
+	}
+
+	rval = qla4xxx_get_flash(ha, chap_dma, offset, chap_size);
+	if (rval != QLA_SUCCESS)
+		goto exit_chap_list;
+
+	if (ha->chap_list == NULL)
+		ha->chap_list = vmalloc(chap_size);
+	if (ha->chap_list == NULL) {
+		ql4_printk(KERN_ERR, ha, "No memory for ha->chap_list\n");
+		goto exit_chap_list;
+	}
+
+	memcpy(ha->chap_list, chap_flash_data, chap_size);
+
+exit_chap_list:
+	dma_free_coherent(&ha->pdev->dev, chap_size,
+			chap_flash_data, chap_dma);
+}
+
+static void qla4xxx_get_param_ddb(struct ddb_entry *ddb_entry,
+				  struct ql4_tuple_ddb *tddb)
+{
+	struct scsi_qla_host *ha;
+	struct iscsi_cls_session *cls_sess;
+	struct iscsi_cls_conn *cls_conn;
+	struct iscsi_session *sess;
+	struct iscsi_conn *conn;
+
+	DEBUG2(printk(KERN_INFO "Func: %s\n", __func__));
+	ha = ddb_entry->ha;
+	cls_sess = ddb_entry->sess;
+	sess = cls_sess->dd_data;
+	cls_conn = ddb_entry->conn;
+	conn = cls_conn->dd_data;
+
+	tddb->tpgt = sess->tpgt;
+	tddb->port = conn->persistent_port;
+	strncpy(tddb->iscsi_name, sess->targetname, ISCSI_NAME_SIZE);
+	strncpy(tddb->ip_addr, conn->persistent_address, DDB_IPADDR_LEN);
+}
+
+static void qla4xxx_convert_param_ddb(struct dev_db_entry *fw_ddb_entry,
+				      struct ql4_tuple_ddb *tddb,
+				      uint8_t *flash_isid)
+{
+	uint16_t options = 0;
+
+	tddb->tpgt = le32_to_cpu(fw_ddb_entry->tgt_portal_grp);
+	memcpy(&tddb->iscsi_name[0], &fw_ddb_entry->iscsi_name[0],
+	       min(sizeof(tddb->iscsi_name), sizeof(fw_ddb_entry->iscsi_name)));
+
+	options = le16_to_cpu(fw_ddb_entry->options);
+	if (options & DDB_OPT_IPV6_DEVICE)
+		sprintf(tddb->ip_addr, "%pI6", fw_ddb_entry->ip_addr);
+	else
+		sprintf(tddb->ip_addr, "%pI4", fw_ddb_entry->ip_addr);
+
+	tddb->port = le16_to_cpu(fw_ddb_entry->port);
+
+	if (flash_isid == NULL)
+		memcpy(&tddb->isid[0], &fw_ddb_entry->isid[0],
+		       sizeof(tddb->isid));
+	else
+		memcpy(&tddb->isid[0], &flash_isid[0], sizeof(tddb->isid));
+}
+
+static int qla4xxx_compare_tuple_ddb(struct scsi_qla_host *ha,
+				     struct ql4_tuple_ddb *old_tddb,
+				     struct ql4_tuple_ddb *new_tddb,
+				     uint8_t is_isid_compare)
+{
+	if (strcmp(old_tddb->iscsi_name, new_tddb->iscsi_name))
+		return QLA_ERROR;
+
+	if (strcmp(old_tddb->ip_addr, new_tddb->ip_addr))
+		return QLA_ERROR;
+
+	if (old_tddb->port != new_tddb->port)
+		return QLA_ERROR;
+
+	/* For multi sessions, driver generates the ISID, so do not compare
+	 * ISID in reset path since it would be a comparison between the
+	 * driver generated ISID and firmware generated ISID. This could
+	 * lead to adding duplicated DDBs in the list as driver generated
+	 * ISID would not match firmware generated ISID.
+	 */
+	if (is_isid_compare) {
+		DEBUG2(ql4_printk(KERN_INFO, ha, "%s: old ISID [%02x%02x%02x"
+			"%02x%02x%02x] New ISID [%02x%02x%02x%02x%02x%02x]\n",
+			__func__, old_tddb->isid[5], old_tddb->isid[4],
+			old_tddb->isid[3], old_tddb->isid[2], old_tddb->isid[1],
+			old_tddb->isid[0], new_tddb->isid[5], new_tddb->isid[4],
+			new_tddb->isid[3], new_tddb->isid[2], new_tddb->isid[1],
+			new_tddb->isid[0]));
+
+		if (memcmp(&old_tddb->isid[0], &new_tddb->isid[0],
+			   sizeof(old_tddb->isid)))
+			return QLA_ERROR;
+	}
+
+	DEBUG2(ql4_printk(KERN_INFO, ha,
+			  "Match Found, fw[%d,%d,%s,%s], [%d,%d,%s,%s]",
+			  old_tddb->port, old_tddb->tpgt, old_tddb->ip_addr,
+			  old_tddb->iscsi_name, new_tddb->port, new_tddb->tpgt,
+			  new_tddb->ip_addr, new_tddb->iscsi_name));
+
+	return QLA_SUCCESS;
+}
+
+static int qla4xxx_is_session_exists(struct scsi_qla_host *ha,
+				     struct dev_db_entry *fw_ddb_entry,
+				     uint32_t *index)
+{
+	struct ddb_entry *ddb_entry;
+	struct ql4_tuple_ddb *fw_tddb = NULL;
+	struct ql4_tuple_ddb *tmp_tddb = NULL;
+	int idx;
+	int ret = QLA_ERROR;
+
+	fw_tddb = vzalloc(sizeof(*fw_tddb));
+	if (!fw_tddb) {
+		DEBUG2(ql4_printk(KERN_WARNING, ha,
+				  "Memory Allocation failed.\n"));
+		ret = QLA_SUCCESS;
+		goto exit_check;
+	}
+
+	tmp_tddb = vzalloc(sizeof(*tmp_tddb));
+	if (!tmp_tddb) {
+		DEBUG2(ql4_printk(KERN_WARNING, ha,
+				  "Memory Allocation failed.\n"));
+		ret = QLA_SUCCESS;
+		goto exit_check;
+	}
+
+	qla4xxx_convert_param_ddb(fw_ddb_entry, fw_tddb, NULL);
+
+	for (idx = 0; idx < MAX_DDB_ENTRIES; idx++) {
+		ddb_entry = qla4xxx_lookup_ddb_by_fw_index(ha, idx);
+		if (ddb_entry == NULL)
+			continue;
+
+		qla4xxx_get_param_ddb(ddb_entry, tmp_tddb);
+		if (!qla4xxx_compare_tuple_ddb(ha, fw_tddb, tmp_tddb, false)) {
+			ret = QLA_SUCCESS; /* found */
+			if (index != NULL)
+				*index = idx;
+			goto exit_check;
+		}
+	}
+
+exit_check:
+	if (fw_tddb)
+		vfree(fw_tddb);
+	if (tmp_tddb)
+		vfree(tmp_tddb);
+	return ret;
+}
+
+/**
+ * qla4xxx_check_existing_isid - check if target with same isid exist
+ *				 in target list
+ * @list_nt: list of target
+ * @isid: isid to check
+ *
+ * This routine return QLA_SUCCESS if target with same isid exist
+ **/
+static int qla4xxx_check_existing_isid(struct list_head *list_nt, uint8_t *isid)
+{
+	struct qla_ddb_index *nt_ddb_idx, *nt_ddb_idx_tmp;
+	struct dev_db_entry *fw_ddb_entry;
+
+	list_for_each_entry_safe(nt_ddb_idx, nt_ddb_idx_tmp, list_nt, list) {
+		fw_ddb_entry = &nt_ddb_idx->fw_ddb;
+
+		if (memcmp(&fw_ddb_entry->isid[0], &isid[0],
+			   sizeof(nt_ddb_idx->fw_ddb.isid)) == 0) {
+			return QLA_SUCCESS;
+		}
+	}
+	return QLA_ERROR;
+}
+
+/**
+ * qla4xxx_update_isid - compare ddbs and updated isid
+ * @ha: Pointer to host adapter structure.
+ * @list_nt: list of nt target
+ * @fw_ddb_entry: firmware ddb entry
+ *
+ * This routine update isid if ddbs have same iqn, same isid and
+ * different IP addr.
+ * Return QLA_SUCCESS if isid is updated.
+ **/
+static int qla4xxx_update_isid(struct scsi_qla_host *ha,
+			       struct list_head *list_nt,
+			       struct dev_db_entry *fw_ddb_entry)
+{
+	uint8_t base_value, i;
+
+	base_value = fw_ddb_entry->isid[1] & 0x1f;
+	for (i = 0; i < 8; i++) {
+		fw_ddb_entry->isid[1] = (base_value | (i << 5));
+		if (qla4xxx_check_existing_isid(list_nt, fw_ddb_entry->isid))
+			break;
+	}
+
+	if (!qla4xxx_check_existing_isid(list_nt, fw_ddb_entry->isid))
+		return QLA_ERROR;
+
+	return QLA_SUCCESS;
+}
+>>>>>>> 0d522ee... Merge tag 'scsi-for-linus' of git://git.kernel.org/pub/scm/linux/kernel/git/jejb/scsi
 
 			if (ha->retry_reset_ha_cnt == 0) {
 				/* Recover adapter retries have been exhausted.
@@ -1970,9 +2964,21 @@ int qla4xxx_unblock_flash_ddb(struct iscsi_cls_session *cls_session)
 
 int qla4xxx_unblock_ddb(struct iscsi_cls_session *cls_session)
 {
+<<<<<<< HEAD
 	struct iscsi_session *sess;
 	struct ddb_entry *ddb_entry;
 	struct scsi_qla_host *ha;
+=======
+	uint16_t def_timeout;
+
+	ddb_entry->ddb_type = FLASH_DDB;
+	ddb_entry->fw_ddb_index = INVALID_ENTRY;
+	ddb_entry->fw_ddb_device_state = DDB_DS_NO_CONNECTION_ACTIVE;
+	ddb_entry->ha = ha;
+	ddb_entry->unblock_sess = qla4xxx_unblock_flash_ddb;
+	ddb_entry->ddb_change = qla4xxx_flash_ddb_change;
+	ddb_entry->chap_tbl_idx = INVALID_ENTRY;
+>>>>>>> 0d522ee... Merge tag 'scsi-for-linus' of git://git.kernel.org/pub/scm/linux/kernel/git/jejb/scsi
 
 	sess = cls_session->dd_data;
 	ddb_entry = sess->dd_data;
@@ -2014,18 +3020,158 @@ static void qla4xxx_relogin_flash_ddb(struct iscsi_cls_session *cls_sess)
 	qla4xxx_login_flash_ddb(cls_sess);
 }
 
+<<<<<<< HEAD
 static void qla4xxx_dpc_relogin(struct iscsi_cls_session *cls_sess)
 {
 	struct iscsi_session *sess;
 	struct ddb_entry *ddb_entry;
 	struct scsi_qla_host *ha;
+=======
+static int qla4xxx_cmp_fw_stentry(struct dev_db_entry *fw_ddb_entry,
+				  struct dev_db_entry *flash_ddb_entry)
+{
+	uint16_t options = 0;
+	size_t ip_len = IP_ADDR_LEN;
+
+	options = le16_to_cpu(fw_ddb_entry->options);
+	if (options & DDB_OPT_IPV6_DEVICE)
+		ip_len = IPv6_ADDR_LEN;
+
+	if (memcmp(fw_ddb_entry->ip_addr, flash_ddb_entry->ip_addr, ip_len))
+		return QLA_ERROR;
+
+	if (memcmp(&fw_ddb_entry->isid[0], &flash_ddb_entry->isid[0],
+		   sizeof(fw_ddb_entry->isid)))
+		return QLA_ERROR;
+
+	if (memcmp(&fw_ddb_entry->port, &flash_ddb_entry->port,
+		   sizeof(fw_ddb_entry->port)))
+		return QLA_ERROR;
+
+	return QLA_SUCCESS;
+}
+
+static int qla4xxx_find_flash_st_idx(struct scsi_qla_host *ha,
+				     struct dev_db_entry *fw_ddb_entry,
+				     uint32_t fw_idx, uint32_t *flash_index)
+{
+	struct dev_db_entry *flash_ddb_entry;
+	dma_addr_t flash_ddb_entry_dma;
+	uint32_t idx = 0;
+	int max_ddbs;
+	int ret = QLA_ERROR, status;
+
+	max_ddbs =  is_qla40XX(ha) ? MAX_DEV_DB_ENTRIES_40XX :
+				     MAX_DEV_DB_ENTRIES;
+
+	flash_ddb_entry = dma_pool_alloc(ha->fw_ddb_dma_pool, GFP_KERNEL,
+					 &flash_ddb_entry_dma);
+	if (flash_ddb_entry == NULL || fw_ddb_entry == NULL) {
+		ql4_printk(KERN_ERR, ha, "Out of memory\n");
+		goto exit_find_st_idx;
+	}
+
+	status = qla4xxx_flashdb_by_index(ha, flash_ddb_entry,
+					  flash_ddb_entry_dma, fw_idx);
+	if (status == QLA_SUCCESS) {
+		status = qla4xxx_cmp_fw_stentry(fw_ddb_entry, flash_ddb_entry);
+		if (status == QLA_SUCCESS) {
+			*flash_index = fw_idx;
+			ret = QLA_SUCCESS;
+			goto exit_find_st_idx;
+		}
+	}
+
+	for (idx = 0; idx < max_ddbs; idx++) {
+		status = qla4xxx_flashdb_by_index(ha, flash_ddb_entry,
+						  flash_ddb_entry_dma, idx);
+		if (status == QLA_ERROR)
+			continue;
+
+		status = qla4xxx_cmp_fw_stentry(fw_ddb_entry, flash_ddb_entry);
+		if (status == QLA_SUCCESS) {
+			*flash_index = idx;
+			ret = QLA_SUCCESS;
+			goto exit_find_st_idx;
+		}
+	}
+
+	if (idx == max_ddbs)
+		ql4_printk(KERN_ERR, ha, "Failed to find ST [%d] in flash\n",
+			   fw_idx);
+
+exit_find_st_idx:
+	if (flash_ddb_entry)
+		dma_pool_free(ha->fw_ddb_dma_pool, flash_ddb_entry,
+			      flash_ddb_entry_dma);
+
+	return ret;
+}
+
+static void qla4xxx_build_st_list(struct scsi_qla_host *ha,
+				  struct list_head *list_st)
+{
+	struct qla_ddb_index  *st_ddb_idx;
+	int max_ddbs;
+	int fw_idx_size;
+	struct dev_db_entry *fw_ddb_entry;
+	dma_addr_t fw_ddb_dma;
+	int ret;
+	uint32_t idx = 0, next_idx = 0;
+	uint32_t state = 0, conn_err = 0;
+	uint32_t flash_index = -1;
+	uint16_t conn_id = 0;
+
+	fw_ddb_entry = dma_pool_alloc(ha->fw_ddb_dma_pool, GFP_KERNEL,
+				      &fw_ddb_dma);
+	if (fw_ddb_entry == NULL) {
+		DEBUG2(ql4_printk(KERN_ERR, ha, "Out of memory\n"));
+		goto exit_st_list;
+	}
+
+	max_ddbs =  is_qla40XX(ha) ? MAX_DEV_DB_ENTRIES_40XX :
+				     MAX_DEV_DB_ENTRIES;
+	fw_idx_size = sizeof(struct qla_ddb_index);
+
+	for (idx = 0; idx < max_ddbs; idx = next_idx) {
+		ret = qla4xxx_get_fwddb_entry(ha, idx, fw_ddb_entry, fw_ddb_dma,
+					      NULL, &next_idx, &state,
+					      &conn_err, NULL, &conn_id);
+		if (ret == QLA_ERROR)
+			break;
+
+		/* Ignore DDB if invalid state (unassigned) */
+		if (state == DDB_DS_UNASSIGNED)
+			goto continue_next_st;
+
+		/* Check if ST, add to the list_st */
+		if (strlen((char *) fw_ddb_entry->iscsi_name) != 0)
+			goto continue_next_st;
+>>>>>>> 0d522ee... Merge tag 'scsi-for-linus' of git://git.kernel.org/pub/scm/linux/kernel/git/jejb/scsi
 
 	sess = cls_sess->dd_data;
 	ddb_entry = sess->dd_data;
 	ha = ddb_entry->ha;
 
+<<<<<<< HEAD
 	if (!(ddb_entry->ddb_type == FLASH_DDB))
 		return;
+=======
+		ret = qla4xxx_find_flash_st_idx(ha, fw_ddb_entry, idx,
+						&flash_index);
+		if (ret == QLA_ERROR) {
+			ql4_printk(KERN_ERR, ha,
+				   "No flash entry for ST at idx [%d]\n", idx);
+			st_ddb_idx->flash_ddb_idx = idx;
+		} else {
+			ql4_printk(KERN_INFO, ha,
+				   "ST at idx [%d] is stored at flash [%d]\n",
+				   idx, flash_index);
+			st_ddb_idx->flash_ddb_idx = flash_index;
+		}
+
+		st_ddb_idx->fw_ddb_idx = idx;
+>>>>>>> 0d522ee... Merge tag 'scsi-for-linus' of git://git.kernel.org/pub/scm/linux/kernel/git/jejb/scsi
 
 	if (test_and_clear_bit(DF_RELOGIN, &ddb_entry->flags) &&
 	    !iscsi_is_session_online(cls_sess)) {
@@ -2052,7 +3198,58 @@ void qla4xxx_wake_dpc(struct scsi_qla_host *ha)
  * the mid-level tries to sleep when it reaches the driver threshold
  * "host->can_queue". This can cause a panic if we were in our interrupt code.
  **/
+<<<<<<< HEAD
 static void qla4xxx_do_dpc(struct work_struct *work)
+=======
+static void qla4xxx_remove_failed_ddb(struct scsi_qla_host *ha,
+				      struct list_head *list_ddb)
+{
+	struct qla_ddb_index  *ddb_idx, *ddb_idx_tmp;
+	uint32_t next_idx = 0;
+	uint32_t state = 0, conn_err = 0;
+	int ret;
+
+	list_for_each_entry_safe(ddb_idx, ddb_idx_tmp, list_ddb, list) {
+		ret = qla4xxx_get_fwddb_entry(ha, ddb_idx->fw_ddb_idx,
+					      NULL, 0, NULL, &next_idx, &state,
+					      &conn_err, NULL, NULL);
+		if (ret == QLA_ERROR)
+			continue;
+
+		if (state == DDB_DS_NO_CONNECTION_ACTIVE ||
+		    state == DDB_DS_SESSION_FAILED) {
+			list_del_init(&ddb_idx->list);
+			vfree(ddb_idx);
+		}
+	}
+}
+
+static void qla4xxx_update_sess_disc_idx(struct scsi_qla_host *ha,
+					 struct ddb_entry *ddb_entry,
+					 struct dev_db_entry *fw_ddb_entry)
+{
+	struct iscsi_cls_session *cls_sess;
+	struct iscsi_session *sess;
+	uint32_t max_ddbs = 0;
+	uint16_t ddb_link = -1;
+
+	max_ddbs =  is_qla40XX(ha) ? MAX_DEV_DB_ENTRIES_40XX :
+				     MAX_DEV_DB_ENTRIES;
+
+	cls_sess = ddb_entry->sess;
+	sess = cls_sess->dd_data;
+
+	ddb_link = le16_to_cpu(fw_ddb_entry->ddb_link);
+	if (ddb_link < max_ddbs)
+		sess->discovery_parent_idx = ddb_link;
+	else
+		sess->discovery_parent_idx = DDB_NO_LINK;
+}
+
+static int qla4xxx_sess_conn_setup(struct scsi_qla_host *ha,
+				   struct dev_db_entry *fw_ddb_entry,
+				   int is_reset, uint16_t idx)
+>>>>>>> 0d522ee... Merge tag 'scsi-for-linus' of git://git.kernel.org/pub/scm/linux/kernel/git/jejb/scsi
 {
 	struct scsi_qla_host *ha =
 		container_of(work, struct scsi_qla_host, dpc_work);
@@ -2072,6 +3269,7 @@ static void qla4xxx_do_dpc(struct work_struct *work)
 		return;
 	}
 
+<<<<<<< HEAD
 	if (is_qla8022(ha)) {
 		if (test_bit(DPC_HA_UNRECOVERABLE, &ha->dpc_flags)) {
 			qla4_8xxx_idc_lock(ha);
@@ -2104,6 +3302,106 @@ static void qla4xxx_do_dpc(struct work_struct *work)
 
 		if (test_bit(DPC_RESET_HA_INTR, &ha->dpc_flags)) {
 			uint8_t wait_time = RESET_INTR_TOV;
+=======
+	/* Update sess/conn params */
+	qla4xxx_copy_fwddb_param(ha, fw_ddb_entry, cls_sess, cls_conn);
+	qla4xxx_update_sess_disc_idx(ha, ddb_entry, fw_ddb_entry);
+
+	if (is_reset == RESET_ADAPTER) {
+		iscsi_block_session(cls_sess);
+		/* Use the relogin path to discover new devices
+		 *  by short-circuting the logic of setting
+		 *  timer to relogin - instead set the flags
+		 *  to initiate login right away.
+		 */
+		set_bit(DPC_RELOGIN_DEVICE, &ha->dpc_flags);
+		set_bit(DF_RELOGIN, &ddb_entry->flags);
+	}
+
+exit_setup:
+	return ret;
+}
+
+static void qla4xxx_update_fw_ddb_link(struct scsi_qla_host *ha,
+				       struct list_head *list_ddb,
+				       struct dev_db_entry *fw_ddb_entry)
+{
+	struct qla_ddb_index  *ddb_idx, *ddb_idx_tmp;
+	uint16_t ddb_link;
+
+	ddb_link = le16_to_cpu(fw_ddb_entry->ddb_link);
+
+	list_for_each_entry_safe(ddb_idx, ddb_idx_tmp, list_ddb, list) {
+		if (ddb_idx->fw_ddb_idx == ddb_link) {
+			DEBUG2(ql4_printk(KERN_INFO, ha,
+					  "Updating NT parent idx from [%d] to [%d]\n",
+					  ddb_link, ddb_idx->flash_ddb_idx));
+			fw_ddb_entry->ddb_link =
+					    cpu_to_le16(ddb_idx->flash_ddb_idx);
+			return;
+		}
+	}
+}
+
+static void qla4xxx_build_nt_list(struct scsi_qla_host *ha,
+				  struct list_head *list_nt,
+				  struct list_head *list_st,
+				  int is_reset)
+{
+	struct dev_db_entry *fw_ddb_entry;
+	struct ddb_entry *ddb_entry = NULL;
+	dma_addr_t fw_ddb_dma;
+	int max_ddbs;
+	int fw_idx_size;
+	int ret;
+	uint32_t idx = 0, next_idx = 0;
+	uint32_t state = 0, conn_err = 0;
+	uint32_t ddb_idx = -1;
+	uint16_t conn_id = 0;
+	uint16_t ddb_link = -1;
+	struct qla_ddb_index  *nt_ddb_idx;
+
+	fw_ddb_entry = dma_pool_alloc(ha->fw_ddb_dma_pool, GFP_KERNEL,
+				      &fw_ddb_dma);
+	if (fw_ddb_entry == NULL) {
+		DEBUG2(ql4_printk(KERN_ERR, ha, "Out of memory\n"));
+		goto exit_nt_list;
+	}
+	max_ddbs =  is_qla40XX(ha) ? MAX_DEV_DB_ENTRIES_40XX :
+				     MAX_DEV_DB_ENTRIES;
+	fw_idx_size = sizeof(struct qla_ddb_index);
+
+	for (idx = 0; idx < max_ddbs; idx = next_idx) {
+		ret = qla4xxx_get_fwddb_entry(ha, idx, fw_ddb_entry, fw_ddb_dma,
+					      NULL, &next_idx, &state,
+					      &conn_err, NULL, &conn_id);
+		if (ret == QLA_ERROR)
+			break;
+
+		if (qla4xxx_verify_boot_idx(ha, idx) != QLA_SUCCESS)
+			goto continue_next_nt;
+
+		/* Check if NT, then add to list it */
+		if (strlen((char *) fw_ddb_entry->iscsi_name) == 0)
+			goto continue_next_nt;
+
+		ddb_link = le16_to_cpu(fw_ddb_entry->ddb_link);
+		if (ddb_link < max_ddbs)
+			qla4xxx_update_fw_ddb_link(ha, list_st, fw_ddb_entry);
+
+		if (!(state == DDB_DS_NO_CONNECTION_ACTIVE ||
+		    state == DDB_DS_SESSION_FAILED) &&
+		    (is_reset == INIT_ADAPTER))
+			goto continue_next_nt;
+
+		DEBUG2(ql4_printk(KERN_INFO, ha,
+				  "Adding  DDB to session = 0x%x\n", idx));
+
+		if (is_reset == INIT_ADAPTER) {
+			nt_ddb_idx = vmalloc(fw_idx_size);
+			if (!nt_ddb_idx)
+				break;
+>>>>>>> 0d522ee... Merge tag 'scsi-for-linus' of git://git.kernel.org/pub/scm/linux/kernel/git/jejb/scsi
 
 			while ((readw(&ha->reg->ctrl_status) &
 				(CSR_SOFT_RESET | CSR_FORCE_SOFT_RESET)) != 0) {
@@ -2111,6 +3409,7 @@ static void qla4xxx_do_dpc(struct work_struct *work)
 					break;
 				msleep(1000);
 			}
+<<<<<<< HEAD
 			if (wait_time == 0)
 				DEBUG2(printk("scsi%ld: %s: SR|FSR "
 					      "bit not cleared-- resetting\n",
@@ -2123,6 +3422,26 @@ static void qla4xxx_do_dpc(struct work_struct *work)
 			clear_bit(DPC_RESET_HA_INTR, &ha->dpc_flags);
 			if (status == QLA_SUCCESS)
 				ha->isp_ops->enable_intrs(ha);
+=======
+
+			/* Copy updated isid */
+			memcpy(&nt_ddb_idx->fw_ddb, fw_ddb_entry,
+			       sizeof(struct dev_db_entry));
+
+			list_add_tail(&nt_ddb_idx->list, list_nt);
+		} else if (is_reset == RESET_ADAPTER) {
+			ret = qla4xxx_is_session_exists(ha, fw_ddb_entry,
+							&ddb_idx);
+			if (ret == QLA_SUCCESS) {
+				ddb_entry = qla4xxx_lookup_ddb_by_fw_index(ha,
+								       ddb_idx);
+				if (ddb_entry != NULL)
+					qla4xxx_update_sess_disc_idx(ha,
+								     ddb_entry,
+								  fw_ddb_entry);
+				goto continue_next_nt;
+			}
+>>>>>>> 0d522ee... Merge tag 'scsi-for-linus' of git://git.kernel.org/pub/scm/linux/kernel/git/jejb/scsi
 		}
 	}
 
@@ -2163,11 +3482,17 @@ dpc_post_reset_ha:
 	}
 }
 
+<<<<<<< HEAD
 /**
  * qla4xxx_free_adapter - release the adapter
  * @ha: pointer to adapter structure
  **/
 static void qla4xxx_free_adapter(struct scsi_qla_host *ha)
+=======
+static void qla4xxx_build_new_nt_list(struct scsi_qla_host *ha,
+				      struct list_head *list_nt,
+				      uint16_t target_id)
+>>>>>>> 0d522ee... Merge tag 'scsi-for-linus' of git://git.kernel.org/pub/scm/linux/kernel/git/jejb/scsi
 {
 
 	if (test_bit(AF_INTERRUPTS_ON, &ha->flags)) {
@@ -2179,6 +3504,7 @@ static void qla4xxx_free_adapter(struct scsi_qla_host *ha)
 	if (ha->timer_active)
 		qla4xxx_stop_timer(ha);
 
+<<<<<<< HEAD
 	/* Kill the kernel thread for this host */
 	if (ha->dpc_thread)
 		destroy_workqueue(ha->dpc_thread);
@@ -2186,6 +3512,19 @@ static void qla4xxx_free_adapter(struct scsi_qla_host *ha)
 	/* Kill the kernel thread for this host */
 	if (ha->task_wq)
 		destroy_workqueue(ha->task_wq);
+=======
+		ret = qla4xxx_is_session_exists(ha, fw_ddb_entry, NULL);
+		if (ret == QLA_SUCCESS) {
+			/* free nt_ddb_idx and do not add to list_nt */
+			vfree(nt_ddb_idx);
+			goto continue_next_new_nt;
+		}
+
+		if (target_id < max_ddbs)
+			fw_ddb_entry->ddb_link = cpu_to_le16(target_id);
+
+		list_add_tail(&nt_ddb_idx->list, list_nt);
+>>>>>>> 0d522ee... Merge tag 'scsi-for-linus' of git://git.kernel.org/pub/scm/linux/kernel/git/jejb/scsi
 
 	/* Put firmware in known state */
 	ha->isp_ops->reset_firmware(ha);
@@ -2402,7 +3741,13 @@ static ssize_t qla4xxx_show_boot_eth_info(void *data, int type, char *buf)
 	return rc;
 }
 
+<<<<<<< HEAD
 static umode_t qla4xxx_eth_get_attr_visibility(void *data, int type)
+=======
+static int qla4xxx_ddb_login_st(struct scsi_qla_host *ha,
+				struct dev_db_entry *fw_ddb_entry,
+				uint16_t target_id)
+>>>>>>> 0d522ee... Merge tag 'scsi-for-linus' of git://git.kernel.org/pub/scm/linux/kernel/git/jejb/scsi
 {
 	int rc;
 
@@ -2419,11 +3764,33 @@ static umode_t qla4xxx_eth_get_attr_visibility(void *data, int type)
 	return rc;
 }
 
+<<<<<<< HEAD
 static ssize_t qla4xxx_show_boot_ini_info(void *data, int type, char *buf)
 {
 	struct scsi_qla_host *ha = data;
 	char *str = buf;
 	int rc;
+=======
+	INIT_LIST_HEAD(&list_nt);
+
+	set_bit(AF_ST_DISCOVERY_IN_PROGRESS, &ha->flags);
+
+	ret = qla4xxx_get_ddb_index(ha, &ddb_index);
+	if (ret == QLA_ERROR)
+		goto exit_login_st_clr_bit;
+
+	ret = qla4xxx_sysfs_ddb_conn_open(ha, fw_ddb_entry, ddb_index);
+	if (ret == QLA_ERROR)
+		goto exit_login_st;
+
+	qla4xxx_build_new_nt_list(ha, &list_nt, target_id);
+
+	list_for_each_entry_safe(ddb_idx, ddb_idx_tmp, &list_nt, list) {
+		list_del_init(&ddb_idx->list);
+		qla4xxx_clear_ddb_entry(ha, ddb_idx->fw_ddb_idx);
+		vfree(ddb_idx);
+	}
+>>>>>>> 0d522ee... Merge tag 'scsi-for-linus' of git://git.kernel.org/pub/scm/linux/kernel/git/jejb/scsi
 
 	switch (type) {
 	case ISCSI_BOOT_INI_INITIATOR_NAME:
@@ -2438,7 +3805,18 @@ static ssize_t qla4xxx_show_boot_ini_info(void *data, int type, char *buf)
 
 static umode_t qla4xxx_ini_get_attr_visibility(void *data, int type)
 {
+<<<<<<< HEAD
 	int rc;
+=======
+	int ret = QLA_ERROR;
+
+	ret = qla4xxx_is_session_exists(ha, fw_ddb_entry, NULL);
+	if (ret != QLA_SUCCESS)
+		ret = qla4xxx_sess_conn_setup(ha, fw_ddb_entry, RESET_ADAPTER,
+					      idx);
+	else
+		ret = -EPERM;
+>>>>>>> 0d522ee... Merge tag 'scsi-for-linus' of git://git.kernel.org/pub/scm/linux/kernel/git/jejb/scsi
 
 	switch (type) {
 	case ISCSI_BOOT_INI_INITIATOR_NAME:
@@ -2510,6 +3888,7 @@ qla4xxx_show_boot_tgt_info(struct ql4_boot_session_info *boot_sess, int type,
 
 	spin_lock_irqsave(&ha->hardware_lock, flags);
 
+<<<<<<< HEAD
 	/*
 	 * If the SCSI Reset Interrupt bit is set, clear it.
 	 * Otherwise, the Soft Reset won't work.
@@ -2517,6 +3896,14 @@ qla4xxx_show_boot_tgt_info(struct ql4_boot_session_info *boot_sess, int type,
 	ctrl_status = readw(&ha->reg->ctrl_status);
 	if ((ctrl_status & CSR_SCSI_RESET_INTR) != 0)
 		writel(set_rmask(CSR_SCSI_RESET_INTR), &ha->reg->ctrl_status);
+=======
+	if (strlen((char *)fw_ddb_entry->iscsi_name) == 0)
+		ret = qla4xxx_ddb_login_st(ha, fw_ddb_entry,
+					   fnode_sess->target_id);
+	else
+		ret = qla4xxx_ddb_login_nt(ha, fw_ddb_entry,
+					   fnode_sess->target_id);
+>>>>>>> 0d522ee... Merge tag 'scsi-for-linus' of git://git.kernel.org/pub/scm/linux/kernel/git/jejb/scsi
 
 	/* Issue Soft Reset */
 	writel(set_rmask(CSR_SOFT_RESET), &ha->reg->ctrl_status);
@@ -2813,6 +4200,7 @@ recover_ha_init_adapter:
 
 static void qla4xxx_relogin_all_devices(struct scsi_qla_host *ha)
 {
+<<<<<<< HEAD
 	struct ddb_entry *ddb_entry, *dtemp;
 
 	list_for_each_entry_safe(ddb_entry, dtemp, &ha->ddb_list, list) {
@@ -2828,6 +4216,217 @@ static void qla4xxx_relogin_all_devices(struct scsi_qla_host *ha)
 				iscsi_unblock_session(ddb_entry->sess);
 			} else
 				qla4xxx_relogin_device(ha, ddb_entry);
+=======
+	struct Scsi_Host *shost = iscsi_flash_session_to_shost(fnode_sess);
+	struct scsi_qla_host *ha = to_qla_host(shost);
+	struct iscsi_flashnode_param_info *fnode_param;
+	struct ql4_chap_table chap_tbl;
+	struct nlattr *attr;
+	uint16_t chap_out_idx = INVALID_ENTRY;
+	int rc = QLA_ERROR;
+	uint32_t rem = len;
+
+	memset((void *)&chap_tbl, 0, sizeof(chap_tbl));
+	nla_for_each_attr(attr, data, len, rem) {
+		fnode_param = nla_data(attr);
+
+		switch (fnode_param->param) {
+		case ISCSI_FLASHNODE_IS_FW_ASSIGNED_IPV6:
+			fnode_conn->is_fw_assigned_ipv6 = fnode_param->value[0];
+			break;
+		case ISCSI_FLASHNODE_PORTAL_TYPE:
+			memcpy(fnode_sess->portal_type, fnode_param->value,
+			       strlen(fnode_sess->portal_type));
+			break;
+		case ISCSI_FLASHNODE_AUTO_SND_TGT_DISABLE:
+			fnode_sess->auto_snd_tgt_disable =
+							fnode_param->value[0];
+			break;
+		case ISCSI_FLASHNODE_DISCOVERY_SESS:
+			fnode_sess->discovery_sess = fnode_param->value[0];
+			break;
+		case ISCSI_FLASHNODE_ENTRY_EN:
+			fnode_sess->entry_state = fnode_param->value[0];
+			break;
+		case ISCSI_FLASHNODE_HDR_DGST_EN:
+			fnode_conn->hdrdgst_en = fnode_param->value[0];
+			break;
+		case ISCSI_FLASHNODE_DATA_DGST_EN:
+			fnode_conn->datadgst_en = fnode_param->value[0];
+			break;
+		case ISCSI_FLASHNODE_IMM_DATA_EN:
+			fnode_sess->imm_data_en = fnode_param->value[0];
+			break;
+		case ISCSI_FLASHNODE_INITIAL_R2T_EN:
+			fnode_sess->initial_r2t_en = fnode_param->value[0];
+			break;
+		case ISCSI_FLASHNODE_DATASEQ_INORDER:
+			fnode_sess->dataseq_inorder_en = fnode_param->value[0];
+			break;
+		case ISCSI_FLASHNODE_PDU_INORDER:
+			fnode_sess->pdu_inorder_en = fnode_param->value[0];
+			break;
+		case ISCSI_FLASHNODE_CHAP_AUTH_EN:
+			fnode_sess->chap_auth_en = fnode_param->value[0];
+			/* Invalidate chap index if chap auth is disabled */
+			if (!fnode_sess->chap_auth_en)
+				fnode_sess->chap_out_idx = INVALID_ENTRY;
+
+			break;
+		case ISCSI_FLASHNODE_SNACK_REQ_EN:
+			fnode_conn->snack_req_en = fnode_param->value[0];
+			break;
+		case ISCSI_FLASHNODE_DISCOVERY_LOGOUT_EN:
+			fnode_sess->discovery_logout_en = fnode_param->value[0];
+			break;
+		case ISCSI_FLASHNODE_BIDI_CHAP_EN:
+			fnode_sess->bidi_chap_en = fnode_param->value[0];
+			break;
+		case ISCSI_FLASHNODE_DISCOVERY_AUTH_OPTIONAL:
+			fnode_sess->discovery_auth_optional =
+							fnode_param->value[0];
+			break;
+		case ISCSI_FLASHNODE_ERL:
+			fnode_sess->erl = fnode_param->value[0];
+			break;
+		case ISCSI_FLASHNODE_TCP_TIMESTAMP_STAT:
+			fnode_conn->tcp_timestamp_stat = fnode_param->value[0];
+			break;
+		case ISCSI_FLASHNODE_TCP_NAGLE_DISABLE:
+			fnode_conn->tcp_nagle_disable = fnode_param->value[0];
+			break;
+		case ISCSI_FLASHNODE_TCP_WSF_DISABLE:
+			fnode_conn->tcp_wsf_disable = fnode_param->value[0];
+			break;
+		case ISCSI_FLASHNODE_TCP_TIMER_SCALE:
+			fnode_conn->tcp_timer_scale = fnode_param->value[0];
+			break;
+		case ISCSI_FLASHNODE_TCP_TIMESTAMP_EN:
+			fnode_conn->tcp_timestamp_en = fnode_param->value[0];
+			break;
+		case ISCSI_FLASHNODE_IP_FRAG_DISABLE:
+			fnode_conn->fragment_disable = fnode_param->value[0];
+			break;
+		case ISCSI_FLASHNODE_MAX_RECV_DLENGTH:
+			fnode_conn->max_recv_dlength =
+					*(unsigned *)fnode_param->value;
+			break;
+		case ISCSI_FLASHNODE_MAX_XMIT_DLENGTH:
+			fnode_conn->max_xmit_dlength =
+					*(unsigned *)fnode_param->value;
+			break;
+		case ISCSI_FLASHNODE_FIRST_BURST:
+			fnode_sess->first_burst =
+					*(unsigned *)fnode_param->value;
+			break;
+		case ISCSI_FLASHNODE_DEF_TIME2WAIT:
+			fnode_sess->time2wait = *(uint16_t *)fnode_param->value;
+			break;
+		case ISCSI_FLASHNODE_DEF_TIME2RETAIN:
+			fnode_sess->time2retain =
+						*(uint16_t *)fnode_param->value;
+			break;
+		case ISCSI_FLASHNODE_MAX_R2T:
+			fnode_sess->max_r2t =
+					*(uint16_t *)fnode_param->value;
+			break;
+		case ISCSI_FLASHNODE_KEEPALIVE_TMO:
+			fnode_conn->keepalive_timeout =
+				*(uint16_t *)fnode_param->value;
+			break;
+		case ISCSI_FLASHNODE_ISID:
+			memcpy(fnode_sess->isid, fnode_param->value,
+			       sizeof(fnode_sess->isid));
+			break;
+		case ISCSI_FLASHNODE_TSID:
+			fnode_sess->tsid = *(uint16_t *)fnode_param->value;
+			break;
+		case ISCSI_FLASHNODE_PORT:
+			fnode_conn->port = *(uint16_t *)fnode_param->value;
+			break;
+		case ISCSI_FLASHNODE_MAX_BURST:
+			fnode_sess->max_burst = *(unsigned *)fnode_param->value;
+			break;
+		case ISCSI_FLASHNODE_DEF_TASKMGMT_TMO:
+			fnode_sess->default_taskmgmt_timeout =
+						*(uint16_t *)fnode_param->value;
+			break;
+		case ISCSI_FLASHNODE_IPADDR:
+			memcpy(fnode_conn->ipaddress, fnode_param->value,
+			       IPv6_ADDR_LEN);
+			break;
+		case ISCSI_FLASHNODE_ALIAS:
+			rc = iscsi_switch_str_param(&fnode_sess->targetalias,
+						    (char *)fnode_param->value);
+			break;
+		case ISCSI_FLASHNODE_REDIRECT_IPADDR:
+			memcpy(fnode_conn->redirect_ipaddr, fnode_param->value,
+			       IPv6_ADDR_LEN);
+			break;
+		case ISCSI_FLASHNODE_MAX_SEGMENT_SIZE:
+			fnode_conn->max_segment_size =
+					*(unsigned *)fnode_param->value;
+			break;
+		case ISCSI_FLASHNODE_LOCAL_PORT:
+			fnode_conn->local_port =
+						*(uint16_t *)fnode_param->value;
+			break;
+		case ISCSI_FLASHNODE_IPV4_TOS:
+			fnode_conn->ipv4_tos = fnode_param->value[0];
+			break;
+		case ISCSI_FLASHNODE_IPV6_TC:
+			fnode_conn->ipv6_traffic_class = fnode_param->value[0];
+			break;
+		case ISCSI_FLASHNODE_IPV6_FLOW_LABEL:
+			fnode_conn->ipv6_flow_label = fnode_param->value[0];
+			break;
+		case ISCSI_FLASHNODE_NAME:
+			rc = iscsi_switch_str_param(&fnode_sess->targetname,
+						    (char *)fnode_param->value);
+			break;
+		case ISCSI_FLASHNODE_TPGT:
+			fnode_sess->tpgt = *(uint16_t *)fnode_param->value;
+			break;
+		case ISCSI_FLASHNODE_LINK_LOCAL_IPV6:
+			memcpy(fnode_conn->link_local_ipv6_addr,
+			       fnode_param->value, IPv6_ADDR_LEN);
+			break;
+		case ISCSI_FLASHNODE_DISCOVERY_PARENT_IDX:
+			fnode_sess->discovery_parent_idx =
+						*(uint16_t *)fnode_param->value;
+			break;
+		case ISCSI_FLASHNODE_TCP_XMIT_WSF:
+			fnode_conn->tcp_xmit_wsf =
+						*(uint8_t *)fnode_param->value;
+			break;
+		case ISCSI_FLASHNODE_TCP_RECV_WSF:
+			fnode_conn->tcp_recv_wsf =
+						*(uint8_t *)fnode_param->value;
+			break;
+		case ISCSI_FLASHNODE_STATSN:
+			fnode_conn->statsn = *(uint32_t *)fnode_param->value;
+			break;
+		case ISCSI_FLASHNODE_EXP_STATSN:
+			fnode_conn->exp_statsn =
+						*(uint32_t *)fnode_param->value;
+			break;
+		case ISCSI_FLASHNODE_CHAP_OUT_IDX:
+			chap_out_idx = *(uint16_t *)fnode_param->value;
+			if (!qla4xxx_get_uni_chap_at_index(ha,
+							   chap_tbl.name,
+							   chap_tbl.secret,
+							   chap_out_idx)) {
+				fnode_sess->chap_out_idx = chap_out_idx;
+				/* Enable chap auth if chap index is valid */
+				fnode_sess->chap_auth_en = QL4_PARAM_ENABLE;
+			}
+			break;
+		default:
+			ql4_printk(KERN_ERR, ha,
+				   "%s: No such sysfs attribute\n", __func__);
+			rc = -ENOSYS;
+			goto exit_set_param;
+>>>>>>> 0d522ee... Merge tag 'scsi-for-linus' of git://git.kernel.org/pub/scm/linux/kernel/git/jejb/scsi
 		}
 	}
 }
@@ -3117,6 +4716,7 @@ int qla4xxx_iospace_config(struct scsi_qla_host *ha)
 		goto iospace_error_exit;
 	}
 
+<<<<<<< HEAD
 	ha->pio_address = pio;
 	ha->pio_length = pio_len;
 	ha->reg = ioremap(mmio, MIN_IOBASE_LEN);
@@ -3128,6 +4728,13 @@ int qla4xxx_iospace_config(struct scsi_qla_host *ha)
 	}
 
 	return 0;
+=======
+
+	qla4xxx_build_nt_list(ha, &list_nt, &list_st, is_reset);
+
+	qla4xxx_free_ddb_list(&list_st);
+	qla4xxx_free_ddb_list(&list_nt);
+>>>>>>> 0d522ee... Merge tag 'scsi-for-linus' of git://git.kernel.org/pub/scm/linux/kernel/git/jejb/scsi
 
 iospace_error_exit:
 	return -ENOMEM;
