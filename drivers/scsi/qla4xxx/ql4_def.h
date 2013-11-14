@@ -249,6 +249,7 @@ struct ddb_entry {
 				     * complete */
 	uint16_t default_relogin_timeout; /*  Max time to wait for
 					   *  relogin to complete */
+<<<<<<< HEAD
 	uint16_t tcp_source_port_num;
 	uint32_t default_time2wait; /* Default Min time between
 				     * relogins (+aens) */
@@ -264,6 +265,37 @@ struct ddb_entry {
 	uint8_t ip_addr[IP_ADDR_LEN];
 	uint8_t iscsi_name[ISCSI_NAME_SIZE];	/* 72 x48 */
 	uint8_t iscsi_alias[0x20];
+=======
+	atomic_t retry_relogin_timer;	  /* Min Time between relogins
+					   * (4000 only) */
+	atomic_t relogin_timer;		  /* Max Time to wait for
+					   * relogin to complete */
+	atomic_t relogin_retry_count;	  /* Num of times relogin has been
+					   * retried */
+	uint32_t default_time2wait;	  /* Default Min time between
+					   * relogins (+aens) */
+	uint16_t chap_tbl_idx;
+};
+
+struct qla_ddb_index {
+	struct list_head list;
+	uint16_t fw_ddb_idx;
+	uint16_t flash_ddb_idx;
+	struct dev_db_entry fw_ddb;
+	uint8_t flash_isid[6];
+};
+
+#define DDB_IPADDR_LEN 64
+
+struct ql4_tuple_ddb {
+	int port;
+	int tpgt;
+	char ip_addr[DDB_IPADDR_LEN];
+	char iscsi_name[ISCSI_NAME_SIZE];
+	uint16_t options;
+#define DDB_OPT_IPV6 0x0e0e
+#define DDB_OPT_IPV4 0x0f0f
+>>>>>>> 0d522ee... Merge tag 'scsi-for-linus' of git://git.kernel.org/pub/scm/linux/kernel/git/jejb/scsi
 	uint8_t isid[6];
 	uint16_t iscsi_max_burst_len;
 	uint16_t iscsi_max_outsnd_r2t;

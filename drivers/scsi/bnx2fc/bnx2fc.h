@@ -62,7 +62,11 @@
 #include "bnx2fc_constants.h"
 
 #define BNX2FC_NAME		"bnx2fc"
+<<<<<<< HEAD
 #define BNX2FC_VERSION		"1.0.1"
+=======
+#define BNX2FC_VERSION		"2.4.1"
+>>>>>>> 0d522ee... Merge tag 'scsi-for-linus' of git://git.kernel.org/pub/scm/linux/kernel/git/jejb/scsi
 
 #define PFX			"bnx2fc: "
 

@@ -3082,19 +3082,27 @@ megasas_get_pd_list(struct megasas_instance *instance)
 		(ci->count <
 		  (MEGASAS_MAX_PD_CHANNELS * MEGASAS_MAX_DEV_PER_CHANNEL))) {
 
-		memset(instance->pd_list, 0,
+		memset(instance->local_pd_list, 0,
 			MEGASAS_MAX_PD * sizeof(struct megasas_pd_list));
 
 		for (pd_index = 0; pd_index < ci->count; pd_index++) {
 
+<<<<<<< HEAD
 			instance->pd_list[pd_addr->deviceId].tid	=
 							pd_addr->deviceId;
 			instance->pd_list[pd_addr->deviceId].driveType	=
+=======
+			instance->local_pd_list[le16_to_cpu(pd_addr->deviceId)].tid	=
+				le16_to_cpu(pd_addr->deviceId);
+			instance->local_pd_list[le16_to_cpu(pd_addr->deviceId)].driveType	=
+>>>>>>> 0d522ee... Merge tag 'scsi-for-linus' of git://git.kernel.org/pub/scm/linux/kernel/git/jejb/scsi
 							pd_addr->scsiDevType;
-			instance->pd_list[pd_addr->deviceId].driveState	=
+			instance->local_pd_list[le16_to_cpu(pd_addr->deviceId)].driveState	=
 							MR_PD_STATE_SYSTEM;
 			pd_addr++;
 		}
+		memcpy(instance->pd_list, instance->local_pd_list,
+			sizeof(instance->pd_list));
 	}
 
 	pci_free_consistent(instance->pdev,
@@ -3816,8 +3824,14 @@ static int megasas_start_aen(struct megasas_instance *instance)
 	class_locale.members.locale = MR_EVT_LOCALE_ALL;
 	class_locale.members.class = MR_EVT_CLASS_DEBUG;
 
+<<<<<<< HEAD
 	return megasas_register_aen(instance, eli.newest_seq_num + 1,
 				    class_locale.word);
+=======
+	return megasas_register_aen(instance,
+			eli.newest_seq_num + 1,
+			class_locale.word);
+>>>>>>> 0d522ee... Merge tag 'scsi-for-linus' of git://git.kernel.org/pub/scm/linux/kernel/git/jejb/scsi
 }
 
 /**

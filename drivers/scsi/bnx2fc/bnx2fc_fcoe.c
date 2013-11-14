@@ -22,7 +22,11 @@ DEFINE_PER_CPU(struct bnx2fc_percpu_s, bnx2fc_percpu);
 
 #define DRV_MODULE_NAME		"bnx2fc"
 #define DRV_MODULE_VERSION	BNX2FC_VERSION
+<<<<<<< HEAD
 #define DRV_MODULE_RELDATE	"Jan 22, 2011"
+=======
+#define DRV_MODULE_RELDATE	"Sep 17, 2013"
+>>>>>>> 0d522ee... Merge tag 'scsi-for-linus' of git://git.kernel.org/pub/scm/linux/kernel/git/jejb/scsi
 
 
 static char version[] __devinitdata =
@@ -536,8 +540,7 @@ static void bnx2fc_recv_frame(struct sk_buff *skb)
 	vn_port = fc_vport_id_lookup(lport, ntoh24(fh->fh_d_id));
 	if (vn_port) {
 		port = lport_priv(vn_port);
-		if (compare_ether_addr(port->data_src_addr, dest_mac)
-		    != 0) {
+		if (!ether_addr_equal(port->data_src_addr, dest_mac)) {
 			BNX2FC_HBA_DBG(lport, "fpma mismatch\n");
 			put_cpu();
 			kfree_skb(skb);
@@ -1337,6 +1340,12 @@ struct bnx2fc_interface *bnx2fc_interface_create(struct bnx2fc_hba *hba,
 		printk(KERN_ERR PFX "Unable to allocate interface structure\n");
 		return NULL;
 	}
+<<<<<<< HEAD
+=======
+	ctlr = fcoe_ctlr_device_priv(ctlr_dev);
+	ctlr->cdev = ctlr_dev;
+	interface = fcoe_ctlr_priv(ctlr);
+>>>>>>> 0d522ee... Merge tag 'scsi-for-linus' of git://git.kernel.org/pub/scm/linux/kernel/git/jejb/scsi
 	dev_hold(netdev);
 	kref_init(&interface->kref);
 	interface->hba = hba;
@@ -1885,7 +1894,31 @@ static void bnx2fc_ulp_init(struct cnic_dev *dev)
 		set_bit(BNX2FC_CNIC_REGISTERED, &hba->reg_with_cnic);
 }
 
+<<<<<<< HEAD
 
+=======
+/* Assumes rtnl_lock and the bnx2fc_dev_lock are already taken */
+static int __bnx2fc_disable(struct fcoe_ctlr *ctlr)
+{
+	struct bnx2fc_interface *interface = fcoe_ctlr_priv(ctlr);
+
+	if (interface->enabled == true) {
+		if (!ctlr->lp) {
+			pr_err(PFX "__bnx2fc_disable: lport not found\n");
+			return -ENODEV;
+		} else {
+			interface->enabled = false;
+			fcoe_ctlr_link_down(ctlr);
+			fcoe_clean_pending_queue(ctlr->lp);
+		}
+	}
+	return 0;
+}
+
+/**
+ * Deperecated: Use bnx2fc_enabled()
+ */
+>>>>>>> 0d522ee... Merge tag 'scsi-for-linus' of git://git.kernel.org/pub/scm/linux/kernel/git/jejb/scsi
 static int bnx2fc_disable(struct net_device *netdev)
 {
 	struct bnx2fc_interface *interface;
@@ -1895,21 +1928,52 @@ static int bnx2fc_disable(struct net_device *netdev)
 	mutex_lock(&bnx2fc_dev_lock);
 
 	interface = bnx2fc_interface_lookup(netdev);
+<<<<<<< HEAD
 	if (!interface || !interface->ctlr.lp) {
+=======
+	ctlr = bnx2fc_to_ctlr(interface);
+
+	if (!interface) {
+>>>>>>> 0d522ee... Merge tag 'scsi-for-linus' of git://git.kernel.org/pub/scm/linux/kernel/git/jejb/scsi
 		rc = -ENODEV;
-		printk(KERN_ERR PFX "bnx2fc_disable: interface or lport not found\n");
+		pr_err(PFX "bnx2fc_disable: interface not found\n");
 	} else {
+<<<<<<< HEAD
 		interface->enabled = false;
 		fcoe_ctlr_link_down(&interface->ctlr);
 		fcoe_clean_pending_queue(interface->ctlr.lp);
+=======
+		rc = __bnx2fc_disable(ctlr);
+>>>>>>> 0d522ee... Merge tag 'scsi-for-linus' of git://git.kernel.org/pub/scm/linux/kernel/git/jejb/scsi
 	}
-
 	mutex_unlock(&bnx2fc_dev_lock);
 	rtnl_unlock();
 	return rc;
 }
 
+<<<<<<< HEAD
 
+=======
+static int __bnx2fc_enable(struct fcoe_ctlr *ctlr)
+{
+	struct bnx2fc_interface *interface = fcoe_ctlr_priv(ctlr);
+
+	if (interface->enabled == false) {
+		if (!ctlr->lp) {
+			pr_err(PFX "__bnx2fc_enable: lport not found\n");
+			return -ENODEV;
+		} else if (!bnx2fc_link_ok(ctlr->lp)) {
+			fcoe_ctlr_link_up(ctlr);
+			interface->enabled = true;
+		}
+	}
+	return 0;
+}
+
+/**
+ * Deprecated: Use bnx2fc_enabled()
+ */
+>>>>>>> 0d522ee... Merge tag 'scsi-for-linus' of git://git.kernel.org/pub/scm/linux/kernel/git/jejb/scsi
 static int bnx2fc_enable(struct net_device *netdev)
 {
 	struct bnx2fc_interface *interface;
@@ -1919,12 +1983,21 @@ static int bnx2fc_enable(struct net_device *netdev)
 	mutex_lock(&bnx2fc_dev_lock);
 
 	interface = bnx2fc_interface_lookup(netdev);
+<<<<<<< HEAD
 	if (!interface || !interface->ctlr.lp) {
 		rc = -ENODEV;
 		printk(KERN_ERR PFX "bnx2fc_enable: interface or lport not found\n");
 	} else if (!bnx2fc_link_ok(interface->ctlr.lp)) {
 		fcoe_ctlr_link_up(&interface->ctlr);
 		interface->enabled = true;
+=======
+	ctlr = bnx2fc_to_ctlr(interface);
+	if (!interface) {
+		rc = -ENODEV;
+		pr_err(PFX "bnx2fc_enable: interface not found\n");
+	} else {
+		rc = __bnx2fc_enable(ctlr);
+>>>>>>> 0d522ee... Merge tag 'scsi-for-linus' of git://git.kernel.org/pub/scm/linux/kernel/git/jejb/scsi
 	}
 
 	mutex_unlock(&bnx2fc_dev_lock);
@@ -1933,7 +2006,44 @@ static int bnx2fc_enable(struct net_device *netdev)
 }
 
 /**
+<<<<<<< HEAD
  * bnx2fc_create - Create bnx2fc FCoE interface
+=======
+ * bnx2fc_ctlr_enabled() - Enable or disable an FCoE Controller
+ * @cdev: The FCoE Controller that is being enabled or disabled
+ *
+ * fcoe_sysfs will ensure that the state of 'enabled' has
+ * changed, so no checking is necessary here. This routine simply
+ * calls fcoe_enable or fcoe_disable, both of which are deprecated.
+ * When those routines are removed the functionality can be merged
+ * here.
+ */
+static int bnx2fc_ctlr_enabled(struct fcoe_ctlr_device *cdev)
+{
+	struct fcoe_ctlr *ctlr = fcoe_ctlr_device_priv(cdev);
+
+	switch (cdev->enabled) {
+	case FCOE_CTLR_ENABLED:
+		return __bnx2fc_enable(ctlr);
+	case FCOE_CTLR_DISABLED:
+		return __bnx2fc_disable(ctlr);
+	case FCOE_CTLR_UNUSED:
+	default:
+		return -ENOTSUPP;
+	};
+}
+
+enum bnx2fc_create_link_state {
+	BNX2FC_CREATE_LINK_DOWN,
+	BNX2FC_CREATE_LINK_UP,
+};
+
+/**
+ * _bnx2fc_create() - Create bnx2fc FCoE interface
+ * @netdev  :   The net_device object the Ethernet interface to create on
+ * @fip_mode:   The FIP mode for this creation
+ * @link_state: The ctlr link state on creation
+>>>>>>> 0d522ee... Merge tag 'scsi-for-linus' of git://git.kernel.org/pub/scm/linux/kernel/git/jejb/scsi
  *
  * @buffer: The name of Ethernet interface to create on
  * @kp:     The associated kernel param
