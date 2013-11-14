@@ -192,6 +192,9 @@ while [ $(cat ${TMPFILE}) == 0 ]; do
 	echo "wait for image ...";
 done;
 
+# to check section mismatch add to make this
+# CONFIG_DEBUG_SECTION_MISMATCH=y
+
 # make kernel!!!
 time make -j $NR_CPUS KALLSYMS_EXTRA_PASS=1 zImage CONFIG_INITRAMFS_SOURCE="$INITRAMFS_TMP";
 
