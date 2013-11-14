@@ -1171,6 +1171,7 @@ int drbd_merge_bvec(struct request_queue *q, struct bvec_merge_data *bvm, struct
 	unsigned int bio_offset =
 		(unsigned int)bvm->bi_sector << 9; /* 32 bit */
 	unsigned int bio_size = bvm->bi_size;
+<<<<<<< HEAD
 	int limit, backing_limit;
 
 	limit = DRBD_MAX_BIO_SIZE
@@ -1181,6 +1182,13 @@ int drbd_merge_bvec(struct request_queue *q, struct bvec_merge_data *bvm, struct
 		if (limit <= bvec->bv_len)
 			limit = bvec->bv_len;
 	} else if (limit && get_ldev(mdev)) {
+=======
+	int limit = DRBD_MAX_BIO_SIZE;
+	int backing_limit;
+
+	if (bio_size && get_ldev(mdev)) {
+		unsigned int max_hw_sectors = queue_max_hw_sectors(q);
+>>>>>>> 5eea9be8... Merge branch 'for-3.13/drivers' of git://git.kernel.dk/linux-block
 		struct request_queue * const b =
 			mdev->ldev->backing_bdev->bd_disk->queue;
 		if (b->merge_bvec_fn) {
@@ -1188,6 +1196,8 @@ int drbd_merge_bvec(struct request_queue *q, struct bvec_merge_data *bvm, struct
 			limit = min(limit, backing_limit);
 		}
 		put_ldev(mdev);
+		if ((limit >> 9) > max_hw_sectors)
+			limit = max_hw_sectors << 9;
 	}
 	return limit;
 }
