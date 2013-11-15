@@ -13,6 +13,9 @@
 #include <linux/dma-contiguous.h>
 #endif
 
+#include <xen/xen.h>
+#include <asm/xen/hypervisor.h>
+
 #define DMA_ERROR_CODE	(~0)
 
 #ifdef __arch_page_to_dma
@@ -73,6 +76,39 @@ static inline unsigned long dma_max_pfn(struct device *dev)
 	return PHYS_PFN_OFFSET + dma_to_pfn(dev, *dev->dma_mask);
 }
 #define dma_max_pfn(dev) dma_max_pfn(dev)
+
+static inline dma_addr_t phys_to_dma(struct device *dev, phys_addr_t paddr)
+{
+	unsigned int offset = paddr & ~PAGE_MASK;
+	return pfn_to_dma(dev, __phys_to_pfn(paddr)) + offset;
+}
+
+static inline phys_addr_t dma_to_phys(struct device *dev, dma_addr_t dev_addr)
+{
+	unsigned int offset = dev_addr & ~PAGE_MASK;
+	return __pfn_to_phys(dma_to_pfn(dev, dev_addr)) + offset;
+}
+
+static inline bool dma_capable(struct device *dev, dma_addr_t addr, size_t size)
+{
+	u64 limit, mask;
+
+	if (!dev->dma_mask)
+		return 0;
+
+	mask = *dev->dma_mask;
+
+	limit = (mask + 1) & ~mask;
+	if (limit && size > limit)
+		return 0;
+
+	if ((addr | (addr + size - 1)) & ~mask)
+		return 0;
+
+	return 1;
+}
+
+static inline void dma_mark_clean(void *addr, size_t size) { }
 
 /*
  * The DMA API is built upon the notion of "buffer ownership".  A buffer
