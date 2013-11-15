@@ -175,8 +175,6 @@ int mc13xxx_reg_read(struct mc13xxx *mc13xxx, unsigned int offset, u32 *val)
 	struct spi_message m;
 	int ret;
 
-	BUG_ON(!mutex_is_locked(&mc13xxx->lock));
-
 	if (offset > MC13XXX_NUMREGS)
 		return -EINVAL;
 
@@ -209,6 +207,7 @@ EXPORT_SYMBOL(mc13xxx_reg_read);
 
 int mc13xxx_reg_write(struct mc13xxx *mc13xxx, unsigned int offset, u32 val)
 {
+<<<<<<< HEAD
 	u32 buf;
 	struct spi_transfer t;
 	struct spi_message m;
@@ -217,6 +216,9 @@ int mc13xxx_reg_write(struct mc13xxx *mc13xxx, unsigned int offset, u32 val)
 	BUG_ON(!mutex_is_locked(&mc13xxx->lock));
 
 	dev_vdbg(&mc13xxx->spidev->dev, "[0x%02x] <- 0x%06x\n", offset, val);
+=======
+	dev_vdbg(mc13xxx->dev, "[0x%02x] <- 0x%06x\n", offset, val);
+>>>>>>> 092d405... Merge remote-tracking branch 'asoc/fix/arizona' into asoc-linus
 
 	if (offset > MC13XXX_NUMREGS || val > 0xffffff)
 		return -EINVAL;
@@ -246,9 +248,12 @@ EXPORT_SYMBOL(mc13xxx_reg_write);
 int mc13xxx_reg_rmw(struct mc13xxx *mc13xxx, unsigned int offset,
 		u32 mask, u32 val)
 {
+<<<<<<< HEAD
 	int ret;
 	u32 valread;
 
+=======
+>>>>>>> 092d405... Merge remote-tracking branch 'asoc/fix/arizona' into asoc-linus
 	BUG_ON(val & ~mask);
 
 	ret = mc13xxx_reg_read(mc13xxx, offset, &valread);
