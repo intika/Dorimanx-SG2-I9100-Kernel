@@ -68,9 +68,14 @@ static int timeriomem_rng_data_read(struct hwrng *rng, u32 *data)
 		timeriomem_rng_timer.expires = cur + delay;
 		timeriomem_rng_data->present = 0;
 
+<<<<<<< HEAD
 		init_completion(&timeriomem_rng_data->completion);
 		add_timer(&timeriomem_rng_timer);
 	}
+=======
+	reinit_completion(&priv->completion);
+	mod_timer(&priv->timer, priv->expires);
+>>>>>>> d8fe4ac... Merge branch 'akpm' (patch-bomb from Andrew Morton)
 
 	return 4;
 }

@@ -164,6 +164,7 @@ static int mpc512x_psc_spi_transfer_rxtx(struct spi_device *spi,
 		 * depends on the fifo size.
 		 */
 		fifosz = MPC512x_PSC_FIFO_SZ(in_be32(&fifo->txsz));
+<<<<<<< HEAD
 		count = min(fifosz, len);
 
 		for (i = count; i > 0; i--) {
@@ -172,6 +173,29 @@ static int mpc512x_psc_spi_transfer_rxtx(struct spi_device *spi,
 				setbits32(&fifo->txcmd, MPC512x_PSC_FIFO_EOF);
 			out_8(&fifo->txdata_8, data);
 			len--;
+=======
+		txcount = min(fifosz, tx_len);
+		fifosz = MPC512x_PSC_FIFO_SZ(in_be32(&fifo->rxsz));
+		fifosz -= in_be32(&fifo->rxcnt) + 1;
+		txcount = min(fifosz, txcount);
+		if (txcount) {
+
+			/* fill the TX FIFO */
+			while (txcount-- > 0) {
+				data = tx_buf ? *tx_buf++ : 0;
+				if (tx_len == EOFBYTE && t->cs_change)
+					setbits32(&fifo->txcmd,
+						  MPC512x_PSC_FIFO_EOF);
+				out_8(&fifo->txdata_8, data);
+				tx_len--;
+			}
+
+			/* have the ISR trigger when the TX FIFO is empty */
+			reinit_completion(&mps->txisrdone);
+			out_be32(&fifo->txisr, MPC512x_PSC_FIFO_EMPTY);
+			out_be32(&fifo->tximr, MPC512x_PSC_FIFO_EMPTY);
+			wait_for_completion(&mps->txisrdone);
+>>>>>>> d8fe4ac... Merge branch 'akpm' (patch-bomb from Andrew Morton)
 		}
 
 		INIT_COMPLETION(mps->done);
