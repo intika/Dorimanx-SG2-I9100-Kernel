@@ -26,6 +26,7 @@
 #ifndef _I915_DRM_H_
 #define _I915_DRM_H_
 
+#include <drm/i915_pciids.h>
 #include <uapi/drm/i915_drm.h>
 
 /* For use by IPS driver */
@@ -34,8 +35,6 @@ extern bool i915_gpu_raise(void);
 extern bool i915_gpu_lower(void);
 extern bool i915_gpu_busy(void);
 extern bool i915_gpu_turbo_disable(void);
-<<<<<<< HEAD
-=======
 
 /*
  * The Bridge device's PCI config space has information about the
@@ -73,5 +72,4 @@ extern bool i915_gpu_turbo_disable(void);
 #define INTEL_GMCH_GMS_STOLEN_224M	(0xc << 4)
 #define INTEL_GMCH_GMS_STOLEN_352M	(0xd << 4)
 
->>>>>>> 049ffa8... Merge branch 'drm-next' of git://people.freedesktop.org/~airlied/linux
 #endif				/* _I915_DRM_H_ */
