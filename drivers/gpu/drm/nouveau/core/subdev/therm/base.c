@@ -116,21 +116,12 @@ nouveau_therm_update(struct nouveau_therm *therm, int mode)
 		if (priv->fan->bios.linear_min_temp ||
 		    priv->fan->bios.linear_max_temp) {
 			duty = nouveau_therm_update_linear(therm);
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-=======
->>>>>>> 049ffa8... Merge branch 'drm-next' of git://people.freedesktop.org/~airlied/linux
 		} else {
 			if (priv->cstate)
 				duty = priv->cstate;
 			poll = false;
 		}
 		immd = false;
-<<<<<<< HEAD
->>>>>>> 0846c72... Merge branch 'drm-nouveau-next' of git://anongit.freedesktop.org/git/nouveau/linux-2.6 into drm-next
-=======
->>>>>>> 049ffa8... Merge branch 'drm-next' of git://people.freedesktop.org/~airlied/linux
 		break;
 	case NOUVEAU_THERM_CTRL_NONE:
 	default:

@@ -1356,8 +1356,8 @@ static void intel_ddi_hot_plug(struct intel_encoder *intel_encoder)
 		intel_dp_check_link_status(intel_dp);
 }
 
-static void intel_ddi_get_config(struct intel_encoder *encoder,
-				 struct intel_crtc_config *pipe_config)
+void intel_ddi_get_config(struct intel_encoder *encoder,
+			  struct intel_crtc_config *pipe_config)
 {
 	struct drm_i915_private *dev_priv = encoder->base.dev->dev_private;
 	struct intel_crtc *intel_crtc = to_intel_crtc(encoder->base.crtc);
@@ -1375,8 +1375,6 @@ static void intel_ddi_get_config(struct intel_encoder *encoder,
 		flags |= DRM_MODE_FLAG_NVSYNC;
 
 	pipe_config->adjusted_mode.flags |= flags;
-<<<<<<< HEAD
-=======
 
 	switch (temp & TRANS_DDI_BPC_MASK) {
 	case TRANS_DDI_BPC_6:
@@ -1408,7 +1406,6 @@ static void intel_ddi_get_config(struct intel_encoder *encoder,
 	default:
 		break;
 	}
->>>>>>> 049ffa8... Merge branch 'drm-next' of git://people.freedesktop.org/~airlied/linux
 }
 
 static void intel_ddi_destroy(struct drm_encoder *encoder)
