@@ -105,8 +105,19 @@ static int xfer_read(struct i2c_adapter *adap, unsigned char *buf, int length)
 
 static int xfer_write(struct i2c_adapter *adap, unsigned char *buf, int length)
 {
+<<<<<<< HEAD
 	/* Load first byte into transmitter */
 	at91_twi_write(AT91_TWI_THR, *buf++);
+=======
+	int ret;
+	bool has_unre_flag = dev->pdata->has_unre_flag;
+
+	dev_dbg(dev->dev, "transfer: %s %d bytes.\n",
+		(dev->msg->flags & I2C_M_RD) ? "read" : "write", dev->buf_len);
+
+	reinit_completion(&dev->cmd_complete);
+	dev->transfer_status = 0;
+>>>>>>> d8fe4ac... Merge branch 'akpm' (patch-bomb from Andrew Morton)
 
 	/* Send Start */
 	at91_twi_write(AT91_TWI_CR, AT91_TWI_START);

@@ -839,7 +839,11 @@ static int s3c64xx_spi_transfer_one_message(struct spi_master *master,
 		unsigned long flags;
 		int use_dma;
 
+<<<<<<< HEAD
 		INIT_COMPLETION(sdd->xfer_completion);
+=======
+		reinit_completion(&sdd->xfer_completion);
+>>>>>>> d8fe4ac... Merge branch 'akpm' (patch-bomb from Andrew Morton)
 
 		/* Only BPW and Speed may change across transfers */
 		bpw = xfer->bits_per_word;
