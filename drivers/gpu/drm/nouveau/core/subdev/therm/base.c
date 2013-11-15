@@ -112,6 +112,15 @@ nouveau_therm_update(struct nouveau_therm *therm, int mode)
 			duty = nouveau_therm_update_trip(therm);
 		else
 			duty = nouveau_therm_update_linear(therm);
+<<<<<<< HEAD
+=======
+		} else {
+			if (priv->cstate)
+				duty = priv->cstate;
+			poll = false;
+		}
+		immd = false;
+>>>>>>> 0846c72... Merge branch 'drm-nouveau-next' of git://anongit.freedesktop.org/git/nouveau/linux-2.6 into drm-next
 		break;
 	case NOUVEAU_THERM_CTRL_NONE:
 	default:
