@@ -20,6 +20,9 @@
 #define __LINUX_IOMMU_H
 
 #include <linux/errno.h>
+#include <linux/err.h>
+#include <linux/types.h>
+#include <trace/events/iommu.h>
 
 #define IOMMU_READ	(1)
 #define IOMMU_WRITE	(2)
@@ -136,6 +139,7 @@ static inline int report_iommu_fault(struct iommu_domain *domain,
 	if (domain->handler)
 		ret = domain->handler(domain, dev, iova, flags);
 
+	trace_io_page_fault(dev, iova, flags);
 	return ret;
 }
 #elif defined(CONFIG_IOMMU_EXYNOS4_API)
