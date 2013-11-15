@@ -52,18 +52,24 @@ struct nouveau_drm_tile {
 
 enum nouveau_drm_handle {
 <<<<<<< HEAD
+<<<<<<< HEAD
 	NVDRM_CLIENT = 0xffffffff,
 	NVDRM_DEVICE = 0xdddddddd,
 	NVDRM_PUSH   = 0xbbbb0000, /* |= client chid */
 	NVDRM_CHAN   = 0xcccc0000, /* |= client chid */
 =======
+=======
+>>>>>>> 049ffa8... Merge branch 'drm-next' of git://people.freedesktop.org/~airlied/linux
 	NVDRM_CLIENT  = 0xffffffff,
 	NVDRM_DEVICE  = 0xdddddddd,
 	NVDRM_CONTROL = 0xdddddddc,
 	NVDRM_PUSH    = 0xbbbb0000, /* |= client chid */
 	NVDRM_CHAN    = 0xcccc0000, /* |= client chid */
 	NVDRM_NVSW    = 0x55550000,
+<<<<<<< HEAD
 >>>>>>> 0846c72... Merge branch 'drm-nouveau-next' of git://anongit.freedesktop.org/git/nouveau/linux-2.6 into drm-next
+=======
+>>>>>>> 049ffa8... Merge branch 'drm-next' of git://people.freedesktop.org/~airlied/linux
 };
 
 struct nouveau_cli {
@@ -136,10 +142,10 @@ struct nouveau_drm {
 	struct nvbios vbios;
 	struct nouveau_display *display;
 	struct backlight_device *backlight;
-	struct nouveau_eventh vblank[4];
 
 	/* power management */
-	struct nouveau_pm *pm;
+	struct nouveau_hwmon *hwmon;
+	struct nouveau_sysfs *sysfs;
 
 	/* display power reference */
 	bool have_disp_power_ref;
@@ -163,7 +169,6 @@ nouveau_dev(struct drm_device *dev)
 int nouveau_pmops_suspend(struct device *);
 int nouveau_pmops_resume(struct device *);
 
-#define NV_SUSPEND(cli, fmt, args...) nv_suspend((cli), fmt, ##args)
 #define NV_FATAL(cli, fmt, args...) nv_fatal((cli), fmt, ##args)
 #define NV_ERROR(cli, fmt, args...) nv_error((cli), fmt, ##args)
 #define NV_WARN(cli, fmt, args...) nv_warn((cli), fmt, ##args)
