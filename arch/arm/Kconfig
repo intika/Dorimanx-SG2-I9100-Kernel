@@ -1515,7 +1515,6 @@ config SMP
 	depends on HAVE_SMP
 	depends on ARCH_EXYNOS
 	depends on MMU || ARM_MPU
-	select USE_GENERIC_SMP_HELPERS
 	select HAVE_ARM_SCU if !ARCH_MSM_SCORPIONMP
 	help
 	  This enables support for systems with more than one CPU. If you have

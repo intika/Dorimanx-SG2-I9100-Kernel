@@ -462,7 +462,7 @@ static void tegra_slink_dma_complete(void *args)
 
 static int tegra_slink_start_tx_dma(struct tegra_slink_data *tspi, int len)
 {
-	INIT_COMPLETION(tspi->tx_dma_complete);
+	reinit_completion(&tspi->tx_dma_complete);
 	tspi->tx_dma_desc = dmaengine_prep_slave_single(tspi->tx_dma_chan,
 				tspi->tx_dma_phys, len, DMA_MEM_TO_DEV,
 				DMA_PREP_INTERRUPT |  DMA_CTRL_ACK);
@@ -481,7 +481,7 @@ static int tegra_slink_start_tx_dma(struct tegra_slink_data *tspi, int len)
 
 static int tegra_slink_start_rx_dma(struct tegra_slink_data *tspi, int len)
 {
-	INIT_COMPLETION(tspi->rx_dma_complete);
+	reinit_completion(&tspi->rx_dma_complete);
 	tspi->rx_dma_desc = dmaengine_prep_slave_single(tspi->rx_dma_chan,
 				tspi->rx_dma_phys, len, DMA_DEV_TO_MEM,
 				DMA_PREP_INTERRUPT |  DMA_CTRL_ACK);
@@ -834,9 +834,14 @@ static int tegra_slink_transfer_one_message(struct spi_master *master,
 	struct spi_device *spi = msg->spi;
 	int ret;
 
+<<<<<<< HEAD
 	msg->status = 0;
 	msg->actual_length = 0;
 	ret = pm_runtime_get_sync(tspi->dev);
+=======
+	reinit_completion(&tspi->xfer_completion);
+	ret = tegra_slink_start_transfer_one(spi, xfer);
+>>>>>>> d8fe4ac... Merge branch 'akpm' (patch-bomb from Andrew Morton)
 	if (ret < 0) {
 		dev_err(tspi->dev, "runtime get failed: %d\n", ret);
 		goto done;

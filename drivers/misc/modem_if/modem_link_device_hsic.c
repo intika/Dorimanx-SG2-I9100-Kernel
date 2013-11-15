@@ -74,7 +74,7 @@ retry:
 	if (dev->power.runtime_status != RPM_ACTIVE) {
 		if (!pm_data->resume_requested) {
 			mif_debug("QW PM\n");
-			INIT_COMPLETION(pm_data->active_done);
+			reinit_completion(&pm_data->active_done);
 			queue_delayed_work(pm_data->wq,
 					&pm_data->link_pm_work, 0);
 		}
@@ -356,7 +356,7 @@ static int usb_send(struct link_device *ld, struct io_device *iod,
 			}
 
 			mif_err("wait RESUME CMD...\n");
-			INIT_COMPLETION(ld->raw_tx_resumed_by_cp);
+			reinit_completion(&ld->raw_tx_resumed_by_cp);
 			wait_for_completion(&ld->raw_tx_resumed_by_cp);
 			mif_err("resumed done.\n");
 		}
@@ -603,7 +603,7 @@ static int link_pm_runtime_get_active(struct link_pm_data *pm_data)
 		queue_delayed_work(pm_data->wq, &pm_data->link_pm_work, 0);
 	}
 	mif_debug("Wait pm\n");
-	INIT_COMPLETION(pm_data->active_done);
+	reinit_completion(&pm_data->active_done);
 	ret = wait_for_completion_timeout(&pm_data->active_done,
 						msecs_to_jiffies(500));
 

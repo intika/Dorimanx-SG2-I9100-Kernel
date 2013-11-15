@@ -226,6 +226,7 @@ static int mxs_i2c_xfer_msg(struct i2c_adapter *adap, struct i2c_msg *msg,
 	if (msg->len == 0)
 		return -EINVAL;
 
+<<<<<<< HEAD
 	init_completion(&i2c->cmd_complete);
 
 	flags = stop ? MXS_I2C_CTRL0_POST_SEND_STOP : 0;
@@ -238,6 +239,27 @@ static int mxs_i2c_xfer_msg(struct i2c_adapter *adap, struct i2c_msg *msg,
 
 	writel(MXS_I2C_QUEUECTRL_QUEUE_RUN,
 			i2c->regs + MXS_I2C_QUEUECTRL_SET);
+=======
+	/*
+	 * The current boundary to select between PIO/DMA transfer method
+	 * is set to 8 bytes, transfers shorter than 8 bytes are transfered
+	 * using PIO mode while longer transfers use DMA. The 8 byte border is
+	 * based on this empirical measurement and a lot of previous frobbing.
+	 */
+	i2c->cmd_err = 0;
+	if (0) {	/* disable PIO mode until a proper fix is made */
+		ret = mxs_i2c_pio_setup_xfer(adap, msg, flags);
+		if (ret) {
+			err = mxs_i2c_reset(i2c);
+			if (err)
+				return err;
+		}
+	} else {
+		reinit_completion(&i2c->cmd_complete);
+		ret = mxs_i2c_dma_setup_xfer(adap, msg, flags);
+		if (ret)
+			return ret;
+>>>>>>> d8fe4ac... Merge branch 'akpm' (patch-bomb from Andrew Morton)
 
 	ret = wait_for_completion_timeout(&i2c->cmd_complete,
 						msecs_to_jiffies(1000));

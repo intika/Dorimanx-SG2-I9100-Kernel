@@ -157,6 +157,7 @@ static void snd_free_dev_pages(struct device *dev, size_t size, void *ptr,
 	dec_snd_pages(pg);
 	dma_free_coherent(dev, PAGE_SIZE << pg, ptr, dma);
 }
+
 #endif /* CONFIG_HAS_DMA */
 
 /*

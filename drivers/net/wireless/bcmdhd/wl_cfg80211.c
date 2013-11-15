@@ -1234,7 +1234,7 @@ wl_cfg80211_add_virtual_iface(struct wiphy *wiphy, char *name,
 					dhd_mode = DHD_FLAG_P2P_GO_MODE;
 				DNGL_FUNC(dhd_cfg80211_set_p2p_info, (wl, dhd_mode));
 				/* reinitialize completion to clear previous count */
-				INIT_COMPLETION(wl->iface_disable);
+				reinit_completion(&wl->iface_disable);
 			} else {
 				/* put back the rtnl_lock again */
 				if (rollback_lock)
@@ -7470,7 +7470,7 @@ wl_bss_connect_done(struct wl_priv *wl, struct net_device *ndev,
 #endif /* ROAM_AP_ENV_DETECTION */
 			if (ndev != wl_to_prmry_ndev(wl)) {
 				/* reinitialize completion to clear previous count */
-				INIT_COMPLETION(wl->iface_disable);
+				reinit_completion(&wl->iface_disable);
 			}
 		}
 		cfg80211_connect_result(ndev,

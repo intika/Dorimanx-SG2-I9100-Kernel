@@ -945,7 +945,7 @@ static int __init wakelocks_init(void)
 		goto err_platform_driver_register;
 	}
 
-	INIT_COMPLETION(suspend_sys_sync_comp);
+	reinit_completion(&suspend_sys_sync_comp);
 	suspend_sys_sync_work_queue =
 		create_singlethread_workqueue("suspend_sys_sync");
 	if (suspend_sys_sync_work_queue == NULL) {
