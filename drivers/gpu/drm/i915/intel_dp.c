@@ -1481,8 +1481,6 @@ static void intel_dp_get_config(struct intel_encoder *encoder,
 		else
 			pipe_config->port_clock = 270000;
 	}
-<<<<<<< HEAD
-=======
 
 	dotclock = intel_dotclock_calculate(pipe_config->port_clock,
 					    &pipe_config->dp_m_n);
@@ -1511,7 +1509,6 @@ static void intel_dp_get_config(struct intel_encoder *encoder,
 			      pipe_config->pipe_bpp, dev_priv->vbt.edp_bpp);
 		dev_priv->vbt.edp_bpp = pipe_config->pipe_bpp;
 	}
->>>>>>> 049ffa8... Merge branch 'drm-next' of git://people.freedesktop.org/~airlied/linux
 }
 
 static bool is_edp_psr(struct drm_device *dev)

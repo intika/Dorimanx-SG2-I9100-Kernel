@@ -862,55 +862,7 @@ int intel_sprite_get_colorkey(struct drm_device *dev, void *data,
 			      struct drm_file *file_priv);
 
 
-<<<<<<< HEAD
-extern bool intel_ddi_get_hw_state(struct intel_encoder *encoder,
-				   enum pipe *pipe);
-extern int intel_ddi_get_cdclk_freq(struct drm_i915_private *dev_priv);
-extern void intel_ddi_pll_init(struct drm_device *dev);
-extern void intel_ddi_enable_transcoder_func(struct drm_crtc *crtc);
-extern void intel_ddi_disable_transcoder_func(struct drm_i915_private *dev_priv,
-					      enum transcoder cpu_transcoder);
-extern void intel_ddi_enable_pipe_clock(struct intel_crtc *intel_crtc);
-extern void intel_ddi_disable_pipe_clock(struct intel_crtc *intel_crtc);
-extern void intel_ddi_setup_hw_pll_state(struct drm_device *dev);
-extern bool intel_ddi_pll_mode_set(struct drm_crtc *crtc);
-extern void intel_ddi_put_crtc_pll(struct drm_crtc *crtc);
-extern void intel_ddi_set_pipe_settings(struct drm_crtc *crtc);
-extern void intel_ddi_prepare_link_retrain(struct drm_encoder *encoder);
-extern bool
-intel_ddi_connector_get_hw_state(struct intel_connector *intel_connector);
-extern void intel_ddi_fdi_disable(struct drm_crtc *crtc);
-
-extern void intel_display_handle_reset(struct drm_device *dev);
-extern bool intel_set_cpu_fifo_underrun_reporting(struct drm_device *dev,
-						  enum pipe pipe,
-						  bool enable);
-extern bool intel_set_pch_fifo_underrun_reporting(struct drm_device *dev,
-						 enum transcoder pch_transcoder,
-						 bool enable);
-
-extern void intel_edp_psr_enable(struct intel_dp *intel_dp);
-extern void intel_edp_psr_disable(struct intel_dp *intel_dp);
-extern void intel_edp_psr_update(struct drm_device *dev);
-extern void hsw_disable_lcpll(struct drm_i915_private *dev_priv,
-			      bool switch_to_fclk, bool allow_power_down);
-extern void hsw_restore_lcpll(struct drm_i915_private *dev_priv);
-extern void ilk_enable_gt_irq(struct drm_i915_private *dev_priv, uint32_t mask);
-extern void ilk_disable_gt_irq(struct drm_i915_private *dev_priv,
-			       uint32_t mask);
-extern void snb_enable_pm_irq(struct drm_i915_private *dev_priv, uint32_t mask);
-extern void snb_disable_pm_irq(struct drm_i915_private *dev_priv,
-			       uint32_t mask);
-extern void hsw_enable_pc8_work(struct work_struct *__work);
-extern void hsw_enable_package_c8(struct drm_i915_private *dev_priv);
-extern void hsw_disable_package_c8(struct drm_i915_private *dev_priv);
-extern void hsw_pc8_disable_interrupts(struct drm_device *dev);
-extern void hsw_pc8_restore_interrupts(struct drm_device *dev);
-extern void intel_aux_display_runtime_get(struct drm_i915_private *dev_priv);
-extern void intel_aux_display_runtime_put(struct drm_i915_private *dev_priv);
-=======
 /* intel_tv.c */
 void intel_tv_init(struct drm_device *dev);
->>>>>>> 049ffa8... Merge branch 'drm-next' of git://people.freedesktop.org/~airlied/linux
 
 #endif /* __INTEL_DRV_H__ */

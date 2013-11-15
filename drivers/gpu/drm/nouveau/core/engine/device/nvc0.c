@@ -256,18 +256,8 @@ nvc0_identify(struct nouveau_device *device)
 		device->oclass[NVDEV_SUBDEV_THERM  ] = &nva3_therm_oclass;
 		device->oclass[NVDEV_SUBDEV_MXM    ] = &nv50_mxm_oclass;
 		device->oclass[NVDEV_SUBDEV_DEVINIT] = &nvc0_devinit_oclass;
-<<<<<<< HEAD
-<<<<<<< HEAD
-		device->oclass[NVDEV_SUBDEV_MC     ] = &nvc0_mc_oclass;
-		device->oclass[NVDEV_SUBDEV_BUS    ] = &nvc0_bus_oclass;
-=======
 		device->oclass[NVDEV_SUBDEV_MC     ] =  nvc0_mc_oclass;
 		device->oclass[NVDEV_SUBDEV_BUS    ] =  nvc0_bus_oclass;
->>>>>>> 0846c72... Merge branch 'drm-nouveau-next' of git://anongit.freedesktop.org/git/nouveau/linux-2.6 into drm-next
-=======
-		device->oclass[NVDEV_SUBDEV_MC     ] =  nvc0_mc_oclass;
-		device->oclass[NVDEV_SUBDEV_BUS    ] =  nvc0_bus_oclass;
->>>>>>> 049ffa8... Merge branch 'drm-next' of git://people.freedesktop.org/~airlied/linux
 		device->oclass[NVDEV_SUBDEV_TIMER  ] = &nv04_timer_oclass;
 		device->oclass[NVDEV_SUBDEV_FB     ] =  nvc0_fb_oclass;
 		device->oclass[NVDEV_SUBDEV_LTCG   ] = &nvc0_ltcg_oclass;
