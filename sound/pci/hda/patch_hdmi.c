@@ -637,6 +637,7 @@ struct channel_map_table {
 };
 
 static struct channel_map_table map_tables[] = {
+<<<<<<< HEAD
 	{ SNDRV_CHMAP_FL,	0x00,	FL },
 	{ SNDRV_CHMAP_FR,	0x01,	FR },
 	{ SNDRV_CHMAP_RL,	0x04,	RL },
@@ -645,6 +646,25 @@ static struct channel_map_table map_tables[] = {
 	{ SNDRV_CHMAP_FC,	0x03,	FC },
 	{ SNDRV_CHMAP_RLC,	0x06,	RLC },
 	{ SNDRV_CHMAP_RRC,	0x07,	RRC },
+=======
+	{ SNDRV_CHMAP_FL,	FL },
+	{ SNDRV_CHMAP_FR,	FR },
+	{ SNDRV_CHMAP_RL,	RL },
+	{ SNDRV_CHMAP_RR,	RR },
+	{ SNDRV_CHMAP_LFE,	LFE },
+	{ SNDRV_CHMAP_FC,	FC },
+	{ SNDRV_CHMAP_RLC,	RLC },
+	{ SNDRV_CHMAP_RRC,	RRC },
+	{ SNDRV_CHMAP_RC,	RC },
+	{ SNDRV_CHMAP_FLC,	FLC },
+	{ SNDRV_CHMAP_FRC,	FRC },
+	{ SNDRV_CHMAP_TFL,	FLH },
+	{ SNDRV_CHMAP_TFR,	FRH },
+	{ SNDRV_CHMAP_FLW,	FLW },
+	{ SNDRV_CHMAP_FRW,	FRW },
+	{ SNDRV_CHMAP_TC,	TC },
+	{ SNDRV_CHMAP_TFC,	FCH },
+>>>>>>> 73d75ba... Merge tag 'sound-fix-3.13-rc1' of git://git.kernel.org/pub/scm/linux/kernel/git/tiwai/sound
 	{} /* terminator */
 };
 
@@ -1079,6 +1099,9 @@ static int hdmi_setup_stream(struct hda_codec *codec, hda_nid_t cvt_nid,
 	if (snd_hda_query_pin_caps(codec, pin_nid) & AC_PINCAP_HBR) {
 		pinctl = snd_hda_codec_read(codec, pin_nid, 0,
 					    AC_VERB_GET_PIN_WIDGET_CONTROL, 0);
+
+		if (pinctl < 0)
+			return hbr ? -EINVAL : 0;
 
 		new_pinctl = pinctl & ~AC_PINCTL_EPT;
 		if (is_hbr_format(format))
@@ -2568,11 +2591,145 @@ static int patch_nvhdmi_8ch_7x(struct hda_codec *codec)
 #define ATIHDMI_CVT_NID		0x02	/* audio converter */
 #define ATIHDMI_PIN_NID		0x03	/* HDMI output pin */
 
+<<<<<<< HEAD
 static int atihdmi_playback_pcm_prepare(struct hda_pcm_stream *hinfo,
 					struct hda_codec *codec,
 					unsigned int stream_tag,
 					unsigned int format,
 					struct snd_pcm_substream *substream)
+=======
+	return snd_hda_codec_write(codec, pin_nid, 0, verb, ati_channel_setup);
+}
+
+static int atihdmi_pin_get_slot_channel(struct hda_codec *codec, hda_nid_t pin_nid,
+					int asp_slot)
+{
+	bool was_odd = false;
+	int ati_asp_slot = asp_slot;
+	int verb;
+	int ati_channel_setup;
+
+	if (asp_slot > 7)
+		return -EINVAL;
+
+	if (!has_amd_full_remap_support(codec)) {
+		ati_asp_slot = atihdmi_paired_swap_fc_lfe(asp_slot);
+		if (ati_asp_slot % 2 != 0) {
+			ati_asp_slot -= 1;
+			was_odd = true;
+		}
+	}
+
+	verb = ATI_VERB_GET_MULTICHANNEL_01 + ati_asp_slot/2 + (ati_asp_slot % 2) * 0x00e;
+
+	ati_channel_setup = snd_hda_codec_read(codec, pin_nid, 0, verb, 0);
+
+	if (!(ati_channel_setup & ATI_OUT_ENABLE))
+		return 0xf;
+
+	return ((ati_channel_setup & 0xf0) >> 4) + !!was_odd;
+}
+
+static int atihdmi_paired_chmap_cea_alloc_validate_get_type(struct cea_channel_speaker_allocation *cap,
+							    int channels)
+{
+	int c;
+
+	/*
+	 * Pre-rev3 ATI/AMD codecs operate in a paired channel mode, so
+	 * we need to take that into account (a single channel may take 2
+	 * channel slots if we need to carry a silent channel next to it).
+	 * On Rev3+ AMD codecs this function is not used.
+	 */
+	int chanpairs = 0;
+
+	/* We only produce even-numbered channel count TLVs */
+	if ((channels % 2) != 0)
+		return -1;
+
+	for (c = 0; c < 7; c += 2) {
+		if (cap->speakers[c] || cap->speakers[c+1])
+			chanpairs++;
+	}
+
+	if (chanpairs * 2 != channels)
+		return -1;
+
+	return SNDRV_CTL_TLVT_CHMAP_PAIRED;
+}
+
+static void atihdmi_paired_cea_alloc_to_tlv_chmap(struct cea_channel_speaker_allocation *cap,
+						  unsigned int *chmap, int channels)
+{
+	/* produce paired maps for pre-rev3 ATI/AMD codecs */
+	int count = 0;
+	int c;
+
+	for (c = 7; c >= 0; c--) {
+		int chan = 7 - atihdmi_paired_swap_fc_lfe(7 - c);
+		int spk = cap->speakers[chan];
+		if (!spk) {
+			/* add N/A channel if the companion channel is occupied */
+			if (cap->speakers[chan + (chan % 2 ? -1 : 1)])
+				chmap[count++] = SNDRV_CHMAP_NA;
+
+			continue;
+		}
+
+		chmap[count++] = spk_to_chmap(spk);
+	}
+
+	WARN_ON(count != channels);
+}
+
+static int atihdmi_pin_hbr_setup(struct hda_codec *codec, hda_nid_t pin_nid,
+				 bool hbr)
+{
+	int hbr_ctl, hbr_ctl_new;
+
+	hbr_ctl = snd_hda_codec_read(codec, pin_nid, 0, ATI_VERB_GET_HBR_CONTROL, 0);
+	if (hbr_ctl >= 0 && (hbr_ctl & ATI_HBR_CAPABLE)) {
+		if (hbr)
+			hbr_ctl_new = hbr_ctl | ATI_HBR_ENABLE;
+		else
+			hbr_ctl_new = hbr_ctl & ~ATI_HBR_ENABLE;
+
+		snd_printdd("atihdmi_pin_hbr_setup: "
+				"NID=0x%x, %shbr-ctl=0x%x\n",
+				pin_nid,
+				hbr_ctl == hbr_ctl_new ? "" : "new-",
+				hbr_ctl_new);
+
+		if (hbr_ctl != hbr_ctl_new)
+			snd_hda_codec_write(codec, pin_nid, 0,
+						ATI_VERB_SET_HBR_CONTROL,
+						hbr_ctl_new);
+
+	} else if (hbr)
+		return -EINVAL;
+
+	return 0;
+}
+
+static int atihdmi_setup_stream(struct hda_codec *codec, hda_nid_t cvt_nid,
+				hda_nid_t pin_nid, u32 stream_tag, int format)
+{
+
+	if (is_amdhdmi_rev3_or_later(codec)) {
+		int ramp_rate = 180; /* default as per AMD spec */
+		/* disable ramp-up/down for non-pcm as per AMD spec */
+		if (format & AC_FMT_TYPE_NON_PCM)
+			ramp_rate = 0;
+
+		snd_hda_codec_write(codec, cvt_nid, 0, ATI_VERB_SET_RAMP_RATE, ramp_rate);
+	}
+
+	return hdmi_setup_stream(codec, cvt_nid, pin_nid, stream_tag, format);
+}
+
+
+static int atihdmi_init(struct hda_codec *codec)
+>>>>>>> 73d75ba... Merge tag 'sound-fix-3.13-rc1' of git://git.kernel.org/pub/scm/linux/kernel/git/tiwai/sound
 {
 	struct hdmi_spec *spec = codec->spec;
 	struct hdmi_spec_per_cvt *per_cvt = get_cvt(spec, 0);
