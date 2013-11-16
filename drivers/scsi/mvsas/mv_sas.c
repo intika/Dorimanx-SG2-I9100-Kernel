@@ -1582,8 +1582,13 @@ static int mvs_exec_internal_tmf_task(struct domain_device *dev,
 		res = mvs_task_exec(task, 1, GFP_KERNEL, NULL, 1, tmf);
 
 		if (res) {
+<<<<<<< HEAD
 			del_timer(&task->timer);
 			mv_printk("executing internel task failed:%d\n", res);
+=======
+			del_timer(&task->slow_task->timer);
+			mv_printk("executing internal task failed:%d\n", res);
+>>>>>>> 9073e1a... Merge branch 'for-linus' of git://git.kernel.org/pub/scm/linux/kernel/git/jikos/trivial
 			goto ex_err;
 		}
 

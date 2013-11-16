@@ -595,7 +595,7 @@ void bnx2i_drop_session(struct iscsi_cls_session *cls_session)
 /**
  * bnx2i_ep_destroy_list_add - add an entry to EP destroy list
  * @hba:	pointer to adapter instance
- * @ep:		pointer to endpoint (transport indentifier) structure
+ * @ep:		pointer to endpoint (transport identifier) structure
  *
  * EP destroy queue manager
  */
@@ -612,7 +612,7 @@ static int bnx2i_ep_destroy_list_add(struct bnx2i_hba *hba,
  * bnx2i_ep_destroy_list_del - add an entry to EP destroy list
  *
  * @hba: 		pointer to adapter instance
- * @ep: 		pointer to endpoint (transport indentifier) structure
+ * @ep: 		pointer to endpoint (transport identifier) structure
  *
  * EP destroy queue manager
  */
@@ -629,7 +629,7 @@ static int bnx2i_ep_destroy_list_del(struct bnx2i_hba *hba,
 /**
  * bnx2i_ep_ofld_list_add - add an entry to ep offload pending list
  * @hba:	pointer to adapter instance
- * @ep:		pointer to endpoint (transport indentifier) structure
+ * @ep:		pointer to endpoint (transport identifier) structure
  *
  * pending conn offload completion queue manager
  */
@@ -645,7 +645,7 @@ static int bnx2i_ep_ofld_list_add(struct bnx2i_hba *hba,
 /**
  * bnx2i_ep_ofld_list_del - add an entry to ep offload pending list
  * @hba: 		pointer to adapter instance
- * @ep: 		pointer to endpoint (transport indentifier) structure
+ * @ep: 		pointer to endpoint (transport identifier) structure
  *
  * pending conn offload completion queue manager
  */
@@ -720,7 +720,7 @@ bnx2i_find_ep_in_destroy_list(struct bnx2i_hba *hba, u32 iscsi_cid)
 /**
  * bnx2i_ep_active_list_add - add an entry to ep active list
  * @hba:	pointer to adapter instance
- * @ep:		pointer to endpoint (transport indentifier) structure
+ * @ep:		pointer to endpoint (transport identifier) structure
  *
  * current active conn queue manager
  */
@@ -736,7 +736,7 @@ static void bnx2i_ep_active_list_add(struct bnx2i_hba *hba,
 /**
  * bnx2i_ep_active_list_del - deletes an entry to ep active list
  * @hba:	pointer to adapter instance
- * @ep:		pointer to endpoint (transport indentifier) structure
+ * @ep:		pointer to endpoint (transport identifier) structure
  *
  * current active conn queue manager
  */
@@ -1656,7 +1656,7 @@ no_nx2_route:
 /**
  * bnx2i_tear_down_conn - tear down iscsi/tcp connection and free resources
  * @hba:	pointer to adapter instance
- * @ep:		endpoint (transport indentifier) structure
+ * @ep:		endpoint (transport identifier) structure
  *
  * destroys cm_sock structure and on chip iscsi context
  */
