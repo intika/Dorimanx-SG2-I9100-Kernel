@@ -1462,7 +1462,7 @@ static void blk_mq_queue_reinit(struct request_queue *q)
 }
 
 static int blk_mq_queue_reinit_notify(struct notifier_block *nb,
-		unsigned long action, void *hcpu)
+				      unsigned long action, void *hcpu)
 {
 	struct request_queue *q;
 
