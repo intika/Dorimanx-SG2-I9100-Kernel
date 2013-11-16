@@ -1343,7 +1343,6 @@ out_release_resources:
 out_free_host:
 	scsi_host_put(host);
 out_disable_device:
-	pci_set_drvdata(pdev, NULL);
 	pci_disable_device(pdev);
 
 	return error;
@@ -1383,7 +1382,6 @@ static void pvscsi_remove(struct pci_dev *pdev)
 
 	scsi_host_put(host);
 
-	pci_set_drvdata(pdev, NULL);
 	pci_disable_device(pdev);
 }
 

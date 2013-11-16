@@ -2554,7 +2554,6 @@ static void __devexit dc390_remove_one(struct pci_dev *dev)
 
 	pci_disable_device(dev);
 	scsi_host_put(scsi_host);
-	pci_set_drvdata(dev, NULL);
 }
 
 static struct pci_device_id tmscsim_pci_tbl[] = {

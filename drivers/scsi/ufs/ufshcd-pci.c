@@ -94,10 +94,13 @@ static void ufshcd_pci_remove(struct pci_dev *pdev)
 	disable_irq(pdev->irq);
 	free_irq(pdev->irq, hba);
 	ufshcd_remove(hba);
+<<<<<<< HEAD
 	pci_release_regions(pdev);
 	pci_set_drvdata(pdev, NULL);
 	pci_clear_master(pdev);
 	pci_disable_device(pdev);
+=======
+>>>>>>> 9073e1a... Merge branch 'for-linus' of git://git.kernel.org/pub/scm/linux/kernel/git/jikos/trivial
 }
 
 /**

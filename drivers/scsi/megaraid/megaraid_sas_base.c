@@ -4150,10 +4150,20 @@ megasas_probe_one(struct pci_dev *pdev, const struct pci_device_id *id)
 	megasas_mgmt_info.instance[megasas_mgmt_info.max_index] = NULL;
 	megasas_mgmt_info.max_index--;
 
+<<<<<<< HEAD
 	pci_set_drvdata(pdev, NULL);
 	instance->instancet->disable_intr(instance->reg_set);
 	free_irq(instance->msi_flag ? instance->msixentry.vector :
 		 instance->pdev->irq, instance);
+=======
+	instance->instancet->disable_intr(instance);
+	if (instance->msix_vectors)
+		for (i = 0 ; i < instance->msix_vectors; i++)
+			free_irq(instance->msixentry[i].vector,
+				 &instance->irq_context[i]);
+	else
+		free_irq(instance->pdev->irq, &instance->irq_context[0]);
+>>>>>>> 9073e1a... Merge branch 'for-linus' of git://git.kernel.org/pub/scm/linux/kernel/git/jikos/trivial
 fail_irq:
 	if (instance->pdev->device == PCI_DEVICE_ID_LSI_FUSION)
 		megasas_release_fusion(instance);
@@ -4484,9 +4494,13 @@ static void __devexit megasas_detach_one(struct pci_dev *pdev)
 		}
 	}
 
+<<<<<<< HEAD
 	pci_set_drvdata(instance->pdev, NULL);
 
 	instance->instancet->disable_intr(instance->reg_set);
+=======
+	instance->instancet->disable_intr(instance);
+>>>>>>> 9073e1a... Merge branch 'for-linus' of git://git.kernel.org/pub/scm/linux/kernel/git/jikos/trivial
 
 	free_irq(instance->msi_flag ? instance->msixentry.vector :
 		 instance->pdev->irq, instance);
@@ -4521,8 +4535,6 @@ static void __devexit megasas_detach_one(struct pci_dev *pdev)
 	}
 
 	scsi_host_put(host);
-
-	pci_set_drvdata(pdev, NULL);
 
 	pci_disable_device(pdev);
 
