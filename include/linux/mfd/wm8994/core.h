@@ -15,7 +15,11 @@
 #ifndef __MFD_WM8994_CORE_H__
 #define __MFD_WM8994_CORE_H__
 
+#include <linux/mutex.h>
 #include <linux/interrupt.h>
+#include <linux/regmap.h>
+
+#include <linux/mfd/wm8994/pdata.h>
 
 enum wm8994_type {
 	WM8994 = 0,
@@ -25,6 +29,7 @@ enum wm8994_type {
 
 struct regulator_dev;
 struct regulator_bulk_data;
+struct irq_domain;
 
 #define WM8994_NUM_GPIO_REGS 11
 #define WM8994_NUM_LDO_REGS   2
@@ -51,21 +56,14 @@ struct regulator_bulk_data;
 #define WM8994_IRQ_GPIO(x) (x + WM8994_IRQ_TEMP_WARN)
 
 struct wm8994 {
-	struct mutex io_lock;
-	struct mutex irq_lock;
+	struct wm8994_pdata pdata;
 
 	enum wm8994_type type;
-
 	int revision;
 	int cust_id;
 
 	struct device *dev;
-	int (*read_dev)(struct wm8994 *wm8994, unsigned short reg,
-			int bytes, void *dest);
-	int (*write_dev)(struct wm8994 *wm8994, unsigned short reg,
-			 int bytes, const void *src);
-
-	void *control_data;
+	struct regmap *regmap;
 
 	bool ldo_ena_always_driven;
 
@@ -73,13 +71,11 @@ struct wm8994 {
 	int irq_base;
 
 	int irq;
-	u16 irq_masks_cur[WM8994_NUM_IRQ_REGS];
-	u16 irq_masks_cache[WM8994_NUM_IRQ_REGS];
+	struct regmap_irq_chip_data *irq_data;
+	struct irq_domain *edge_irq;
 
 	/* Used over suspend/resume */
 	bool suspended;
-	u16 ldo_regs[WM8994_NUM_LDO_REGS];
-	u16 gpio_regs[WM8994_NUM_GPIO_REGS];
 
 	struct regulator_dev *dbvdd;
 	int num_supplies;
@@ -87,35 +83,60 @@ struct wm8994 {
 };
 
 /* Device I/O API */
-int wm8994_reg_read(struct wm8994 *wm8994, unsigned short reg);
-int wm8994_reg_write(struct wm8994 *wm8994, unsigned short reg,
-		 unsigned short val);
-int wm8994_set_bits(struct wm8994 *wm8994, unsigned short reg,
-		    unsigned short mask, unsigned short val);
-int wm8994_bulk_read(struct wm8994 *wm8994, unsigned short reg,
-		     int count, u16 *buf);
-int wm8994_bulk_write(struct wm8994 *wm8994, unsigned short reg,
-		     int count, const u16 *buf);
 
+static inline int wm8994_reg_read(struct wm8994 *wm8994, unsigned short reg)
+{
+	unsigned int val;
+	int ret;
+
+	ret = regmap_read(wm8994->regmap, reg, &val);
+
+	if (ret < 0)
+		return ret;
+	else
+		return val;
+}
+
+static inline int wm8994_reg_write(struct wm8994 *wm8994, unsigned short reg,
+				   unsigned short val)
+{
+	return regmap_write(wm8994->regmap, reg, val);
+}
+
+static inline int wm8994_bulk_read(struct wm8994 *wm8994, unsigned short reg,
+				   int count, u16 *buf)
+{
+	return regmap_bulk_read(wm8994->regmap, reg, buf, count);
+}
+
+static inline int wm8994_bulk_write(struct wm8994 *wm8994, unsigned short reg,
+				    int count, const u16 *buf)
+{
+	return regmap_raw_write(wm8994->regmap, reg, buf, count * sizeof(u16));
+}
+
+static inline int wm8994_set_bits(struct wm8994 *wm8994, unsigned short reg,
+		    unsigned short mask, unsigned short val)
+{
+	return regmap_update_bits(wm8994->regmap, reg, mask, val);
+}
 
 /* Helper to save on boilerplate */
 static inline int wm8994_request_irq(struct wm8994 *wm8994, int irq,
 				     irq_handler_t handler, const char *name,
 				     void *data)
 {
-	if (!wm8994)
+	if (!wm8994->irq_data)
 		return -EINVAL;
-	if (!wm8994->irq_base)
-		return -EINVAL;
-	return request_threaded_irq(wm8994->irq_base + irq, NULL, handler,
-				    IRQF_TRIGGER_RISING, name,
+	return request_threaded_irq(regmap_irq_get_virq(wm8994->irq_data, irq),
+				    NULL, handler, IRQF_TRIGGER_RISING, name,
 				    data);
 }
 static inline void wm8994_free_irq(struct wm8994 *wm8994, int irq, void *data)
 {
-	if (!wm8994->irq_base)
+	if (!wm8994->irq_data)
 		return;
-	free_irq(wm8994->irq_base + irq, data);
+	free_irq(regmap_irq_get_virq(wm8994->irq_data, irq), data);
 }
 
 int wm8994_irq_init(struct wm8994 *wm8994);

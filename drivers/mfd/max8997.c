@@ -25,6 +25,7 @@
 #include <linux/init.h>
 #include <linux/slab.h>
 #include <linux/i2c.h>
+#include <linux/of.h>
 #include <linux/interrupt.h>
 #include <linux/mutex.h>
 #include <linux/mfd/core.h>
