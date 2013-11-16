@@ -1,7 +1,7 @@
 /*
  * max77686.h - Driver for the Maxim 77686
  *
- *  Copyright (C) 2011 Samsung Electrnoics
+ *  Copyright (C) 2012 Samsung Electrnoics
  *  Chiwoong Byun <woong.byun@samsung.com>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -29,9 +29,6 @@
 #define __LINUX_MFD_MAX77686_H
 
 #include <linux/regulator/consumer.h>
-
-#define MAX77686_SMPL_ENABLE			(0x1)
-#define MAX77686_WTSR_ENABLE			(0x2)
 
 /* MAX77686 regulator IDs */
 enum max77686_regulators {
@@ -70,9 +67,6 @@ enum max77686_regulators {
 	MAX77686_BUCK7,
 	MAX77686_BUCK8,
 	MAX77686_BUCK9,
-	MAX77686_EN32KHZ_AP,
-	MAX77686_EN32KHZ_CP,
-	MAX77686_P32KH,
 
 	MAX77686_REG_MAX,
 };
@@ -80,6 +74,7 @@ enum max77686_regulators {
 struct max77686_regulator_data {
 	int id;
 	struct regulator_init_data *initdata;
+	struct device_node *of_node;
 };
 
 enum max77686_opmode {
@@ -88,45 +83,29 @@ enum max77686_opmode {
 	MAX77686_OPMODE_STANDBY,
 };
 
-enum max77686_ramp_rate {
-	MAX77686_RAMP_RATE_100MV,
-	MAX77686_RAMP_RATE_13MV,
-	MAX77686_RAMP_RATE_27MV,
-	MAX77686_RAMP_RATE_55MV,
-};
-
 struct max77686_opmode_data {
 	int id;
 	int mode;
 };
 
-struct max77686_buck234_gpio_data {
-	int gpio;
-	int data;
-};
-
 struct max77686_platform_data {
 	/* IRQ */
 	int irq_gpio;
-	int irq_base;
 	int ono;
 	int wakeup;
 
 	/* ---- PMIC ---- */
 	struct max77686_regulator_data *regulators;
 	int num_regulators;
-	int has_full_constraints;
 
 	struct max77686_opmode_data *opmode_data;
-	int ramp_rate;
-	int wtsr_smpl;
 
 	/*
 	 * GPIO-DVS feature is not enabled with the current version of
 	 * MAX77686 driver. Buck2/3/4_voltages[0] is used as the default
 	 * voltage at probe. DVS/SELB gpios are set as OUTPUT-LOW.
 	 */
-	struct max77686_buck234_gpio_data buck234_gpio_dvs[3]; /* GPIO of [0]DVS1, [1]DVS2, [2]DVS3 */
+	int buck234_gpio_dvs[3]; /* GPIO of [0]DVS1, [1]DVS2, [2]DVS3 */
 	int buck234_gpio_selb[3]; /* [0]SELB2, [1]SELB3, [2]SELB4 */
 	unsigned int buck2_voltage[8]; /* buckx_voltage in uV */
 	unsigned int buck3_voltage[8];

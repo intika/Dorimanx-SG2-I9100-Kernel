@@ -1,7 +1,7 @@
 /*
  * max77686.h - Voltage regulator driver for the Maxim 77686
  *
- *  Copyright (C) 2011 Samsung Electrnoics
+ *  Copyright (C) 2012 Samsung Electrnoics
  *  Chiwoong Byun <woong.byun@samsung.com>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -23,6 +23,8 @@
 #define __LINUX_MFD_MAX77686_PRIV_H
 
 #include <linux/i2c.h>
+#include <linux/regmap.h>
+#include <linux/module.h>
 
 #define MAX77686_REG_INVALID		(0xff)
 
@@ -182,11 +184,6 @@ enum max77686_rtc_reg {
 #define MAX77686_IRQSRC_PMIC	(0)
 #define MAX77686_IRQSRC_RTC		(1 << 0)
 
-#define MAX77686_REG_RAMP_RATE_100MV	(0x3<<6)
-#define MAX77686_REG_RAMP_RATE_55MV		(0x2<<6)
-#define MAX77686_REG_RAMP_RATE_27MV		(0x1<<6)
-#define MAX77686_REG_RAMP_RATE_13MV		(0x0<<6)
-
 enum max77686_irq_source {
 	PMIC_INT1 = 0,
 	PMIC_INT2,
@@ -222,22 +219,20 @@ struct max77686_dev {
 	struct device *dev;
 	struct i2c_client *i2c; /* 0xcc / PMIC, Battery Control, and FLASH */
 	struct i2c_client *rtc; /* slave addr 0x0c */
-	struct mutex iolock;
 
 	int type;
 
+	struct regmap *regmap;		/* regmap for mfd */
+	struct regmap *rtc_regmap;	/* regmap for rtc */
+
+	struct irq_domain *irq_domain;
+
 	int irq;
 	int irq_gpio;
-	int irq_base;
 	bool wakeup;
 	struct mutex irqlock;
 	int irq_masks_cur[MAX77686_IRQ_GROUP_NR];
 	int irq_masks_cache[MAX77686_IRQ_GROUP_NR];
-	int wtsr_smpl;
-
-#ifdef CONFIG_HIBERNATION
-	u8 reg_dump[MAX77686_REG_PMIC_END];
-#endif
 };
 
 enum max77686_types {
@@ -247,13 +242,5 @@ enum max77686_types {
 extern int max77686_irq_init(struct max77686_dev *max77686);
 extern void max77686_irq_exit(struct max77686_dev *max77686);
 extern int max77686_irq_resume(struct max77686_dev *max77686);
-
-extern int max77686_read_reg(struct i2c_client *i2c, u8 reg, u8 *dest);
-extern int max77686_bulk_read(struct i2c_client *i2c, u8 reg, int count,
-				u8 *buf);
-extern int max77686_write_reg(struct i2c_client *i2c, u8 reg, u8 value);
-extern int max77686_bulk_write(struct i2c_client *i2c, u8 reg, int count,
-				u8 *buf);
-extern int max77686_update_reg(struct i2c_client *i2c, u8 reg, u8 val, u8 mask);
 
 #endif /*  __LINUX_MFD_MAX77686_PRIV_H */
