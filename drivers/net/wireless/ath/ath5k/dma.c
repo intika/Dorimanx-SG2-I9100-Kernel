@@ -567,9 +567,18 @@ int ath5k_hw_get_isr(struct ath5k_hw *ah, enum ath5k_int *interrupt_mask)
 		if (unlikely(data & (AR5K_ISR_HIUERR)))
 			*interrupt_mask |= AR5K_INT_FATAL;
 
+<<<<<<< HEAD
 		/*Beacon Not Ready*/
 		if (unlikely(data & (AR5K_ISR_BNR)))
 			*interrupt_mask |= AR5K_INT_BNR;
+=======
+		/* Currently this is not much useful since we treat
+		 * all queues the same way if we get a TXURN (update
+		 * tx trigger level) but we might need it later on*/
+		if (pisr & AR5K_ISR_TXURN)
+			ah->ah_txq_isr_txurn |= AR5K_REG_MS(sisr2,
+						AR5K_SISR2_QCU_TXURN);
+>>>>>>> 9073e1a... Merge branch 'for-linus' of git://git.kernel.org/pub/scm/linux/kernel/git/jikos/trivial
 
 		if (unlikely(sisr2 & (AR5K_SISR2_SSERR |
 					AR5K_SISR2_DPERR |

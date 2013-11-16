@@ -4353,7 +4353,6 @@ static void __devexit hpsa_remove_one(struct pci_dev *pdev)
 	 * Smart Array controllers that pci_enable_device does not undo
 	 */
 	pci_release_regions(pdev);
-	pci_set_drvdata(pdev, NULL);
 	kfree(h);
 }
 

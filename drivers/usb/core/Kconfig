@@ -60,18 +60,14 @@ config USB_DEVICE_CLASS
 	bool "USB device class-devices (DEPRECATED)"
 	depends on USB
 	default y
-	---help---
-	  Userspace access to USB devices is granted by device-nodes exported
-	  directly from the usbdev in sysfs. Old versions of the driver
-	  core and udev needed additional class devices to export device nodes.
-
-	  These additional devices are difficult to handle in userspace, if
-	  information about USB interfaces must be available. One device
-	  contains the device node, the other device contains the interface
-	  data. Both devices are at the same level in sysfs (siblings) and one
-	  can't access the other. The device node created directly by the
-	  usb device is the parent device of the interface and therefore
-	  easily accessible from the interface event.
+	help
+	  Say N here if you don't want USB power session persistence
+	  enabled by default.  If you say N it will make suspended USB
+	  devices that lose power get reenumerated as if they had been
+	  unplugged, causing any mounted filesystems to be lost.  The
+	  persist feature can still be enabled for individual devices
+	  through the power/persist sysfs node. See
+	  Documentation/usb/persist.txt for more info.
 
 	  This option provides backward compatibility for libusb device
 	  nodes (lsusb) when usbfs is not used, and the following udev rule
