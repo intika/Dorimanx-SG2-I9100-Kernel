@@ -88,12 +88,6 @@ MDNIE_STORE(tune_natural_ui);
 MDNIE_STORE(tune_natural_video);
 MDNIE_STORE(tune_natural_vt);
 MDNIE_STORE(tune_camera);
-MDNIE_STORE(tune_camera_outdoor);
-MDNIE_STORE(tune_cold);
-MDNIE_STORE(tune_cold_outdoor);
-MDNIE_STORE(tune_normal_outdoor);
-MDNIE_STORE(tune_warm);
-MDNIE_STORE(tune_warm_outdoor);
 
 #define MDNIE_ATTR(name) &dev_attr_##name.attr,
 
@@ -115,12 +109,6 @@ MDNIE_ATTR(tune_natural_ui)
 MDNIE_ATTR(tune_natural_video)
 MDNIE_ATTR(tune_natural_vt)
 MDNIE_ATTR(tune_camera)
-MDNIE_ATTR(tune_camera_outdoor)
-MDNIE_ATTR(tune_cold)
-MDNIE_ATTR(tune_cold_outdoor)
-MDNIE_ATTR(tune_normal_outdoor)
-MDNIE_ATTR(tune_warm)
-MDNIE_ATTR(tune_warm_outdoor)
 	NULL
 };
 
