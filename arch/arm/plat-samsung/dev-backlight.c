@@ -59,12 +59,24 @@ static void samsung_bl_exit(struct device *dev)
  * for their specific boards
  */
 
+<<<<<<< HEAD
 static struct platform_pwm_backlight_data samsung_dfl_bl_data = {
 	.max_brightness = 255,
 	.dft_brightness = 255,
 	.pwm_period_ns  = 78770,
 	.init           = samsung_bl_init,
 	.exit           = samsung_bl_exit,
+=======
+static struct samsung_bl_drvdata samsung_dfl_bl_data __initdata = {
+	.plat_data = {
+		.max_brightness = 255,
+		.dft_brightness = 255,
+		.pwm_period_ns  = 78770,
+		.enable_gpio    = -1,
+		.init           = samsung_bl_init,
+		.exit           = samsung_bl_exit,
+	},
+>>>>>>> 0bde729... Merge tag 'pwm/for-3.13-rc1' of git://git.kernel.org/pub/scm/linux/kernel/git/thierry.reding/linux-pwm
 };
 
 static struct platform_device samsung_dfl_bl_device = {
@@ -110,6 +122,10 @@ void samsung_bl_set(struct samsung_bl_gpio_info *gpio_info,
 		samsung_bl_data->lth_brightness = bl_data->lth_brightness;
 	if (bl_data->pwm_period_ns)
 		samsung_bl_data->pwm_period_ns = bl_data->pwm_period_ns;
+	if (bl_data->enable_gpio >= 0)
+		samsung_bl_data->enable_gpio = bl_data->enable_gpio;
+	if (bl_data->enable_gpio_flags)
+		samsung_bl_data->enable_gpio_flags = bl_data->enable_gpio_flags;
 	if (bl_data->init)
 		samsung_bl_data->init = bl_data->init;
 	if (bl_data->notify)

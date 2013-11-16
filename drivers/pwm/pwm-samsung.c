@@ -15,6 +15,11 @@
 
 #include <linux/export.h>
 #include <linux/kernel.h>
+<<<<<<< HEAD
+=======
+#include <linux/module.h>
+#include <linux/of.h>
+>>>>>>> 0bde729... Merge tag 'pwm/for-3.13-rc1' of git://git.kernel.org/pub/scm/linux/kernel/git/thierry.reding/linux-pwm
 #include <linux/platform_device.h>
 #include <linux/slab.h>
 #include <linux/err.h>
@@ -105,7 +110,34 @@ static unsigned long pwm_calc_tin(struct s3c_chip *s3c, unsigned long freq)
 	return tin_parent_rate / 16;
 }
 
+<<<<<<< HEAD
 #define NS_IN_HZ (1000000000UL)
+=======
+static void pwm_samsung_free(struct pwm_chip *chip, struct pwm_device *pwm)
+{
+	devm_kfree(chip->dev, pwm_get_chip_data(pwm));
+	pwm_set_chip_data(pwm, NULL);
+}
+
+static int pwm_samsung_enable(struct pwm_chip *chip, struct pwm_device *pwm)
+{
+	struct samsung_pwm_chip *our_chip = to_samsung_pwm_chip(chip);
+	unsigned int tcon_chan = to_tcon_channel(pwm->hwpwm);
+	unsigned long flags;
+	u32 tcon;
+
+	spin_lock_irqsave(&samsung_pwm_lock, flags);
+
+	tcon = readl(our_chip->base + REG_TCON);
+
+	tcon &= ~TCON_START(tcon_chan);
+	tcon |= TCON_MANUALUPDATE(tcon_chan);
+	writel(tcon, our_chip->base + REG_TCON);
+
+	tcon &= ~TCON_MANUALUPDATE(tcon_chan);
+	tcon |= TCON_START(tcon_chan) | TCON_AUTORELOAD(tcon_chan);
+	writel(tcon, our_chip->base + REG_TCON);
+>>>>>>> 0bde729... Merge tag 'pwm/for-3.13-rc1' of git://git.kernel.org/pub/scm/linux/kernel/git/thierry.reding/linux-pwm
 
 static int s3c_pwm_config(struct pwm_chip *chip, struct pwm_device *pwm,
 		int duty_ns, int period_ns)

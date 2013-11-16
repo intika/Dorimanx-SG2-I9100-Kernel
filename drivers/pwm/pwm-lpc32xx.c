@@ -171,7 +171,12 @@ MODULE_DEVICE_TABLE(of, lpc32xx_pwm_dt_ids);
 static struct platform_driver lpc32xx_pwm_driver = {
 	.driver = {
 		.name = "lpc32xx-pwm",
+<<<<<<< HEAD
 		.of_match_table = of_match_ptr(lpc32xx_pwm_dt_ids),
+=======
+		.owner = THIS_MODULE,
+		.of_match_table = lpc32xx_pwm_dt_ids,
+>>>>>>> 0bde729... Merge tag 'pwm/for-3.13-rc1' of git://git.kernel.org/pub/scm/linux/kernel/git/thierry.reding/linux-pwm
 	},
 	.probe = lpc32xx_pwm_probe,
 	.remove = lpc32xx_pwm_remove,
