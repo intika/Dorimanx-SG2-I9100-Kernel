@@ -151,7 +151,6 @@ struct s3cfb_global {
 	void __iomem		*regs_org;
 	void __iomem		*ielcd_regs;	/* to force upload Dump */
 	void __iomem		*dsim_regs;	/* to forcd upload Dump */
-	void			*data;
 	struct mutex		lock;
 	struct mutex		output_lock;
 	spinlock_t		slock;
@@ -430,13 +429,6 @@ extern void s3cfb_clean_outer_pagetable(unsigned long vaddr, size_t size);
 extern int s3cfb_wait_for_vsync(struct s3cfb_global *fbdev, u32 timeout);
 #endif
 
-#ifdef CONFIG_HAS_WAKELOCK
-#ifdef CONFIG_HAS_EARLYSUSPEND
-extern void s3cfb_early_suspend(struct early_suspend *h);
-extern void s3cfb_late_resume(struct early_suspend *h);
-#endif
-#endif
-
 /* LCD */
 extern void s3cfb_set_lcd_info(struct s3cfb_global *ctrl);
 
@@ -459,3 +451,4 @@ extern void lms501kf03_ldi_disable(void);
 #endif
 
 #endif /* _S3CFB_H */
+
