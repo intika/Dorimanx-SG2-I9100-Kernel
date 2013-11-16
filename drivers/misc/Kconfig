@@ -421,19 +421,6 @@ config SENSORS_AK8975
 	  If you say yes here you get support for Asahi Kasei's
 	  orientation sensor AK8975.
 
-config EP93XX_PWM
-	tristate "EP93xx PWM support"
-	depends on ARCH_EP93XX
-	help
-	  This option enables device driver support for the PWM channels
-	  on the Cirrus EP93xx processors.  The EP9307 chip only has one
-	  PWM channel all the others have two, the second channel is an
-	  alternate function of the EGPIO14 pin.  A sysfs interface is
-	  provided to control the PWM channels.
-
-	  To compile this driver as a module, choose M here: the module will
-	  be called ep93xx_pwm.
-
 config DS1682
 	tristate "Dallas DS1682 Total Elapsed Time Recorder with Alarm"
 	depends on I2C && EXPERIMENTAL
