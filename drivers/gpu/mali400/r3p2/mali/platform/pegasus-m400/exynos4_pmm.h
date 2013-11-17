@@ -22,8 +22,6 @@
 #include "mali_osk.h"
 #include <linux/platform_device.h>
 
-#define MALI_DVFS_STEPS 5
-
 /* @Enable or Disable Mali GPU Bottom Lock feature */
 #define MALI_GPU_BOTTOM_LOCK 1
 #define MALI_VOLTAGE_LOCK 1
@@ -108,10 +106,8 @@ mali_bool init_mali_dvfs_status(int step);
 void deinit_mali_dvfs_status(void);
 mali_bool mali_dvfs_handler(u32 utilization);
 int mali_dvfs_is_running(void);
-void mali_dvfs_late_resume(void);
 int get_mali_dvfs_control_status(void);
 mali_bool set_mali_dvfs_current_step(unsigned int step);
-void mali_default_step_set(int step, mali_bool boostup);
 int change_dvfs_tableset(int change_clk, int change_step);
 int mali_dvfs_bottom_lock_push(int lock_step);
 int mali_dvfs_bottom_lock_pop(void);
