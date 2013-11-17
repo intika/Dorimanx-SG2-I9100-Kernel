@@ -21,9 +21,15 @@
 #include "mali_utgard.h"
 #include "mali_osk.h"
 #include <linux/platform_device.h>
+
+#define MALI_DVFS_STEPS 5
+
 /* @Enable or Disable Mali GPU Bottom Lock feature */
 #define MALI_GPU_BOTTOM_LOCK 1
 #define MALI_VOLTAGE_LOCK 1
+
+/* @Enable or Disable the CPU frequency lock when the GPU clock is 440 Mhz */
+#define CPUFREQ_LOCK_DURING_440 0
 
 #ifdef __cplusplus
 extern "C" {
@@ -33,9 +39,9 @@ extern "C" {
  */
 typedef enum mali_power_mode_tag
 {
-	MALI_POWER_MODE_ON,
-	MALI_POWER_MODE_LIGHT_SLEEP,
-	MALI_POWER_MODE_DEEP_SLEEP,
+	MALI_POWER_MODE_ON,           /**< Power Mali on */
+	MALI_POWER_MODE_LIGHT_SLEEP,  /**< Mali has been idle for a short time, or runtime PM suspend */
+	MALI_POWER_MODE_DEEP_SLEEP,   /**< Mali has been idle for a long time, or OS suspend */
 } mali_power_mode;
 
 /** @brief Platform specific setup and initialisation of MALI
@@ -98,16 +104,20 @@ void mali_regulator_set_voltage(int min_uV, int max_uV);
 #ifdef CONFIG_MALI_DVFS
 ssize_t show_time_in_state(struct device *dev, struct device_attribute *attr, char *buf);
 ssize_t set_time_in_state(struct device *dev, struct device_attribute *attr, const char *buf, size_t count);
-#ifdef CONFIG_CPU_EXYNOS4210
-#if MALI_GPU_BOTTOM_LOCK
-int mali_dvfs_bottom_lock_push(void);
-int mali_dvfs_bottom_lock_pop(void);
-#endif
-#else
+mali_bool init_mali_dvfs_status(int step);
+void deinit_mali_dvfs_status(void);
+mali_bool mali_dvfs_handler(u32 utilization);
+int mali_dvfs_is_running(void);
+void mali_dvfs_late_resume(void);
+int get_mali_dvfs_control_status(void);
+mali_bool set_mali_dvfs_current_step(unsigned int step);
+void mali_default_step_set(int step, mali_bool boostup);
+int change_dvfs_tableset(int change_clk, int change_step);
 int mali_dvfs_bottom_lock_push(int lock_step);
 int mali_dvfs_bottom_lock_pop(void);
 #endif
-#endif
+
+int mali_dvfs_get_vol(int step);
 
 #if MALI_VOLTAGE_LOCK
 int mali_voltage_lock_push(int lock_vol);
