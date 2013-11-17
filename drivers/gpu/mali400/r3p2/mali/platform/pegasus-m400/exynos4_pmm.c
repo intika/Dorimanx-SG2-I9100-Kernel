@@ -50,7 +50,7 @@
 
 static int bMaliDvfsRun = 0;
 static _mali_osk_atomic_t bottomlock_status;
-static int bottom_lock_step = 0;
+static int bottom_lock_step;
 
 typedef struct mali_dvfs_tableTag{
 	unsigned int clock;
@@ -129,7 +129,7 @@ mali_dvfs_table mali_dvfs[MALI_DVFS_STEPS]={
 };
 
 mali_dvfs_threshold_table mali_dvfs_threshold[MALI_DVFS_STEPS]={
-	{0   , 60},
+	{0   , 40},
 	{50  , 60},
 	{50  , 85},
 	{50  , 85},
@@ -146,7 +146,7 @@ typedef struct mali_runtime_resumeTag{
 	unsigned int step;
 }mali_runtime_resume_table;
 
-mali_runtime_resume_table mali_runtime_resume = {100, 950000, 1};
+mali_runtime_resume_table mali_runtime_resume = {160, 950000, 1};
 
 #ifdef EXYNOS4_ASV_ENABLED
 #define ASV_LEVEL	12	/* ASV0, 1, 11 is reserved */
@@ -220,9 +220,6 @@ static mali_bool mali_vol_lock_flag = 0;
 #ifdef CONFIG_MALI_DVFS
 module_param(mali_dvfs_control, int, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP| S_IROTH); /* rw-rw-r-- */
 MODULE_PARM_DESC(mali_dvfs_control, "Mali Current DVFS");
-
-DEVICE_ATTR(time_in_state, S_IRUGO|S_IWUSR, show_time_in_state, set_time_in_state);
-MODULE_PARM_DESC(time_in_state, "Time-in-state of Mali DVFS");
 #endif
 
 module_param(mali_gpu_clk, int, S_IRUSR | S_IRGRP | S_IROTH); /* r--r--r-- */
@@ -243,9 +240,6 @@ mali_io_address clk_register_map = 0;
 /* DVFS */
 unsigned int mali_dvfs_utilization = 255;
 u64 mali_dvfs_time[MALI_DVFS_STEPS];
-#ifdef CONFIG_MALI_DVFS
-static void update_time_in_state(int level);
-#endif
 static void mali_dvfs_work_handler(struct work_struct *w);
 static struct workqueue_struct *mali_dvfs_wq = 0;
 extern mali_io_address clk_register_map;
@@ -622,7 +616,7 @@ static unsigned int decideNextStatus(unsigned int utilization)
 		return level;
 	}
 
-	if (mali_dvfs_control == 0 && level == maliDvfsStatus.currentStep) {
+	if (!mali_dvfs_control && level == maliDvfsStatus.currentStep) {
 		if (utilization > (int)(255 * mali_dvfs_threshold[maliDvfsStatus.currentStep].upthreshold / 100) &&
 				level < MALI_DVFS_STEPS - 1) {
 			level++;
@@ -733,7 +727,6 @@ static mali_bool mali_dvfs_status(unsigned int utilization)
 		if (nextStatus > maliDvfsStatus.currentStep) boostup = 1;
 
 		/* change mali dvfs status */
-		update_time_in_state(curStatus);
 		if (!change_mali_dvfs_status(nextStatus,boostup)) {
 			MALI_DEBUG_PRINT(1, ("error on change_mali_dvfs_status \n"));
 			return MALI_FALSE;
@@ -750,6 +743,12 @@ static mali_bool mali_dvfs_status(unsigned int utilization)
 int mali_dvfs_is_running(void)
 {
 	return bMaliDvfsRun;
+}
+
+void mali_dvfs_late_resume(void)
+{
+	/* set the init clock as low when resume */
+	set_mali_dvfs_status(0, 0);
 }
 
 static void mali_dvfs_work_handler(struct work_struct *w)
@@ -963,6 +962,7 @@ static _mali_osk_errcode_t enable_mali_clocks(void)
 		gpu_power_state = 1;
 	}
 
+	mali_runtime_resume.vol = mali_dvfs_get_vol(MALI_DVFS_STEPS + 1);
 	/* set clock rate */
 #ifdef CONFIG_MALI_DVFS
 	if (get_mali_dvfs_control_status() != 0 || mali_gpu_clk >= mali_runtime_resume.clk) {
@@ -1057,11 +1057,6 @@ _mali_osk_errcode_t mali_platform_init(struct device *dev)
 	atomic_set(&clk_active, 0);
 
 #ifdef CONFIG_MALI_DVFS
-	/* Create sysfs for time-in-state */
-	if (device_create_file(dev, &dev_attr_time_in_state)) {
-		dev_err(dev, "Couldn't create sysfs file [time_in_state]\n");
-	}
-
 	if (!clk_register_map) clk_register_map = _mali_osk_mem_mapioregion( CLK_DIV_STAT_G3D, 0x20, CLK_DESC );
 	if (!init_mali_dvfs_status(MALI_DVFS_DEFAULT_STEP))
 		MALI_DEBUG_PRINT(1, ("mali_platform_init failed\n"));
@@ -1149,6 +1144,14 @@ int change_dvfs_tableset(int change_clk, int change_step)
 	}
 
 	return mali_dvfs[change_step].clock;
+}
+
+void mali_default_step_set(int step, mali_bool boostup)
+{
+	mali_clk_set_rate(mali_dvfs[step].clock, mali_dvfs[step].freq);
+
+	if (maliDvfsStatus.currentStep == 1)
+		set_mali_dvfs_status(step, boostup);
 }
 
 int mali_dvfs_bottom_lock_push(int lock_step)
@@ -1247,55 +1250,5 @@ int mali_vol_get_from_table(int vol)
 	}
 	MALI_PRINT(("Failed to get voltage from mali_dvfs table, maximum voltage is %d uV\n", mali_dvfs[MALI_DVFS_STEPS-1].vol));
 	return 0;
-}
-#endif
-
-#ifdef CONFIG_MALI_DVFS
-static void update_time_in_state(int level)
-{
-	u64 current_time;
-	static u64 prev_time = 0;
-
-	if (prev_time == 0)
-		prev_time=get_jiffies_64();
-
-	current_time = get_jiffies_64();
-	mali_dvfs_time[level] += current_time-prev_time;
-	prev_time = current_time;
-}
-
-ssize_t show_time_in_state(struct device *dev, struct device_attribute *attr, char *buf)
-{
-	ssize_t ret = 0;
-	int i;
-
-	update_time_in_state(maliDvfsStatus.currentStep);
-
-	for (i = 0; i < MALI_DVFS_STEPS; i++) {
-		ret += snprintf(buf+ret, PAGE_SIZE-ret, "%d %llu\n",
-				mali_dvfs[i].clock,
-				mali_dvfs_time[i]);
-	}
-
-	if (ret < PAGE_SIZE - 1) {
-		ret += snprintf(buf+ret, PAGE_SIZE-ret, "\n");
-	} else {
-		buf[PAGE_SIZE-2] = '\n';
-		buf[PAGE_SIZE-1] = '\0';
-		ret = PAGE_SIZE-1;
-	}
-
-	return ret;
-}
-
-ssize_t set_time_in_state(struct device *dev, struct device_attribute *attr, const char *buf, size_t count)
-{
-	int i;
-
-	for (i = 0; i < MALI_DVFS_STEPS; i++) {
-		mali_dvfs_time[i] = 0;
-	}
-
-	return count;
 }
 #endif
