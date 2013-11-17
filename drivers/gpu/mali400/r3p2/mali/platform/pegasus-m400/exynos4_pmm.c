@@ -79,11 +79,11 @@ typedef struct mali_dvfs_stepTag{
 }mali_dvfs_step;
 
 mali_dvfs_step step[MALI_DVFS_STEPS]={
-	/*step 0 clk*/ {108,   950000},
+	/*step 0 clk*/ {100,   950000},
 	/*step 1 clk*/ {160,   950000},
 	/*step 2 clk*/ {200,  1000000},
-	/*step 3 clk*/ {267,  1050000},
-	/*step 4 clk*/ {267,  1050000}
+	/*step 3 clk*/ {266,  1050000},
+	/*step 4 clk*/ {266,  1050000}
 };
 
 mali_dvfs_staycount_table mali_dvfs_staycount[MALI_DVFS_STEPS]={
@@ -94,14 +94,7 @@ mali_dvfs_staycount_table mali_dvfs_staycount[MALI_DVFS_STEPS]={
 	/*step 4*/{0}
 };
 
-/* dvfs information */
-// L0 = 533Mhz, 1.075V
-// L1 = 440Mhz, 1.025V
-// L2 = 350Mhz, 0.95V
-// L3 = 266Mhz, 0.90V
-// L4 = 160Mhz, 0.875V
-
-int step0_clk = 108;
+int step0_clk = 100;
 int step0_vol = 950000;
 int step1_clk = 160;
 int step1_vol = 950000;
@@ -111,28 +104,28 @@ int step2_clk = 200;
 int step2_vol = 1000000;
 int step1_up = 60;
 int step2_down = 50;
-int step3_clk = 267;
+int step3_clk = 266;
 int step3_vol = 1050000;
 int step2_up = 85;
 int step3_down = 50;
-int step4_clk = 267;
+int step4_clk = 266;
 int step4_vol = 1050000;
 int step3_up = 85;
 int step4_down = 70;
 
 mali_dvfs_table mali_dvfs_all[MAX_MALI_DVFS_STEPS]={
-	{108   ,1000000   ,  950000},
+	{100   ,1000000   ,  950000},
 	{160   ,1000000   ,  950000},
 	{200   ,1000000   , 1000000},
-	{267   ,1000000   , 1050000},
-	{267   ,1000000   , 1050000} };
+	{266   ,1000000   , 1050000},
+	{266   ,1000000   , 1050000} };
 
 mali_dvfs_table mali_dvfs[MALI_DVFS_STEPS]={
-	{108  ,1000000    , 950000},
+	{100  ,1000000    , 950000},
 	{160  ,1000000    , 950000},
 	{200  ,1000000    ,1000000},
-	{267  ,1000000    ,1050000},
-	{267  ,1000000    ,1050000}
+	{266  ,1000000    ,1050000},
+	{266  ,1000000    ,1050000}
 };
 
 mali_dvfs_threshold_table mali_dvfs_threshold[MALI_DVFS_STEPS]={
@@ -156,14 +149,14 @@ typedef struct mali_runtime_resumeTag{
 mali_runtime_resume_table mali_runtime_resume = {100, 950000, 1};
 
 #ifdef EXYNOS4_ASV_ENABLED
-#define ASV_LEVEL     12	/* ASV0, 1, 11 is reserved */
-#define ASV_LEVEL_PRIME     13	/* ASV0, 1, 12 is reserved */
+#define ASV_LEVEL	12	/* ASV0, 1, 11 is reserved */
+#define ASV_LEVEL_PRIME	13	/* ASV0, 1, 12 is reserved */
 #define ASV_LEVEL_PD	13
 #define ASV_8_LEVEL	8
 #define ASV_5_LEVEL	5
 
 static unsigned int asv_3d_volt_5_table[ASV_5_LEVEL][MALI_DVFS_STEPS] = {
-	/* L4(108MHz), L3(160MHz), L2(266MHz), L1(330MHz) */
+	/* L4(100MHz), L3(160MHz), L2(266MHz), L1(330MHz) */
 	{ 950000, 1000000, 1100000, 1150000, 1200000},	/* S */
 	{ 950000, 1000000, 1100000, 1150000, 1200000},	/* A */
 	{ 900000,  950000, 1000000, 1100000, 1200000},	/* B */
@@ -172,7 +165,7 @@ static unsigned int asv_3d_volt_5_table[ASV_5_LEVEL][MALI_DVFS_STEPS] = {
 };
 
 static unsigned int asv_3d_volt_8_table[ASV_8_LEVEL][MALI_DVFS_STEPS] = {
-	/* L4(108MHz), L3(160MHz), L2(266MHz)), L1(330MHz) */
+	/* L4(100MHz), L3(160MHz), L2(266MHz)), L1(330MHz) */
 	{ 950000, 1000000, 1100000, 1150000, 1200000},	/* SS */
 	{ 950000, 1000000, 1100000, 1150000, 1200000},	/* A1 */
 	{ 950000, 1000000, 1100000, 1150000, 1200000},	/* A2 */
@@ -192,18 +185,18 @@ static unsigned int asv_3d_volt_8_table[ASV_8_LEVEL][MALI_DVFS_STEPS] = {
 
 #define MPLLCLK_NAME		"mout_mpll"
 #define GPUMOUT0CLK_NAME	"mout_g3d0"
-#define GPUCLK_NAME			"sclk_g3d"
+#define GPUCLK_NAME		"sclk_g3d"
 #define CLK_DIV_STAT_G3D	0x1003C62C
-#define CLK_DESC			"clk-divider-status"
+#define CLK_DESC		"clk-divider-status"
 
 static struct clk *ext_xtal_clock	= NULL;
 static struct clk *vpll_src_clock	= NULL;
-static struct clk *fout_vpll_clock   = NULL;
-static struct clk *sclk_vpll_clock   = NULL;
+static struct clk *fout_vpll_clock	= NULL;
+static struct clk *sclk_vpll_clock	= NULL;
 
 static struct clk *mpll_clock		= NULL;
-static struct clk *mali_parent_clock = NULL;
-static struct clk  *mali_mout0_clock = NULL;
+static struct clk *mali_parent_clock	= NULL;
+static struct clk  *mali_mout0_clock	= NULL;
 static struct clk *mali_clock		= NULL;
 
 /* Orion */
