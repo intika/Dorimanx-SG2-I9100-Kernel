@@ -413,5 +413,9 @@ module_platform_driver(xwdt_driver);
 
 MODULE_AUTHOR("Alejandro Cabrera <aldaya@gmail.com>");
 MODULE_DESCRIPTION("Xilinx Watchdog driver");
+<<<<<<< HEAD
 MODULE_LICENSE("GPL");
 MODULE_ALIAS_MISCDEV(WATCHDOG_MINOR);
+=======
+MODULE_LICENSE("GPL v2");
+>>>>>>> 27b5c3f... Merge git://www.linux-watchdog.org/linux-watchdog
