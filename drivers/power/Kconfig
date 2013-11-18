@@ -285,6 +285,12 @@ config BATTERY_MAX17042_FUELGAUGE_U1
 	  multi-function devices that include fuel gauages that are compatible
 	  with MAX17042.
 
+config CHARGER_BQ24735
+	tristate "TI BQ24735 battery charger support"
+	depends on I2C && GPIOLIB
+	help
+	  Say Y to enable support for the TI BQ24735 battery charger.
+
 config BATTERY_MAX17042_FUELGAUGE_PX
 	tristate "Maxim MAX17042/8997/8966 Fuel Gauge for Samsung Galaxy Tab ICS upgrade"
 	depends on I2C
