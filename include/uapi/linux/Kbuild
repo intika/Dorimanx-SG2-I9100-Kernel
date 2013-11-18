@@ -24,7 +24,7 @@ header-y += wimax/
 genhdr-y += version.h
 
 ifneq ($(wildcard $(srctree)/arch/$(SRCARCH)/include/uapi/asm/a.out.h \
-      $(srctree)/arch/$(SRCARCH)/include/asm/a.out.h),)
+		  $(srctree)/arch/$(SRCARCH)/include/asm/a.out.h),)
 header-y += a.out.h
 endif
 
@@ -68,6 +68,7 @@ header-y += blkpg.h
 header-y += blktrace_api.h
 header-y += bpqether.h
 header-y += bsg.h
+header-y += btrfs.h
 header-y += can.h
 header-y += capability.h
 header-y += capi.h
@@ -100,10 +101,10 @@ header-y += dn.h
 header-y += dqblk_xfs.h
 header-y += edd.h
 header-y += efs_fs_sb.h
-header-y += elfcore.h
 header-y += elf-em.h
 header-y += elf-fdpic.h
 header-y += elf.h
+header-y += elfcore.h
 header-y += errno.h
 header-y += errqueue.h
 header-y += ethtool.h
@@ -168,8 +169,8 @@ header-y += igmp.h
 header-y += in_route.h
 header-y += inotify.h
 header-y += ioctl.h
-header-y += ip6_tunnel.h
 header-y += ip.h
+header-y += ip6_tunnel.h
 header-y += ip_vs.h
 header-y += ipc.h
 header-y += ipmi_msgdefs.h
@@ -188,22 +189,25 @@ header-y += jffs2.h
 header-y += joystick.h
 header-y += kd.h
 header-y += kdev_t.h
+header-y += kernel-page-flags.h
+header-y += kernel.h
 header-y += kernelcapi.h
 header-y += keyboard.h
 header-y += keyctl.h
 
 ifneq ($(wildcard $(srctree)/arch/$(SRCARCH)/include/uapi/asm/kvm.h \
-      $(srctree)/arch/$(SRCARCH)/include/asm/kvm.h),)
+		  $(srctree)/arch/$(SRCARCH)/include/asm/kvm.h),)
 header-y += kvm.h
 endif
 
 
 ifneq ($(wildcard $(srctree)/arch/$(SRCARCH)/include/uapi/asm/kvm_para.h \
-      $(srctree)/arch/$(SRCARCH)/include/asm/kvm_para.h),)
+		  $(srctree)/arch/$(SRCARCH)/include/asm/kvm_para.h),)
 header-y += kvm_para.h
 endif
 
 header-y += limits.h
+header-y += loop.h
 header-y += lp.h
 header-y += magic.h
 header-y += major.h
@@ -244,16 +248,20 @@ header-y += phantom.h
 header-y += pkt_cls.h
 header-y += pkt_sched.h
 header-y += pktcdvd.h
+header-y += poll.h
 header-y += posix_types.h
 header-y += ppdev.h
 header-y += pps.h
 header-y += prctl.h
 header-y += ptp_clock.h
+header-y += ptrace.h
 header-y += qnx4_fs.h
 header-y += qnxtypes.h
 header-y += radeonfb.h
+header-y += random.h
 header-y += raw.h
 header-y += rds.h
+header-y += reboot.h
 header-y += reiserfs_fs.h
 header-y += reiserfs_xattr.h
 header-y += resource.h
@@ -261,10 +269,13 @@ header-y += romfs_fs.h
 header-y += rose.h
 header-y += route.h
 header-y += scc.h
+header-y += sched.h
 header-y += sdla.h
+header-y += seccomp.h
 header-y += securebits.h
 header-y += selinux_netlink.h
 header-y += serial_reg.h
+header-y += signal.h
 header-y += signalfd.h
 header-y += snmp.h
 header-y += sockios.h
@@ -281,6 +292,7 @@ header-y += sysinfo.h
 header-y += taskstats.h
 header-y += telephony.h
 header-y += termios.h
+header-y += time.h
 header-y += times.h
 header-y += tiocl.h
 header-y += tipc.h
@@ -308,6 +320,7 @@ header-y += virtio_net.h
 header-y += virtio_pci.h
 header-y += virtio_rng.h
 header-y += vt.h
+header-y += wait.h
 header-y += wimax.h
 header-y += wireless.h
 header-y += x25.h
