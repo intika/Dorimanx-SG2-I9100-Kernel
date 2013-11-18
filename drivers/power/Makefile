@@ -55,4 +55,4 @@ obj-$(CONFIG_SMB136_CHARGER)	+= smb136_charger.o
 obj-$(CONFIG_SMB136_CHARGER_Q1)	+= smb136_charger_q1.o
 obj-$(CONFIG_SMB328_CHARGER)	+= smb328_charger.o
 obj-$(CONFIG_SMB347_CHARGER)	+= smb347_charger.o
-
+obj-$(CONFIG_CHARGER_BQ24735)	+= bq24735-charger.o

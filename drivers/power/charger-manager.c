@@ -1160,7 +1160,232 @@ static int charger_extcon_init(struct charger_manager *cm,
 	return ret;
 }
 
+<<<<<<< HEAD
 #endif	/* CONFIG_EXTCON */
+=======
+/**
+ * charger_manager_register_extcon - Register extcon device to recevie state
+ *				     of charger cable.
+ * @cm: the Charger Manager representing the battery.
+ *
+ * This function support EXTCON(External Connector) subsystem to detect the
+ * state of charger cables for enabling or disabling charger(regulator) and
+ * select the charger cable for charging among a number of external cable
+ * according to policy of H/W board.
+ */
+static int charger_manager_register_extcon(struct charger_manager *cm)
+{
+	struct charger_desc *desc = cm->desc;
+	struct charger_regulator *charger;
+	int ret = 0;
+	int i;
+	int j;
+
+	for (i = 0; i < desc->num_charger_regulators; i++) {
+		charger = &desc->charger_regulators[i];
+
+		charger->consumer = regulator_get(cm->dev,
+					charger->regulator_name);
+		if (IS_ERR(charger->consumer)) {
+			dev_err(cm->dev, "Cannot find charger(%s)\n",
+				charger->regulator_name);
+			return PTR_ERR(charger->consumer);
+		}
+		charger->cm = cm;
+
+		for (j = 0; j < charger->num_cables; j++) {
+			struct charger_cable *cable = &charger->cables[j];
+
+			ret = charger_extcon_init(cm, cable);
+			if (ret < 0) {
+				dev_err(cm->dev, "Cannot initialize charger(%s)\n",
+					charger->regulator_name);
+				goto err;
+			}
+			cable->charger = charger;
+			cable->cm = cm;
+		}
+	}
+
+err:
+	return ret;
+}
+
+/* help function of sysfs node to control charger(regulator) */
+static ssize_t charger_name_show(struct device *dev,
+				struct device_attribute *attr, char *buf)
+{
+	struct charger_regulator *charger
+		= container_of(attr, struct charger_regulator, attr_name);
+
+	return sprintf(buf, "%s\n", charger->regulator_name);
+}
+
+static ssize_t charger_state_show(struct device *dev,
+				struct device_attribute *attr, char *buf)
+{
+	struct charger_regulator *charger
+		= container_of(attr, struct charger_regulator, attr_state);
+	int state = 0;
+
+	if (!charger->externally_control)
+		state = regulator_is_enabled(charger->consumer);
+
+	return sprintf(buf, "%s\n", state ? "enabled" : "disabled");
+}
+
+static ssize_t charger_externally_control_show(struct device *dev,
+				struct device_attribute *attr, char *buf)
+{
+	struct charger_regulator *charger = container_of(attr,
+			struct charger_regulator, attr_externally_control);
+
+	return sprintf(buf, "%d\n", charger->externally_control);
+}
+
+static ssize_t charger_externally_control_store(struct device *dev,
+				struct device_attribute *attr, const char *buf,
+				size_t count)
+{
+	struct charger_regulator *charger
+		= container_of(attr, struct charger_regulator,
+					attr_externally_control);
+	struct charger_manager *cm = charger->cm;
+	struct charger_desc *desc = cm->desc;
+	int i;
+	int ret;
+	int externally_control;
+	int chargers_externally_control = 1;
+
+	ret = sscanf(buf, "%d", &externally_control);
+	if (ret == 0) {
+		ret = -EINVAL;
+		return ret;
+	}
+
+	if (!externally_control) {
+		charger->externally_control = 0;
+		return count;
+	}
+
+	for (i = 0; i < desc->num_charger_regulators; i++) {
+		if (&desc->charger_regulators[i] != charger &&
+			!desc->charger_regulators[i].externally_control) {
+			/*
+			 * At least, one charger is controlled by
+			 * charger-manager
+			 */
+			chargers_externally_control = 0;
+			break;
+		}
+	}
+
+	if (!chargers_externally_control) {
+		if (cm->charger_enabled) {
+			try_charger_enable(charger->cm, false);
+			charger->externally_control = externally_control;
+			try_charger_enable(charger->cm, true);
+		} else {
+			charger->externally_control = externally_control;
+		}
+	} else {
+		dev_warn(cm->dev,
+			 "'%s' regulator should be controlled in charger-manager because charger-manager must need at least one charger for charging\n",
+			 charger->regulator_name);
+	}
+
+	return count;
+}
+
+/**
+ * charger_manager_register_sysfs - Register sysfs entry for each charger
+ * @cm: the Charger Manager representing the battery.
+ *
+ * This function add sysfs entry for charger(regulator) to control charger from
+ * user-space. If some development board use one more chargers for charging
+ * but only need one charger on specific case which is dependent on user
+ * scenario or hardware restrictions, the user enter 1 or 0(zero) to '/sys/
+ * class/power_supply/battery/charger.[index]/externally_control'. For example,
+ * if user enter 1 to 'sys/class/power_supply/battery/charger.[index]/
+ * externally_control, this charger isn't controlled from charger-manager and
+ * always stay off state of regulator.
+ */
+static int charger_manager_register_sysfs(struct charger_manager *cm)
+{
+	struct charger_desc *desc = cm->desc;
+	struct charger_regulator *charger;
+	int chargers_externally_control = 1;
+	char buf[11];
+	char *str;
+	int ret = 0;
+	int i;
+
+	/* Create sysfs entry to control charger(regulator) */
+	for (i = 0; i < desc->num_charger_regulators; i++) {
+		charger = &desc->charger_regulators[i];
+
+		snprintf(buf, 10, "charger.%d", i);
+		str = devm_kzalloc(cm->dev,
+				sizeof(char) * (strlen(buf) + 1), GFP_KERNEL);
+		if (!str) {
+			ret = -ENOMEM;
+			goto err;
+		}
+		strcpy(str, buf);
+
+		charger->attrs[0] = &charger->attr_name.attr;
+		charger->attrs[1] = &charger->attr_state.attr;
+		charger->attrs[2] = &charger->attr_externally_control.attr;
+		charger->attrs[3] = NULL;
+		charger->attr_g.name = str;
+		charger->attr_g.attrs = charger->attrs;
+
+		sysfs_attr_init(&charger->attr_name.attr);
+		charger->attr_name.attr.name = "name";
+		charger->attr_name.attr.mode = 0444;
+		charger->attr_name.show = charger_name_show;
+
+		sysfs_attr_init(&charger->attr_state.attr);
+		charger->attr_state.attr.name = "state";
+		charger->attr_state.attr.mode = 0444;
+		charger->attr_state.show = charger_state_show;
+
+		sysfs_attr_init(&charger->attr_externally_control.attr);
+		charger->attr_externally_control.attr.name
+				= "externally_control";
+		charger->attr_externally_control.attr.mode = 0644;
+		charger->attr_externally_control.show
+				= charger_externally_control_show;
+		charger->attr_externally_control.store
+				= charger_externally_control_store;
+
+		if (!desc->charger_regulators[i].externally_control ||
+				!chargers_externally_control)
+			chargers_externally_control = 0;
+
+		dev_info(cm->dev, "'%s' regulator's externally_control is %d\n",
+			 charger->regulator_name, charger->externally_control);
+
+		ret = sysfs_create_group(&cm->charger_psy.dev->kobj,
+					&charger->attr_g);
+		if (ret < 0) {
+			dev_err(cm->dev, "Cannot create sysfs entry of %s regulator\n",
+				charger->regulator_name);
+			ret = -EINVAL;
+			goto err;
+		}
+	}
+
+	if (chargers_externally_control) {
+		dev_err(cm->dev, "Cannot register regulator because charger-manager must need at least one charger for charging battery\n");
+		ret = -EINVAL;
+		goto err;
+	}
+
+err:
+	return ret;
+}
+>>>>>>> a709bd5... Merge tag 'for-v3.13' of git://git.infradead.org/battery-2.6
 
 static int charger_manager_probe(struct platform_device *pdev)
 {
@@ -1173,14 +1398,21 @@ static int charger_manager_probe(struct platform_device *pdev)
 		rtc_dev = rtc_class_open(g_desc->rtc);
 		if (IS_ERR_OR_NULL(rtc_dev)) {
 			rtc_dev = NULL;
+<<<<<<< HEAD
 			dev_err(&pdev->dev, "Cannot get RTC %s.\n",
 				g_desc->rtc);
 			ret = -ENODEV;
 			goto err_alloc;
+=======
+			dev_err(&pdev->dev, "Cannot get RTC %s\n",
+				g_desc->rtc_name);
+			return -ENODEV;
+>>>>>>> a709bd5... Merge tag 'for-v3.13' of git://git.infradead.org/battery-2.6
 		}
 	}
 
 	if (!desc) {
+<<<<<<< HEAD
 		dev_err(&pdev->dev, "No platform data (desc) found.\n");
 		ret = -ENODEV;
 		goto err_alloc;
@@ -1192,6 +1424,16 @@ static int charger_manager_probe(struct platform_device *pdev)
 		ret = -ENOMEM;
 		goto err_alloc;
 	}
+=======
+		dev_err(&pdev->dev, "No platform data (desc) found\n");
+		return -ENODEV;
+	}
+
+	cm = devm_kzalloc(&pdev->dev,
+			sizeof(struct charger_manager),	GFP_KERNEL);
+	if (!cm)
+		return -ENOMEM;
+>>>>>>> a709bd5... Merge tag 'for-v3.13' of git://git.infradead.org/battery-2.6
 
 	/* Basic Values. Unspecified are Null or 0 */
 	cm->dev = &pdev->dev;
@@ -1217,9 +1459,14 @@ static int charger_manager_probe(struct platform_device *pdev)
 	}
 
 	if (!desc->charger_regulators || desc->num_charger_regulators < 1) {
+<<<<<<< HEAD
 		ret = -EINVAL;
 		dev_err(&pdev->dev, "charger_regulators undefined.\n");
 		goto err_no_charger;
+=======
+		dev_err(&pdev->dev, "charger_regulators undefined\n");
+		return -EINVAL;
+>>>>>>> a709bd5... Merge tag 'for-v3.13' of git://git.infradead.org/battery-2.6
 	}
 
 	for (i = 0 ; i < desc->num_charger_regulators ; i++) {
@@ -1251,52 +1498,80 @@ static int charger_manager_probe(struct platform_device *pdev)
 	}
 
 	if (!desc->psy_charger_stat || !desc->psy_charger_stat[0]) {
+<<<<<<< HEAD
 		dev_err(&pdev->dev, "No power supply defined.\n");
 		ret = -EINVAL;
 		goto err_extcon;
+=======
+		dev_err(&pdev->dev, "No power supply defined\n");
+		return -EINVAL;
+>>>>>>> a709bd5... Merge tag 'for-v3.13' of git://git.infradead.org/battery-2.6
 	}
 
 	for (i = 0; desc->psy_charger_stat[i]; i++)
 		/* Counting index only */ ;
 
+<<<<<<< HEAD
 	cm->charger_stat = kzalloc(sizeof(struct power_supply *) * (i + 1),
 				   GFP_KERNEL);
 	if (!cm->charger_stat) {
 		ret = -ENOMEM;
 		goto err_extcon;
 	}
+=======
+	cm->charger_stat = devm_kzalloc(&pdev->dev,
+				sizeof(struct power_supply *) * i, GFP_KERNEL);
+	if (!cm->charger_stat)
+		return -ENOMEM;
+>>>>>>> a709bd5... Merge tag 'for-v3.13' of git://git.infradead.org/battery-2.6
 
 	for (i = 0; desc->psy_charger_stat[i]; i++) {
 		cm->charger_stat[i] = power_supply_get_by_name(
 					desc->psy_charger_stat[i]);
 		if (!cm->charger_stat[i]) {
+<<<<<<< HEAD
 			dev_err(&pdev->dev, "Cannot find power supply "
 					"\"%s\"\n",
 					desc->psy_charger_stat[i]);
 			ret = -ENODEV;
 			goto err_chg_stat;
+=======
+			dev_err(&pdev->dev, "Cannot find power supply \"%s\"\n",
+				desc->psy_charger_stat[i]);
+			return -ENODEV;
+>>>>>>> a709bd5... Merge tag 'for-v3.13' of git://git.infradead.org/battery-2.6
 		}
 	}
 
 	cm->fuel_gauge = power_supply_get_by_name(desc->psy_fuel_gauge);
 	if (!cm->fuel_gauge) {
 		dev_err(&pdev->dev, "Cannot find power supply \"%s\"\n",
+<<<<<<< HEAD
 				desc->psy_fuel_gauge);
 		ret = -ENODEV;
 		goto err_chg_stat;
+=======
+			desc->psy_fuel_gauge);
+		return -ENODEV;
+>>>>>>> a709bd5... Merge tag 'for-v3.13' of git://git.infradead.org/battery-2.6
 	}
 
 	if (desc->polling_interval_ms == 0 ||
 	    msecs_to_jiffies(desc->polling_interval_ms) <= CM_JIFFIES_SMALL) {
 		dev_err(&pdev->dev, "polling_interval_ms is too small\n");
-		ret = -EINVAL;
-		goto err_chg_stat;
+		return -EINVAL;
 	}
 
+<<<<<<< HEAD
 	if (!desc->is_temperature_error) {
 		dev_err(&pdev->dev, "there is no is_temperature_error\n");
 		ret = -EINVAL;
 		goto err_chg_stat;
+=======
+	if (!desc->temperature_out_of_range) {
+		dev_err(&pdev->dev, "there is no temperature_out_of_range\n");
+		return -EINVAL;
+>>>>>>> a709bd5... Merge tag 'for-v3.13' of git://git.infradead.org/battery-2.6
 	}
 
 	platform_set_drvdata(pdev, cm);
@@ -1312,8 +1587,10 @@ static int charger_manager_probe(struct platform_device *pdev)
 	cm->charger_psy.name = cm->psy_name_buf;
 
 	/* Allocate for psy properties because they may vary */
-	cm->charger_psy.properties = kzalloc(sizeof(enum power_supply_property)
+	cm->charger_psy.properties = devm_kzalloc(&pdev->dev,
+				sizeof(enum power_supply_property)
 				* (ARRAY_SIZE(default_charger_props) +
+<<<<<<< HEAD
 				NUM_CHARGER_PSY_OPTIONAL),
 				GFP_KERNEL);
 	if (!cm->charger_psy.properties) {
@@ -1321,6 +1598,12 @@ static int charger_manager_probe(struct platform_device *pdev)
 		ret = -ENOMEM;
 		goto err_chg_stat;
 	}
+=======
+				NUM_CHARGER_PSY_OPTIONAL), GFP_KERNEL);
+	if (!cm->charger_psy.properties)
+		return -ENOMEM;
+
+>>>>>>> a709bd5... Merge tag 'for-v3.13' of git://git.infradead.org/battery-2.6
 	memcpy(cm->charger_psy.properties, default_charger_props,
 		sizeof(enum power_supply_property) *
 		ARRAY_SIZE(default_charger_props));
@@ -1345,10 +1628,21 @@ static int charger_manager_probe(struct platform_device *pdev)
 				POWER_SUPPLY_PROP_TEMP_AMBIENT;
 		cm->charger_psy.num_properties++;
 	}
+<<<<<<< HEAD
 	if (desc->measure_battery_temp) {
 		cm->charger_psy.properties[cm->charger_psy.num_properties] =
 				POWER_SUPPLY_PROP_TEMP;
 		cm->charger_psy.num_properties++;
+=======
+
+	INIT_DELAYED_WORK(&cm->fullbatt_vchk_work, fullbatt_vchk);
+
+	ret = power_supply_register(NULL, &cm->charger_psy);
+	if (ret) {
+		dev_err(&pdev->dev, "Cannot register charger-manager with name \"%s\"\n",
+			cm->charger_psy.name);
+		return ret;
+>>>>>>> a709bd5... Merge tag 'for-v3.13' of git://git.infradead.org/battery-2.6
 	}
 
 	if (power_supply_register(NULL, &cm->charger_psy)) {
@@ -1370,6 +1664,7 @@ static int charger_manager_probe(struct platform_device *pdev)
 
 	return 0;
 
+<<<<<<< HEAD
 err_psy:
 	kfree(cm->charger_psy.properties);
 err_chg_stat:
@@ -1391,6 +1686,33 @@ err_no_charger_stat:
 err_no_charger:
 	kfree(cm);
 err_alloc:
+=======
+err_reg_sysfs:
+	for (i = 0; i < desc->num_charger_regulators; i++) {
+		struct charger_regulator *charger;
+
+		charger = &desc->charger_regulators[i];
+		sysfs_remove_group(&cm->charger_psy.dev->kobj,
+				&charger->attr_g);
+	}
+err_reg_extcon:
+	for (i = 0; i < desc->num_charger_regulators; i++) {
+		struct charger_regulator *charger;
+
+		charger = &desc->charger_regulators[i];
+		for (j = 0; j < charger->num_cables; j++) {
+			struct charger_cable *cable = &charger->cables[j];
+			/* Remove notifier block if only edev exists */
+			if (cable->extcon_dev.edev)
+				extcon_unregister_interest(&cable->extcon_dev);
+		}
+
+		regulator_put(desc->charger_regulators[i].consumer);
+	}
+
+	power_supply_unregister(&cm->charger_psy);
+
+>>>>>>> a709bd5... Merge tag 'for-v3.13' of git://git.infradead.org/battery-2.6
 	return ret;
 }
 
@@ -1423,10 +1745,17 @@ static int __devexit charger_manager_remove(struct platform_device *pdev)
 	for (i = 0 ; i < desc->num_charger_regulators ; i++)
 		regulator_put(desc->charger_regulators[i].consumer);
 
+<<<<<<< HEAD
 	kfree(cm->charger_psy.properties);
 	kfree(cm->charger_stat);
 
 	kfree(cm);
+=======
+	power_supply_unregister(&cm->charger_psy);
+
+	try_charger_enable(cm, false);
+
+>>>>>>> a709bd5... Merge tag 'for-v3.13' of git://git.infradead.org/battery-2.6
 	return 0;
 }
 
