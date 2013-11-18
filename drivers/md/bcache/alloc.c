@@ -369,7 +369,7 @@ long bch_bucket_alloc(struct cache *ca, unsigned watermark, bool wait)
 {
 	DEFINE_WAIT(w);
 	struct bucket *b;
-	long r;
+	long r = 0;
 
 	/* fastpath */
 	if (fifo_used(&ca->free) > ca->watermark[watermark]) {
