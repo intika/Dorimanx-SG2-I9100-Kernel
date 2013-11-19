@@ -31,12 +31,20 @@
 #include <scsi/libfc.h>
 #include "fnic_io.h"
 #include "fnic.h"
+#include "fnic_fip.h"
 #include "cq_enet_desc.h"
 #include "cq_exch_desc.h"
 
+static u8 fcoe_all_fcfs[ETH_ALEN];
+struct workqueue_struct *fnic_fip_queue;
 struct workqueue_struct *fnic_event_queue;
 
 static void fnic_set_eth_mode(struct fnic *);
+static void fnic_fcoe_send_vlan_req(struct fnic *fnic);
+static void fnic_fcoe_start_fcf_disc(struct fnic *fnic);
+static void fnic_fcoe_process_vlan_resp(struct fnic *fnic, struct sk_buff *);
+static int fnic_fcoe_vlan_check(struct fnic *fnic, u16 flag);
+static int fnic_fcoe_handle_fip_frame(struct fnic *fnic, struct sk_buff *skb);
 
 void fnic_handle_link(struct work_struct *work)
 {
@@ -69,6 +77,11 @@ void fnic_handle_link(struct work_struct *work)
 				FNIC_FCS_DBG(KERN_DEBUG, fnic->lport->host,
 					     "link down\n");
 				fcoe_ctlr_link_down(&fnic->ctlr);
+				if (fnic->config.flags & VFCF_FIP_CAPABLE) {
+					/* start FCoE VLAN discovery */
+					fnic_fcoe_send_vlan_req(fnic);
+					return;
+				}
 				FNIC_FCS_DBG(KERN_DEBUG, fnic->lport->host,
 					     "link up\n");
 				fcoe_ctlr_link_up(&fnic->ctlr);
@@ -79,6 +92,11 @@ void fnic_handle_link(struct work_struct *work)
 	} else if (fnic->link_status) {
 		/* DOWN -> UP */
 		spin_unlock_irqrestore(&fnic->fnic_lock, flags);
+		if (fnic->config.flags & VFCF_FIP_CAPABLE) {
+			/* start FCoE VLAN discovery */
+			fnic_fcoe_send_vlan_req(fnic);
+			return;
+		}
 		FNIC_FCS_DBG(KERN_DEBUG, fnic->lport->host, "link up\n");
 		fcoe_ctlr_link_up(&fnic->ctlr);
 	} else {
@@ -128,8 +146,6 @@ void fnic_handle_frame(struct work_struct *work)
 	}
 }
 
-<<<<<<< HEAD
-=======
 void fnic_fcoe_evlist_free(struct fnic *fnic)
 {
 	struct fnic_event *fevt = NULL;
@@ -572,7 +588,6 @@ void fnic_handle_fip_frame(struct work_struct *work)
 	}
 }
 
->>>>>>> 0d522ee... Merge tag 'scsi-for-linus' of git://git.kernel.org/pub/scm/linux/kernel/git/jejb/scsi
 /**
  * fnic_import_rq_eth_pkt() - handle received FCoE or FIP frame.
  * @fnic:	fnic instance.
@@ -595,8 +610,14 @@ static inline int fnic_import_rq_eth_pkt(struct fnic *fnic, struct sk_buff *skb)
 		skb_reset_mac_header(skb);
 	}
 	if (eh->h_proto == htons(ETH_P_FIP)) {
-		skb_pull(skb, sizeof(*eh));
-		fcoe_ctlr_recv(&fnic->ctlr, skb);
+		if (!(fnic->config.flags & VFCF_FIP_CAPABLE)) {
+			printk(KERN_ERR "Dropped FIP frame, as firmware "
+					"uses non-FIP mode, Enable FIP "
+					"using UCSM\n");
+			goto drop;
+		}
+		skb_queue_tail(&fnic->fip_frame_queue, skb);
+		queue_work(fnic_fip_queue, &fnic->fip_frame_work);
 		return 1;		/* let caller know packet was used */
 	}
 	if (eh->h_proto != htons(ETH_P_FCOE))
@@ -943,7 +964,8 @@ void fnic_eth_send(struct fcoe_ctlr *fip, struct sk_buff *skb)
 	}
 
 	fnic_queue_wq_eth_desc(wq, skb, pa, skb->len,
-			       fnic->vlan_hw_insert, fnic->vlan_id, 1);
+			       0 /* hw inserts cos value */,
+			       fnic->vlan_id, 1);
 	spin_unlock_irqrestore(&fnic->wq_lock[0], flags);
 }
 
@@ -1011,7 +1033,8 @@ static int fnic_send_frame(struct fnic *fnic, struct fc_frame *fp)
 	}
 
 	fnic_queue_wq_desc(wq, skb, pa, tot_len, fr_eof(fp),
-			   fnic->vlan_hw_insert, fnic->vlan_id, 1, 1, 1);
+			   0 /* hw inserts cos value */,
+			   fnic->vlan_id, 1, 1, 1);
 fnic_send_frame_end:
 	spin_unlock_irqrestore(&fnic->wq_lock[0], flags);
 
@@ -1166,8 +1189,6 @@ void fnic_free_wq_buf(struct vnic_wq *wq, struct vnic_wq_buf *buf)
 	dev_kfree_skb(fp_skb(fp));
 	buf->os_buf = NULL;
 }
-<<<<<<< HEAD
-=======
 
 void fnic_fcoe_reset_vlans(struct fnic *fnic)
 {
@@ -1271,4 +1292,3 @@ void fnic_handle_fip_timer(struct fnic *fnic)
 		break;
 	}
 }
->>>>>>> 0d522ee... Merge tag 'scsi-for-linus' of git://git.kernel.org/pub/scm/linux/kernel/git/jejb/scsi

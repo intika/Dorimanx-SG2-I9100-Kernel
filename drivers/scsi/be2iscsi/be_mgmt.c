@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2005 - 2011 Emulex
+ * Copyright (C) 2005 - 2013 Emulex
  * All rights reserved.
  *
  * This program is free software; you can redistribute it and/or
@@ -17,18 +17,202 @@
  * Costa Mesa, CA 92626
  */
 
+#include <linux/bsg-lib.h>
+#include <scsi/scsi_transport_iscsi.h>
+#include <scsi/scsi_bsg_iscsi.h>
 #include "be_mgmt.h"
 #include "be_iscsi.h"
-#include <scsi/scsi_transport_iscsi.h>
+#include "be_main.h"
 
-unsigned int beiscsi_get_boot_target(struct beiscsi_hba *phba)
+/* UE Status Low CSR */
+static const char * const desc_ue_status_low[] = {
+	"CEV",
+	"CTX",
+	"DBUF",
+	"ERX",
+	"Host",
+	"MPU",
+	"NDMA",
+	"PTC ",
+	"RDMA ",
+	"RXF ",
+	"RXIPS ",
+	"RXULP0 ",
+	"RXULP1 ",
+	"RXULP2 ",
+	"TIM ",
+	"TPOST ",
+	"TPRE ",
+	"TXIPS ",
+	"TXULP0 ",
+	"TXULP1 ",
+	"UC ",
+	"WDMA ",
+	"TXULP2 ",
+	"HOST1 ",
+	"P0_OB_LINK ",
+	"P1_OB_LINK ",
+	"HOST_GPIO ",
+	"MBOX ",
+	"AXGMAC0",
+	"AXGMAC1",
+	"JTAG",
+	"MPU_INTPEND"
+};
+
+/* UE Status High CSR */
+static const char * const desc_ue_status_hi[] = {
+	"LPCMEMHOST",
+	"MGMT_MAC",
+	"PCS0ONLINE",
+	"MPU_IRAM",
+	"PCS1ONLINE",
+	"PCTL0",
+	"PCTL1",
+	"PMEM",
+	"RR",
+	"TXPB",
+	"RXPP",
+	"XAUI",
+	"TXP",
+	"ARM",
+	"IPC",
+	"HOST2",
+	"HOST3",
+	"HOST4",
+	"HOST5",
+	"HOST6",
+	"HOST7",
+	"HOST8",
+	"HOST9",
+	"NETC",
+	"Unknown",
+	"Unknown",
+	"Unknown",
+	"Unknown",
+	"Unknown",
+	"Unknown",
+	"Unknown",
+	"Unknown"
+};
+
+/*
+ * beiscsi_ue_detec()- Detect Unrecoverable Error on adapter
+ * @phba: Driver priv structure
+ *
+ * Read registers linked to UE and check for the UE status
+ **/
+void beiscsi_ue_detect(struct beiscsi_hba *phba)
+{
+	uint32_t ue_hi = 0, ue_lo = 0;
+	uint32_t ue_mask_hi = 0, ue_mask_lo = 0;
+	uint8_t i = 0;
+
+	if (phba->ue_detected)
+		return;
+
+	pci_read_config_dword(phba->pcidev,
+			      PCICFG_UE_STATUS_LOW, &ue_lo);
+	pci_read_config_dword(phba->pcidev,
+			      PCICFG_UE_STATUS_MASK_LOW,
+			      &ue_mask_lo);
+	pci_read_config_dword(phba->pcidev,
+			      PCICFG_UE_STATUS_HIGH,
+			      &ue_hi);
+	pci_read_config_dword(phba->pcidev,
+			      PCICFG_UE_STATUS_MASK_HI,
+			      &ue_mask_hi);
+
+	ue_lo = (ue_lo & ~ue_mask_lo);
+	ue_hi = (ue_hi & ~ue_mask_hi);
+
+
+	if (ue_lo || ue_hi) {
+		phba->ue_detected = true;
+		beiscsi_log(phba, KERN_ERR,
+			    BEISCSI_LOG_CONFIG | BEISCSI_LOG_MBOX,
+			    "BG_%d : Error detected on the adapter\n");
+	}
+
+	if (ue_lo) {
+		for (i = 0; ue_lo; ue_lo >>= 1, i++) {
+			if (ue_lo & 1)
+				beiscsi_log(phba, KERN_ERR,
+					    BEISCSI_LOG_CONFIG,
+					    "BG_%d : UE_LOW %s bit set\n",
+					    desc_ue_status_low[i]);
+		}
+	}
+
+	if (ue_hi) {
+		for (i = 0; ue_hi; ue_hi >>= 1, i++) {
+			if (ue_hi & 1)
+				beiscsi_log(phba, KERN_ERR,
+					    BEISCSI_LOG_CONFIG,
+					    "BG_%d : UE_HIGH %s bit set\n",
+					    desc_ue_status_hi[i]);
+		}
+	}
+}
+
+/**
+ * mgmt_reopen_session()- Reopen a session based on reopen_type
+ * @phba: Device priv structure instance
+ * @reopen_type: Type of reopen_session FW should do.
+ * @sess_handle: Session Handle of the session to be re-opened
+ *
+ * return
+ *	the TAG used for MBOX Command
+ *
+ **/
+unsigned int mgmt_reopen_session(struct beiscsi_hba *phba,
+				  unsigned int reopen_type,
+				  unsigned int sess_handle)
 {
 	struct be_ctrl_info *ctrl = &phba->ctrl;
 	struct be_mcc_wrb *wrb;
-	struct be_cmd_req_get_mac_addr *req;
+	struct be_cmd_reopen_session_req *req;
 	unsigned int tag = 0;
 
-	SE_DEBUG(DBG_LVL_8, "In bescsi_get_boot_target\n");
+	beiscsi_log(phba, KERN_INFO,
+		    BEISCSI_LOG_CONFIG | BEISCSI_LOG_MBOX,
+		    "BG_%d : In bescsi_get_boot_target\n");
+
+	spin_lock(&ctrl->mbox_lock);
+	tag = alloc_mcc_tag(phba);
+	if (!tag) {
+		spin_unlock(&ctrl->mbox_lock);
+		return tag;
+	}
+
+	wrb = wrb_from_mccq(phba);
+	req = embedded_payload(wrb);
+	wrb->tag0 |= tag;
+	be_wrb_hdr_prepare(wrb, sizeof(*req), true, 0);
+	be_cmd_hdr_prepare(&req->hdr, CMD_SUBSYSTEM_ISCSI_INI,
+			   OPCODE_ISCSI_INI_DRIVER_REOPEN_ALL_SESSIONS,
+			   sizeof(struct be_cmd_reopen_session_resp));
+
+	/* set the reopen_type,sess_handle */
+	req->reopen_type = reopen_type;
+	req->session_handle = sess_handle;
+
+	be_mcc_notify(phba);
+	spin_unlock(&ctrl->mbox_lock);
+	return tag;
+}
+
+unsigned int mgmt_get_boot_target(struct beiscsi_hba *phba)
+{
+	struct be_ctrl_info *ctrl = &phba->ctrl;
+	struct be_mcc_wrb *wrb;
+	struct be_cmd_get_boot_target_req *req;
+	unsigned int tag = 0;
+
+	beiscsi_log(phba, KERN_INFO,
+		    BEISCSI_LOG_CONFIG | BEISCSI_LOG_MBOX,
+		    "BG_%d : In bescsi_get_boot_target\n");
+
 	spin_lock(&ctrl->mbox_lock);
 	tag = alloc_mcc_tag(phba);
 	if (!tag) {
@@ -42,25 +226,28 @@ unsigned int beiscsi_get_boot_target(struct beiscsi_hba *phba)
 	be_wrb_hdr_prepare(wrb, sizeof(*req), true, 0);
 	be_cmd_hdr_prepare(&req->hdr, CMD_SUBSYSTEM_ISCSI_INI,
 			   OPCODE_ISCSI_INI_BOOT_GET_BOOT_TARGET,
-			   sizeof(*req));
+			   sizeof(struct be_cmd_get_boot_target_resp));
 
 	be_mcc_notify(phba);
 	spin_unlock(&ctrl->mbox_lock);
 	return tag;
 }
 
-unsigned int beiscsi_get_session_info(struct beiscsi_hba *phba,
-				  u32 boot_session_handle,
-				  struct be_dma_mem *nonemb_cmd)
+unsigned int mgmt_get_session_info(struct beiscsi_hba *phba,
+				   u32 boot_session_handle,
+				   struct be_dma_mem *nonemb_cmd)
 {
 	struct be_ctrl_info *ctrl = &phba->ctrl;
 	struct be_mcc_wrb *wrb;
 	unsigned int tag = 0;
-	struct  be_cmd_req_get_session *req;
-	struct be_cmd_resp_get_session *resp;
+	struct  be_cmd_get_session_req *req;
+	struct be_cmd_get_session_resp *resp;
 	struct be_sge *sge;
 
-	SE_DEBUG(DBG_LVL_8, "In beiscsi_get_session_info\n");
+	beiscsi_log(phba, KERN_INFO,
+		    BEISCSI_LOG_CONFIG | BEISCSI_LOG_MBOX,
+		    "BG_%d : In beiscsi_get_session_info\n");
+
 	spin_lock(&ctrl->mbox_lock);
 	tag = alloc_mcc_tag(phba);
 	if (!tag) {
@@ -142,23 +329,6 @@ int mgmt_get_fw_config(struct be_ctrl_info *ctrl,
 				&phba->fw_config.ulp_supported);
 
 		phba->fw_config.phys_port = pfw_cfg->phys_port;
-<<<<<<< HEAD
-		phba->fw_config.iscsi_icd_start =
-					pfw_cfg->ulp[0].icd_base;
-		phba->fw_config.iscsi_icd_count =
-					pfw_cfg->ulp[0].icd_count;
-		phba->fw_config.iscsi_cid_start =
-					pfw_cfg->ulp[0].sq_base;
-		phba->fw_config.iscsi_cid_count =
-					pfw_cfg->ulp[0].sq_count;
-		if (phba->fw_config.iscsi_cid_count > (BE2_MAX_SESSIONS / 2)) {
-			SE_DEBUG(DBG_LVL_8,
-				"FW reported MAX CXNS as %d\t"
-				"Max Supported = %d.\n",
-				phba->fw_config.iscsi_cid_count,
-				BE2_MAX_SESSIONS);
-			phba->fw_config.iscsi_cid_count = BE2_MAX_SESSIONS / 2;
-=======
 		for (ulp_num = 0; ulp_num < BEISCSI_ULP_COUNT; ulp_num++) {
 			if (test_bit(ulp_num, &phba->fw_config.ulp_supported)) {
 
@@ -193,7 +363,6 @@ int mgmt_get_fw_config(struct be_ctrl_info *ctrl,
 					    phba->fw_config.
 					    iscsi_icd_start[ulp_num]);
 			}
->>>>>>> 0d522ee... Merge tag 'scsi-for-linus' of git://git.kernel.org/pub/scm/linux/kernel/git/jejb/scsi
 		}
 
 		phba->fw_config.dual_ulp_aware = (pfw_cfg->function_mode &
@@ -204,14 +373,9 @@ int mgmt_get_fw_config(struct be_ctrl_info *ctrl,
 			    phba->fw_config.dual_ulp_aware);
 
 	} else {
-<<<<<<< HEAD
-		shost_printk(KERN_WARNING, phba->shost,
-			     "Failed in mgmt_get_fw_config\n");
-=======
 		beiscsi_log(phba, KERN_ERR, BEISCSI_LOG_INIT,
 			    "BG_%d : Failed in mgmt_get_fw_config\n");
 		status = -EINVAL;
->>>>>>> 0d522ee... Merge tag 'scsi-for-linus' of git://git.kernel.org/pub/scm/linux/kernel/git/jejb/scsi
 	}
 
 	spin_unlock(&ctrl->mbox_lock);
@@ -231,9 +395,9 @@ int mgmt_check_supported_fw(struct be_ctrl_info *ctrl,
 				sizeof(struct be_mgmt_controller_attributes),
 				&nonemb_cmd.dma);
 	if (nonemb_cmd.va == NULL) {
-		SE_DEBUG(DBG_LVL_1,
-			 "Failed to allocate memory for mgmt_check_supported_fw"
-			 "\n");
+		beiscsi_log(phba, KERN_ERR, BEISCSI_LOG_INIT,
+			    "BG_%d : Failed to allocate memory for "
+			    "mgmt_check_supported_fw\n");
 		return -ENOMEM;
 	}
 	nonemb_cmd.size = sizeof(struct be_mgmt_controller_attributes);
@@ -250,18 +414,25 @@ int mgmt_check_supported_fw(struct be_ctrl_info *ctrl,
 	status = be_mbox_notify(ctrl);
 	if (!status) {
 		struct be_mgmt_controller_attributes_resp *resp = nonemb_cmd.va;
-		SE_DEBUG(DBG_LVL_8, "Firmware version of CMD: %s\n",
-			resp->params.hba_attribs.flashrom_version_string);
-		SE_DEBUG(DBG_LVL_8, "Firmware version is : %s\n",
-			resp->params.hba_attribs.firmware_version_string);
-		SE_DEBUG(DBG_LVL_8,
-			"Developer Build, not performing version check...\n");
+		beiscsi_log(phba, KERN_INFO, BEISCSI_LOG_INIT,
+			    "BG_%d : Firmware Version of CMD : %s\n"
+			    "Firmware Version is : %s\n"
+			    "Developer Build, not performing version check...\n",
+			    resp->params.hba_attribs
+			    .flashrom_version_string,
+			    resp->params.hba_attribs.
+			    firmware_version_string);
+
 		phba->fw_config.iscsi_features =
 				resp->params.hba_attribs.iscsi_features;
-		SE_DEBUG(DBG_LVL_8, " phba->fw_config.iscsi_features = %d\n",
-				      phba->fw_config.iscsi_features);
+		beiscsi_log(phba, KERN_INFO, BEISCSI_LOG_INIT,
+			    "BM_%d : phba->fw_config.iscsi_features = %d\n",
+			    phba->fw_config.iscsi_features);
+		memcpy(phba->fw_ver_str, resp->params.hba_attribs.
+		       firmware_version_string, BEISCSI_VER_STRLEN);
 	} else
-		SE_DEBUG(DBG_LVL_1, " Failed in mgmt_check_supported_fw\n");
+		beiscsi_log(phba, KERN_ERR, BEISCSI_LOG_INIT,
+			    "BG_%d :  Failed in mgmt_check_supported_fw\n");
 	spin_unlock(&ctrl->mbox_lock);
 	if (nonemb_cmd.va)
 		pci_free_consistent(ctrl->pdev, nonemb_cmd.size,
@@ -270,9 +441,6 @@ int mgmt_check_supported_fw(struct be_ctrl_info *ctrl,
 	return status;
 }
 
-<<<<<<< HEAD
-int mgmt_epfw_cleanup(struct beiscsi_hba *phba, unsigned short chute)
-=======
 unsigned int mgmt_vendor_specific_fw_cmd(struct be_ctrl_info *ctrl,
 					 struct beiscsi_hba *phba,
 					 struct bsg_job *job,
@@ -350,7 +518,6 @@ unsigned int mgmt_vendor_specific_fw_cmd(struct be_ctrl_info *ctrl,
  *	Failure: Non-Zero Value
  **/
 int mgmt_epfw_cleanup(struct beiscsi_hba *phba, unsigned short ulp_num)
->>>>>>> 0d522ee... Merge tag 'scsi-for-linus' of git://git.kernel.org/pub/scm/linux/kernel/git/jejb/scsi
 {
 	struct be_ctrl_info *ctrl = &phba->ctrl;
 	struct be_mcc_wrb *wrb = wrb_from_mccq(phba);
@@ -370,8 +537,8 @@ int mgmt_epfw_cleanup(struct beiscsi_hba *phba, unsigned short ulp_num)
 
 	status =  be_mcc_notify_wait(phba);
 	if (status)
-		shost_printk(KERN_WARNING, phba->shost,
-			     " mgmt_epfw_cleanup , FAILED\n");
+		beiscsi_log(phba, KERN_WARNING, BEISCSI_LOG_INIT,
+			    "BG_%d : mgmt_epfw_cleanup , FAILED\n");
 	spin_unlock(&ctrl->mbox_lock);
 	return status;
 }
@@ -501,7 +668,6 @@ int mgmt_open_connection(struct beiscsi_hba *phba,
 			 struct sockaddr *dst_addr,
 			 struct beiscsi_endpoint *beiscsi_ep,
 			 struct be_dma_mem *nonemb_cmd)
-
 {
 	struct hwi_controller *phwi_ctrlr;
 	struct hwi_context_memory *phwi_context;
@@ -550,17 +716,17 @@ int mgmt_open_connection(struct beiscsi_hba *phba,
 	if (dst_addr->sa_family == PF_INET) {
 		__be32 s_addr = daddr_in->sin_addr.s_addr;
 		req->ip_address.ip_type = BE2_IPV4;
-		req->ip_address.ip_address[0] = s_addr & 0x000000ff;
-		req->ip_address.ip_address[1] = (s_addr & 0x0000ff00) >> 8;
-		req->ip_address.ip_address[2] = (s_addr & 0x00ff0000) >> 16;
-		req->ip_address.ip_address[3] = (s_addr & 0xff000000) >> 24;
+		req->ip_address.addr[0] = s_addr & 0x000000ff;
+		req->ip_address.addr[1] = (s_addr & 0x0000ff00) >> 8;
+		req->ip_address.addr[2] = (s_addr & 0x00ff0000) >> 16;
+		req->ip_address.addr[3] = (s_addr & 0xff000000) >> 24;
 		req->tcp_port = ntohs(daddr_in->sin_port);
 		beiscsi_ep->dst_addr = daddr_in->sin_addr.s_addr;
 		beiscsi_ep->dst_tcpport = ntohs(daddr_in->sin_port);
 		beiscsi_ep->ip_type = BE2_IPV4;
 	} else if (dst_addr->sa_family == PF_INET6) {
 		req->ip_address.ip_type = BE2_IPV6;
-		memcpy(&req->ip_address.ip_address,
+		memcpy(&req->ip_address.addr,
 		       &daddr_in6->sin6_addr.in6_u.u6_addr8, 16);
 		req->tcp_port = ntohs(daddr_in6->sin6_port);
 		beiscsi_ep->dst_tcpport = ntohs(daddr_in6->sin6_port);
@@ -568,8 +734,9 @@ int mgmt_open_connection(struct beiscsi_hba *phba,
 		       &daddr_in6->sin6_addr.in6_u.u6_addr8, 16);
 		beiscsi_ep->ip_type = BE2_IPV6;
 	} else{
-		shost_printk(KERN_ERR, phba->shost, "unknown addr family %d\n",
-			     dst_addr->sa_family);
+		beiscsi_log(phba, KERN_ERR, BEISCSI_LOG_CONFIG,
+			    "BG_%d : unknown addr family %d\n",
+			    dst_addr->sa_family);
 		spin_unlock(&ctrl->mbox_lock);
 		free_mcc_tag(&phba->ctrl, tag);
 		return -EINVAL;
@@ -580,7 +747,8 @@ int mgmt_open_connection(struct beiscsi_hba *phba,
 	if (phba->nxt_cqid == phba->num_cpus)
 		phba->nxt_cqid = 0;
 	req->cq_id = phwi_context->be_cq[i].id;
-	SE_DEBUG(DBG_LVL_8, "i=%d cq_id=%d\n", i, req->cq_id);
+	beiscsi_log(phba, KERN_INFO, BEISCSI_LOG_CONFIG,
+		    "BG_%d : i=%d cq_id=%d\n", i, req->cq_id);
 	req->defq_id = def_hdr_id;
 	req->hdr_ring_id = def_hdr_id;
 	req->data_ring_id = def_data_id;
@@ -595,11 +763,9 @@ int mgmt_open_connection(struct beiscsi_hba *phba,
 	return tag;
 }
 
-unsigned int be_cmd_get_mac_addr(struct beiscsi_hba *phba)
+unsigned int mgmt_get_all_if_id(struct beiscsi_hba *phba)
 {
 	struct be_ctrl_info *ctrl = &phba->ctrl;
-<<<<<<< HEAD
-=======
 	struct be_mcc_wrb *wrb = wrb_from_mbox(&ctrl->mbox_mem);
 	struct be_cmd_get_all_if_id_req *req = embedded_payload(wrb);
 	struct be_cmd_get_all_if_id_req *pbe_allid = req;
@@ -1031,12 +1197,10 @@ int mgmt_get_nic_conf(struct beiscsi_hba *phba,
 unsigned int be_cmd_get_initname(struct beiscsi_hba *phba)
 {
 	unsigned int tag = 0;
->>>>>>> 0d522ee... Merge tag 'scsi-for-linus' of git://git.kernel.org/pub/scm/linux/kernel/git/jejb/scsi
 	struct be_mcc_wrb *wrb;
-	struct be_cmd_req_get_mac_addr *req;
-	unsigned int tag = 0;
+	struct be_cmd_hba_name *req;
+	struct be_ctrl_info *ctrl = &phba->ctrl;
 
-	SE_DEBUG(DBG_LVL_8, "In be_cmd_get_mac_addr\n");
 	spin_lock(&ctrl->mbox_lock);
 	tag = alloc_mcc_tag(phba);
 	if (!tag) {
@@ -1048,17 +1212,42 @@ unsigned int be_cmd_get_initname(struct beiscsi_hba *phba)
 	req = embedded_payload(wrb);
 	wrb->tag0 |= tag;
 	be_wrb_hdr_prepare(wrb, sizeof(*req), true, 0);
-	be_cmd_hdr_prepare(&req->hdr, CMD_SUBSYSTEM_ISCSI,
-			   OPCODE_COMMON_ISCSI_NTWK_GET_NIC_CONFIG,
-			   sizeof(*req));
+	be_cmd_hdr_prepare(&req->hdr, CMD_SUBSYSTEM_ISCSI_INI,
+			OPCODE_ISCSI_INI_CFG_GET_HBA_NAME,
+			sizeof(*req));
 
 	be_mcc_notify(phba);
 	spin_unlock(&ctrl->mbox_lock);
 	return tag;
 }
 
-<<<<<<< HEAD
-=======
+unsigned int be_cmd_get_port_speed(struct beiscsi_hba *phba)
+{
+	unsigned int tag = 0;
+	struct be_mcc_wrb *wrb;
+	struct be_cmd_ntwk_link_status_req *req;
+	struct be_ctrl_info *ctrl = &phba->ctrl;
+
+	spin_lock(&ctrl->mbox_lock);
+	tag = alloc_mcc_tag(phba);
+	if (!tag) {
+		spin_unlock(&ctrl->mbox_lock);
+		return tag;
+	}
+
+	wrb = wrb_from_mccq(phba);
+	req = embedded_payload(wrb);
+	wrb->tag0 |= tag;
+	be_wrb_hdr_prepare(wrb, sizeof(*req), true, 0);
+	be_cmd_hdr_prepare(&req->hdr, CMD_SUBSYSTEM_COMMON,
+			OPCODE_COMMON_NTWK_LINK_STATUS_QUERY,
+			sizeof(*req));
+
+	be_mcc_notify(phba);
+	spin_unlock(&ctrl->mbox_lock);
+	return tag;
+}
+
 /**
  * be_mgmt_get_boot_shandle()- Get the session handle
  * @phba: device priv structure instance
@@ -1470,4 +1659,3 @@ void beiscsi_offload_cxn_v2(struct beiscsi_offload_params *params,
 		     (params->dw[offsetof(struct amap_beiscsi_offload_params,
 		      exp_statsn) / 32] + 1));
 }
->>>>>>> 0d522ee... Merge tag 'scsi-for-linus' of git://git.kernel.org/pub/scm/linux/kernel/git/jejb/scsi

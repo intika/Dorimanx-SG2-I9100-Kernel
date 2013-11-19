@@ -1,5 +1,5 @@
 /*
- * PMC-Sierra SPC 8001 SAS/SATA based host adapters driver
+ * PMC-Sierra PM8001/8081/8088/8089 SAS/SATA based host adapters driver
  *
  * Copyright (c) 2008-2009 USI Co., Ltd.
  * All rights reserved.
@@ -57,8 +57,8 @@
 #include <linux/atomic.h>
 #include "pm8001_defs.h"
 
-#define DRV_NAME		"pm8001"
-#define DRV_VERSION		"0.1.36"
+#define DRV_NAME		"pm80xx"
+#define DRV_VERSION		"0.1.37"
 #define PM8001_FAIL_LOGGING	0x01 /* Error message logging */
 #define PM8001_INIT_LOGGING	0x02 /* driver init logging */
 #define PM8001_DISC_LOGGING	0x04 /* discovery layer logging */
@@ -66,8 +66,8 @@
 #define PM8001_EH_LOGGING	0x10 /* libsas EH function logging*/
 #define PM8001_IOCTL_LOGGING	0x20 /* IOCTL message logging */
 #define PM8001_MSG_LOGGING	0x40 /* misc message logging */
-#define pm8001_printk(format, arg...)	printk(KERN_INFO "%s %d:" format,\
-				__func__, __LINE__, ## arg)
+#define pm8001_printk(format, arg...)	printk(KERN_INFO "pm80xx %s %d:" \
+			format, __func__, __LINE__, ## arg)
 #define PM8001_CHECK_LOGGING(HBA, LEVEL, CMD)	\
 do {						\
 	if (unlikely(HBA->logging_level & LEVEL))	\
@@ -103,18 +103,15 @@ do {						\
 #define PM8001_READ_VPD
 
 
-<<<<<<< HEAD
-#define DEV_IS_EXPANDER(type)	((type == EDGE_DEV) || (type == FANOUT_DEV))
-=======
 #define DEV_IS_EXPANDER(type)	((type == SAS_EDGE_EXPANDER_DEVICE) || (type == SAS_FANOUT_EXPANDER_DEVICE))
 #define IS_SPCV_12G(dev)	((dev->device == 0X8074)		\
 				|| (dev->device == 0X8076)		\
 				|| (dev->device == 0X8077))
->>>>>>> 0d522ee... Merge tag 'scsi-for-linus' of git://git.kernel.org/pub/scm/linux/kernel/git/jejb/scsi
 
 #define PM8001_NAME_LENGTH		32/* generic length of strings */
 extern struct list_head hba_list;
 extern const struct pm8001_dispatch pm8001_8001_dispatch;
+extern const struct pm8001_dispatch pm8001_80xx_dispatch;
 
 struct pm8001_hba_info;
 struct pm8001_ccb_info;
@@ -193,15 +190,15 @@ struct forensic_data {
 struct pm8001_dispatch {
 	char *name;
 	int (*chip_init)(struct pm8001_hba_info *pm8001_ha);
-	int (*chip_soft_rst)(struct pm8001_hba_info *pm8001_ha, u32 signature);
+	int (*chip_soft_rst)(struct pm8001_hba_info *pm8001_ha);
 	void (*chip_rst)(struct pm8001_hba_info *pm8001_ha);
 	int (*chip_ioremap)(struct pm8001_hba_info *pm8001_ha);
 	void (*chip_iounmap)(struct pm8001_hba_info *pm8001_ha);
-	irqreturn_t (*isr)(struct pm8001_hba_info *pm8001_ha);
+	irqreturn_t (*isr)(struct pm8001_hba_info *pm8001_ha, u8 vec);
 	u32 (*is_our_interupt)(struct pm8001_hba_info *pm8001_ha);
-	int (*isr_process_oq)(struct pm8001_hba_info *pm8001_ha);
-	void (*interrupt_enable)(struct pm8001_hba_info *pm8001_ha);
-	void (*interrupt_disable)(struct pm8001_hba_info *pm8001_ha);
+	int (*isr_process_oq)(struct pm8001_hba_info *pm8001_ha, u8 vec);
+	void (*interrupt_enable)(struct pm8001_hba_info *pm8001_ha, u8 vec);
+	void (*interrupt_disable)(struct pm8001_hba_info *pm8001_ha, u8 vec);
 	void (*make_prd)(struct scatterlist *scatter, int nr, void *prd);
 	int (*smp_req)(struct pm8001_hba_info *pm8001_ha,
 		struct pm8001_ccb_info *ccb);
@@ -235,6 +232,7 @@ struct pm8001_dispatch {
 };
 
 struct pm8001_chip_info {
+	u32     encrypt;
 	u32	n_phy;
 	const struct pm8001_dispatch	*dispatch;
 };
@@ -266,7 +264,7 @@ struct pm8001_phy {
 };
 
 struct pm8001_device {
-	enum sas_dev_type	dev_type;
+	enum sas_device_type	dev_type;
 	struct domain_device	*sas_device;
 	u32			attached_phy;
 	u32			id;
@@ -297,6 +295,7 @@ struct pm8001_ccb_info {
 	struct pm8001_device	*device;
 	struct pm8001_prd	buf_prd[PM8001_MAX_DMA_SG];
 	struct fw_control_ex	*fw_control_context;
+	u8			open_retry;
 };
 
 struct mpi_mem {
@@ -317,7 +316,20 @@ struct mpi_mem_req {
 	struct mpi_mem		region[USI_MAX_MEMCNT];
 };
 
-struct main_cfg_table {
+struct encrypt {
+	u32	cipher_mode;
+	u32	sec_mode;
+	u32	status;
+	u32	flag;
+};
+
+struct sas_phy_attribute_table {
+	u32	phystart1_16[16];
+	u32	outbound_hw_event_pid1_16[16];
+};
+
+union main_cfg_table {
+	struct {
 	u32			signature;
 	u32			interface_rev;
 	u32			firmware_rev;
@@ -353,8 +365,6 @@ struct main_cfg_table {
 	u32			fatal_err_dump_length1;
 	u32			hda_mode_flag;
 	u32			anolog_setup_table_offset;
-<<<<<<< HEAD
-=======
 	u32			rsvd[4];
 	} pm8001_tbl;
 
@@ -393,20 +403,32 @@ struct main_cfg_table {
 	u32			interrupt_reassertion_delay;
 	u32			fatal_n_non_fatal_dump;	        /* 0x28 */
 	} pm80xx_tbl;
->>>>>>> 0d522ee... Merge tag 'scsi-for-linus' of git://git.kernel.org/pub/scm/linux/kernel/git/jejb/scsi
 };
-struct general_status_table {
+
+union general_status_table {
+	struct {
 	u32			gst_len_mpistate;
 	u32			iq_freeze_state0;
 	u32			iq_freeze_state1;
 	u32			msgu_tcnt;
 	u32			iop_tcnt;
-	u32			reserved;
+	u32			rsvd;
 	u32			phy_state[8];
-	u32			reserved1;
-	u32			reserved2;
-	u32			reserved3;
+	u32			gpio_input_val;
+	u32			rsvd1[2];
 	u32			recover_err_info[8];
+	} pm8001_tbl;
+	struct {
+	u32			gst_len_mpistate;
+	u32			iq_freeze_state0;
+	u32			iq_freeze_state1;
+	u32			msgu_tcnt;
+	u32			iop_tcnt;
+	u32			rsvd[9];
+	u32			gpio_input_val;
+	u32			rsvd1[2];
+	u32			recover_err_info[8];
+	} pm80xx_tbl;
 };
 struct inbound_queue_table {
 	u32			element_pri_size_cnt;
@@ -453,8 +475,6 @@ struct pm8001_hba_info {
 	struct device		*dev;
 	struct pm8001_hba_memspace io_mem[6];
 	struct mpi_mem_req	memoryMap;
-<<<<<<< HEAD
-=======
 	struct encrypt		encrypt_info; /* support encryption */
 	struct forensic_data	forensic_info;
 	u32			fatal_bar_loc;
@@ -463,18 +483,11 @@ struct pm8001_hba_info {
 	u32			forensic_fatal_step;
 	u32			evtlog_ib_offset;
 	u32			evtlog_ob_offset;
->>>>>>> 0d522ee... Merge tag 'scsi-for-linus' of git://git.kernel.org/pub/scm/linux/kernel/git/jejb/scsi
 	void __iomem	*msg_unit_tbl_addr;/*Message Unit Table Addr*/
 	void __iomem	*main_cfg_tbl_addr;/*Main Config Table Addr*/
 	void __iomem	*general_stat_tbl_addr;/*General Status Table Addr*/
 	void __iomem	*inbnd_q_tbl_addr;/*Inbound Queue Config Table Addr*/
 	void __iomem	*outbnd_q_tbl_addr;/*Outbound Queue Config Table Addr*/
-<<<<<<< HEAD
-	struct main_cfg_table	main_cfg_tbl;
-	struct general_status_table	gs_tbl;
-	struct inbound_queue_table	inbnd_q_tbl[PM8001_MAX_INB_NUM];
-	struct outbound_queue_table	outbnd_q_tbl[PM8001_MAX_OUTB_NUM];
-=======
 	void __iomem	*pspa_q_tbl_addr;
 			/*MPI SAS PHY attributes Queue Config Table Addr*/
 	void __iomem	*ivt_tbl_addr; /*MPI IVT Table Addr */
@@ -485,7 +498,6 @@ struct pm8001_hba_info {
 	struct outbound_queue_table	outbnd_q_tbl[PM8001_MAX_SPCV_OUTB_NUM];
 	struct sas_phy_attribute_table	phy_attr_table;
 					/* MPI SAS PHY attributes */
->>>>>>> 0d522ee... Merge tag 'scsi-for-linus' of git://git.kernel.org/pub/scm/linux/kernel/git/jejb/scsi
 	u8			sas_addr[SAS_ADDR_SIZE];
 	struct sas_ha_struct	*sas;/* SCSI/SAS glue */
 	struct Scsi_Host	*shost;
@@ -498,10 +510,12 @@ struct pm8001_hba_info {
 	struct pm8001_port	port[PM8001_MAX_PHYS];
 	u32			id;
 	u32			irq;
+	u32			iomb_size; /* SPC and SPCV IOMB size */
 	struct pm8001_device	*devices;
 	struct pm8001_ccb_info	*ccb_info;
 #ifdef PM8001_USE_MSIX
-	struct msix_entry	msix_entries[16];/*for msi-x interrupt*/
+	struct msix_entry	msix_entries[PM8001_MAX_MSIX_VEC];
+					/*for msi-x interrupt*/
 	int			number_of_intr;/*will be used in remove()*/
 #endif
 #ifdef PM8001_USE_TASKLET
@@ -509,7 +523,10 @@ struct pm8001_hba_info {
 #endif
 	u32			logging_level;
 	u32			fw_status;
+	u32			smp_exp_mode;
+	u32			int_vector;
 	const struct firmware 	*fw_image;
+	u8			outq[PM8001_MAX_MSIX_VEC];
 };
 
 struct pm8001_work {
@@ -545,6 +562,9 @@ struct pm8001_fw_image_header {
 #define FLASH_UPDATE_DNLD_NOT_SUPPORTED		0x10
 #define FLASH_UPDATE_DISABLED			0x11
 
+#define	NCQ_READ_LOG_FLAG			0x80000000
+#define	NCQ_ABORT_ALL_FLAG			0x40000000
+#define	NCQ_2ND_RLE_FLAG			0x20000000
 /**
  * brief param structure for firmware flash update.
  */
@@ -598,8 +618,6 @@ void pm8001_ccb_task_free(struct pm8001_hba_info *pm8001_ha,
 	struct sas_task *task, struct pm8001_ccb_info *ccb, u32 ccb_idx);
 int pm8001_phy_control(struct asd_sas_phy *sas_phy, enum phy_func func,
 	void *funcdata);
-int pm8001_slave_alloc(struct scsi_device *scsi_dev);
-int pm8001_slave_configure(struct scsi_device *sdev);
 void pm8001_scan_start(struct Scsi_Host *shost);
 int pm8001_scan_finished(struct Scsi_Host *shost, unsigned long time);
 int pm8001_queue_command(struct sas_task *task, const int num,
@@ -612,14 +630,16 @@ int pm8001_dev_found(struct domain_device *dev);
 void pm8001_dev_gone(struct domain_device *dev);
 int pm8001_lu_reset(struct domain_device *dev, u8 *lun);
 int pm8001_I_T_nexus_reset(struct domain_device *dev);
+int pm8001_I_T_nexus_event_handler(struct domain_device *dev);
 int pm8001_query_task(struct sas_task *task);
+void pm8001_open_reject_retry(
+	struct pm8001_hba_info *pm8001_ha,
+	struct sas_task *task_to_close,
+	struct pm8001_device *device_to_close);
 int pm8001_mem_alloc(struct pci_dev *pdev, void **virt_addr,
 	dma_addr_t *pphys_addr, u32 *pphys_addr_hi, u32 *pphys_addr_lo,
 	u32 mem_size, u32 align);
 
-<<<<<<< HEAD
-
-=======
 void pm8001_chip_iounmap(struct pm8001_hba_info *pm8001_ha);
 int pm8001_mpi_build_cmd(struct pm8001_hba_info *pm8001_ha,
 			struct inbound_queue_table *circularQ,
@@ -682,7 +702,6 @@ int pm80xx_bar4_shift(struct pm8001_hba_info *pm8001_ha, u32 shiftValue);
 ssize_t pm80xx_get_fatal_dump(struct device *cdev,
 		struct device_attribute *attr, char *buf);
 ssize_t pm8001_get_gsm_dump(struct device *cdev, u32, char *buf);
->>>>>>> 0d522ee... Merge tag 'scsi-for-linus' of git://git.kernel.org/pub/scm/linux/kernel/git/jejb/scsi
 /* ctl shared API */
 extern struct device_attribute *pm8001_host_attrs[];
 
