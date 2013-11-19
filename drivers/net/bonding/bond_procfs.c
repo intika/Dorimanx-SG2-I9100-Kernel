@@ -1,4 +1,5 @@
 #include <linux/proc_fs.h>
+#include <linux/export.h>
 #include <net/net_namespace.h>
 #include <net/netns/generic.h>
 #include "bonding.h"
@@ -9,9 +10,9 @@ static void *bond_info_seq_start(struct seq_file *seq, loff_t *pos)
 	__acquires(&bond->lock)
 {
 	struct bonding *bond = seq->private;
-	loff_t off = 0;
+	struct list_head *iter;
 	struct slave *slave;
-	int i;
+	loff_t off = 0;
 
 	/* make sure the bond won't be taken away */
 	rcu_read_lock();
@@ -20,10 +21,9 @@ static void *bond_info_seq_start(struct seq_file *seq, loff_t *pos)
 	if (*pos == 0)
 		return SEQ_START_TOKEN;
 
-	bond_for_each_slave(bond, slave, i) {
+	bond_for_each_slave(bond, slave, iter)
 		if (++off == *pos)
 			return slave;
-	}
 
 	return NULL;
 }
@@ -31,15 +31,25 @@ static void *bond_info_seq_start(struct seq_file *seq, loff_t *pos)
 static void *bond_info_seq_next(struct seq_file *seq, void *v, loff_t *pos)
 {
 	struct bonding *bond = seq->private;
-	struct slave *slave = v;
+	struct list_head *iter;
+	struct slave *slave;
+	bool found = false;
 
 	++*pos;
 	if (v == SEQ_START_TOKEN)
-		return bond->first_slave;
+		return bond_first_slave(bond);
 
-	slave = slave->next;
+	if (bond_is_last_slave(bond, v))
+		return NULL;
 
-	return (slave == bond->first_slave) ? NULL : slave;
+	bond_for_each_slave(bond, slave, iter) {
+		if (found)
+			return slave;
+		if (slave == v)
+			found = true;
+	}
+
+	return NULL;
 }
 
 static void bond_info_seq_stop(struct seq_file *seq, void *v)
@@ -125,10 +135,11 @@ static void bond_info_show_master(struct seq_file *seq)
 		seq_puts(seq, "\n802.3ad info\n");
 		seq_printf(seq, "LACP rate: %s\n",
 			   (bond->params.lacp_fast) ? "fast" : "slow");
+		seq_printf(seq, "Min links: %d\n", bond->params.min_links);
 		seq_printf(seq, "Aggregator selection policy (ad_select): %s\n",
 			   ad_select_tbl[bond->params.ad_select].modename);
 
-		if (bond_3ad_get_active_agg_info(bond, &ad_info)) {
+		if (__bond_3ad_get_active_agg_info(bond, &ad_info)) {
 			seq_printf(seq, "bond %s has no active aggregator\n",
 				   bond->dev->name);
 		} else {
@@ -148,16 +159,35 @@ static void bond_info_show_master(struct seq_file *seq)
 	}
 }
 
+static const char *bond_slave_link_status(s8 link)
+{
+	static const char * const status[] = {
+		[BOND_LINK_UP] = "up",
+		[BOND_LINK_FAIL] = "going down",
+		[BOND_LINK_DOWN] = "down",
+		[BOND_LINK_BACK] = "going back",
+	};
+
+	return status[link];
+}
+
 static void bond_info_show_slave(struct seq_file *seq,
 				 const struct slave *slave)
 {
 	struct bonding *bond = seq->private;
 
 	seq_printf(seq, "\nSlave Interface: %s\n", slave->dev->name);
-	seq_printf(seq, "MII Status: %s\n",
-		   (slave->link == BOND_LINK_UP) ?  "up" : "down");
-	seq_printf(seq, "Speed: %d Mbps\n", slave->speed);
-	seq_printf(seq, "Duplex: %s\n", slave->duplex ? "full" : "half");
+	seq_printf(seq, "MII Status: %s\n", bond_slave_link_status(slave->link));
+	if (slave->speed == SPEED_UNKNOWN)
+		seq_printf(seq, "Speed: %s\n", "Unknown");
+	else
+		seq_printf(seq, "Speed: %d Mbps\n", slave->speed);
+
+	if (slave->duplex == DUPLEX_UNKNOWN)
+		seq_printf(seq, "Duplex: %s\n", "Unknown");
+	else
+		seq_printf(seq, "Duplex: %s\n", slave->duplex ? "full" : "half");
+
 	seq_printf(seq, "Link Failure Count: %u\n",
 		   slave->link_failure_count);
 

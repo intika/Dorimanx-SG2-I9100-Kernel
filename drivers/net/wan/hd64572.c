@@ -529,8 +529,8 @@ static void sca_dump_rings(struct net_device *dev)
 	       sca_in(DSR_RX(port->chan), card), port->rxin,
 	       sca_in(DSR_RX(port->chan), card) & DSR_DE ? "" : "in");
 	for (cnt = 0; cnt < port->card->rx_ring_buffers; cnt++)
-		printk(" %02X", readb(&(desc_address(port, cnt, 0)->stat)));
-	printk(KERN_CONT "\n");
+		pr_cont(" %02X", readb(&(desc_address(port, cnt, 0)->stat)));
+	pr_cont("\n");
 
 	printk(KERN_DEBUG "TX ring: CDA=%u EDA=%u DSR=%02X in=%u "
 	       "last=%u %sactive",
@@ -540,8 +540,8 @@ static void sca_dump_rings(struct net_device *dev)
 	       sca_in(DSR_TX(port->chan), card) & DSR_DE ? "" : "in");
 
 	for (cnt = 0; cnt < port->card->tx_ring_buffers; cnt++)
-		printk(" %02X", readb(&(desc_address(port, cnt, 1)->stat)));
-	printk("\n");
+		pr_cont(" %02X", readb(&(desc_address(port, cnt, 1)->stat)));
+	pr_cont("\n");
 
 	printk(KERN_DEBUG "MSCI: MD: %02x %02x %02x,"
 	       " ST: %02x %02x %02x %02x %02x, FST: %02x CST: %02x %02x\n",
@@ -605,8 +605,7 @@ static netdev_tx_t sca_xmit(struct sk_buff *skb, struct net_device *dev)
 }
 
 
-static u32 __devinit sca_detect_ram(card_t *card, u8 __iomem *rambase,
-				    u32 ramsize)
+static u32 sca_detect_ram(card_t *card, u8 __iomem *rambase, u32 ramsize)
 {
 	/* Round RAM size to 32 bits, fill from end to start */
 	u32 i = ramsize &= ~3;
@@ -625,7 +624,7 @@ static u32 __devinit sca_detect_ram(card_t *card, u8 __iomem *rambase,
 }
 
 
-static void __devinit sca_init(card_t *card, int wait_states)
+static void sca_init(card_t *card, int wait_states)
 {
 	sca_out(wait_states, WCRL, card); /* Wait Control */
 	sca_out(wait_states, WCRM, card);

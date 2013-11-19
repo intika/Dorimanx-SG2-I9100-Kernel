@@ -708,7 +708,7 @@ unlhsh_remove_return:
  * netlbl_unlhsh_netdev_handler - Network device notification handler
  * @this: notifier block
  * @event: the event
- * @ptr: the network device (cast to void)
+ * @ptr: the netdevice notifier info (cast to void)
  *
  * Description:
  * Handle network device events, although at present all we care about is a
@@ -717,10 +717,9 @@ unlhsh_remove_return:
  *
  */
 static int netlbl_unlhsh_netdev_handler(struct notifier_block *this,
-					unsigned long event,
-					void *ptr)
+					unsigned long event, void *ptr)
 {
-	struct net_device *dev = ptr;
+	struct net_device *dev = netdev_notifier_info_to_dev(ptr);
 	struct netlbl_unlhsh_iface *iface = NULL;
 
 	if (!net_eq(dev_net(dev), &init_net))
@@ -1096,7 +1095,7 @@ static int netlbl_unlabel_staticlist_gen(u32 cmd,
 	char *secctx;
 	u32 secctx_len;
 
-	data = genlmsg_put(cb_arg->skb, NETLINK_CB(cb_arg->nl_cb->skb).pid,
+	data = genlmsg_put(cb_arg->skb, NETLINK_CB(cb_arg->nl_cb->skb).portid,
 			   cb_arg->seq, &netlbl_unlabel_gnl_family,
 			   NLM_F_MULTI, cmd);
 	if (data == NULL)
@@ -1274,7 +1273,6 @@ static int netlbl_unlabel_staticlistdef(struct sk_buff *skb,
 	u32 iter_addr4 = 0, iter_addr6 = 0;
 	struct netlbl_af4list *addr4;
 #if IS_ENABLED(CONFIG_IPV6)
-	u32 iter_addr6 = 0;
 	struct netlbl_af6list *addr6;
 #endif
 
@@ -1325,7 +1323,7 @@ unlabel_staticlistdef_return:
  * NetLabel Generic NETLINK Command Definitions
  */
 
-static struct genl_ops netlbl_unlabel_genl_ops[] = {
+static const struct genl_ops netlbl_unlabel_genl_ops[] = {
 	{
 	.cmd = NLBL_UNLABEL_C_STATICADD,
 	.flags = GENL_ADMIN_PERM,
@@ -1399,7 +1397,7 @@ static struct genl_ops netlbl_unlabel_genl_ops[] = {
 int __init netlbl_unlabel_genl_init(void)
 {
 	return genl_register_family_with_ops(&netlbl_unlabel_gnl_family,
-		netlbl_unlabel_genl_ops, ARRAY_SIZE(netlbl_unlabel_genl_ops));
+					     netlbl_unlabel_genl_ops);
 }
 
 /*
@@ -1543,7 +1541,7 @@ int __init netlbl_unlabel_defconf(void)
 	entry = kzalloc(sizeof(*entry), GFP_KERNEL);
 	if (entry == NULL)
 		return -ENOMEM;
-	entry->type = NETLBL_NLTYPE_UNLABELED;
+	entry->def.type = NETLBL_NLTYPE_UNLABELED;
 	ret_val = netlbl_domhsh_add_default(entry, &audit_info);
 	if (ret_val != 0)
 		return ret_val;
