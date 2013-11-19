@@ -30,6 +30,8 @@
 #include <plat/clock.h>
 #include <plat/cpu.h>
 
+#include <mach/dev.h>
+
 #include "mshci.h"
 
 #ifdef CONFIG_MMC_MSHCI_S3C_DMA_MAP
