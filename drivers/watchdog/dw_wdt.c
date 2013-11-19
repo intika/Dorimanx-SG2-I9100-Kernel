@@ -155,8 +155,8 @@ static int dw_wdt_open(struct inode *inode, struct file *filp)
 	return nonseekable_open(inode, filp);
 }
 
-ssize_t dw_wdt_write(struct file *filp, const char __user *buf, size_t len,
-		     loff_t *offset)
+static ssize_t dw_wdt_write(struct file *filp, const char __user *buf,
+			    size_t len, loff_t *offset)
 {
 	if (!len)
 		return 0;
@@ -303,13 +303,13 @@ static int dw_wdt_drv_probe(struct platform_device *pdev)
 	if (IS_ERR(dw_wdt.regs))
 		return PTR_ERR(dw_wdt.regs);
 
-	dw_wdt.clk = clk_get(&pdev->dev, NULL);
+	dw_wdt.clk = devm_clk_get(&pdev->dev, NULL);
 	if (IS_ERR(dw_wdt.clk))
 		return PTR_ERR(dw_wdt.clk);
 
 	ret = clk_prepare_enable(dw_wdt.clk);
 	if (ret)
-		goto out_put_clk;
+		return ret;
 
 	spin_lock_init(&dw_wdt.lock);
 
@@ -324,13 +324,7 @@ static int dw_wdt_drv_probe(struct platform_device *pdev)
 	return 0;
 
 out_disable_clk:
-<<<<<<< HEAD
-	clk_disable(dw_wdt.clk);
-out_put_clk:
-	clk_put(dw_wdt.clk);
-=======
 	clk_disable_unprepare(dw_wdt.clk);
->>>>>>> 27b5c3f... Merge git://www.linux-watchdog.org/linux-watchdog
 
 	return ret;
 }
@@ -339,12 +333,7 @@ static int dw_wdt_drv_remove(struct platform_device *pdev)
 {
 	misc_deregister(&dw_wdt_miscdev);
 
-<<<<<<< HEAD
-	clk_disable(dw_wdt.clk);
-	clk_put(dw_wdt.clk);
-=======
 	clk_disable_unprepare(dw_wdt.clk);
->>>>>>> 27b5c3f... Merge git://www.linux-watchdog.org/linux-watchdog
 
 	return 0;
 }

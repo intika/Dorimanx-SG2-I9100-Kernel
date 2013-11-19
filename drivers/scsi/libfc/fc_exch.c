@@ -26,11 +26,8 @@
 #include <linux/timer.h>
 #include <linux/slab.h>
 #include <linux/err.h>
-<<<<<<< HEAD
-=======
 #include <linux/export.h>
 #include <linux/log2.h>
->>>>>>> 0d522ee... Merge tag 'scsi-for-linus' of git://git.kernel.org/pub/scm/linux/kernel/git/jejb/scsi
 
 #include <scsi/fc/fc_fc2.h>
 
@@ -70,16 +67,15 @@ static struct workqueue_struct *fc_exch_workqueue;
  * assigned range of exchanges to per cpu pool.
  */
 struct fc_exch_pool {
+	spinlock_t	 lock;
+	struct list_head ex_list;
 	u16		 next_index;
 	u16		 total_exches;
 
 	/* two cache of free slot in exch array */
 	u16		 left;
 	u16		 right;
-
-	spinlock_t	 lock;
-	struct list_head ex_list;
-};
+} ____cacheline_aligned_in_smp;
 
 /**
  * struct fc_exch_mgr - The Exchange Manager (EM).
@@ -96,19 +92,14 @@ struct fc_exch_pool {
  * It manages the allocation of exchange IDs.
  */
 struct fc_exch_mgr {
+	struct fc_exch_pool __percpu *pool;
+	mempool_t	*ep_pool;
 	enum fc_class	class;
 	struct kref	kref;
 	u16		min_xid;
 	u16		max_xid;
-	mempool_t	*ep_pool;
 	u16		pool_max_index;
-	struct fc_exch_pool *pool;
 
-	/*
-	 * currently exchange mgr stats are updated but not used.
-	 * either stats can be expose via sysfs or remove them
-	 * all together if not used XXX
-	 */
 	struct {
 		atomic_t no_free_exch;
 		atomic_t no_free_exch_xid;
@@ -129,7 +120,7 @@ struct fc_exch_mgr {
  * for each anchor to determine if that EM should be used. The last
  * anchor in the list will always match to handle any exchanges not
  * handled by other EMs. The non-default EMs would be added to the
- * anchor list by HW that provides FCoE offloads.
+ * anchor list by HW that provides offloads.
  */
 struct fc_exch_mgr_anchor {
 	struct list_head ema_list;
@@ -341,8 +332,6 @@ static void fc_exch_release(struct fc_exch *ep)
 }
 
 /**
-<<<<<<< HEAD
-=======
  * fc_exch_timer_cancel() - cancel exch timer
  * @ep:		The exchange whose timer to be canceled
  */
@@ -390,7 +379,6 @@ static void fc_exch_timer_set(struct fc_exch *ep, unsigned int timer_msec)
 }
 
 /**
->>>>>>> 0d522ee... Merge tag 'scsi-for-linus' of git://git.kernel.org/pub/scm/linux/kernel/git/jejb/scsi
  * fc_exch_done_locked() - Complete an exchange with the exchange lock held
  * @ep: The exchange that is complete
  *
@@ -412,8 +400,7 @@ static int fc_exch_done_locked(struct fc_exch *ep)
 
 	if (!(ep->esb_stat & ESB_ST_REC_QUAL)) {
 		ep->state |= FC_EX_DONE;
-		if (cancel_delayed_work(&ep->timeout_work))
-			atomic_dec(&ep->ex_refcnt); /* drop hold for timer */
+		fc_exch_timer_cancel(ep);
 		rc = 0;
 	}
 	return rc;
@@ -476,63 +463,16 @@ static void fc_exch_delete(struct fc_exch *ep)
 	fc_exch_release(ep);	/* drop hold for exch in mp */
 }
 
-<<<<<<< HEAD
-/**
- * fc_exch_timer_set_locked() - Start a timer for an exchange w/ the
- *				the exchange lock held
- * @ep:		The exchange whose timer will start
- * @timer_msec: The timeout period
- *
- * Used for upper level protocols to time out the exchange.
- * The timer is cancelled when it fires or when the exchange completes.
- */
-static inline void fc_exch_timer_set_locked(struct fc_exch *ep,
-					    unsigned int timer_msec)
-{
-	if (ep->state & (FC_EX_RST_CLEANUP | FC_EX_DONE))
-		return;
-
-	FC_EXCH_DBG(ep, "Exchange timer armed\n");
-
-	if (queue_delayed_work(fc_exch_workqueue, &ep->timeout_work,
-			       msecs_to_jiffies(timer_msec)))
-		fc_exch_hold(ep);		/* hold for timer */
-}
-
-/**
- * fc_exch_timer_set() - Lock the exchange and set the timer
- * @ep:		The exchange whose timer will start
- * @timer_msec: The timeout period
- */
-static void fc_exch_timer_set(struct fc_exch *ep, unsigned int timer_msec)
-{
-	spin_lock_bh(&ep->ex_lock);
-	fc_exch_timer_set_locked(ep, timer_msec);
-	spin_unlock_bh(&ep->ex_lock);
-}
-
-/**
- * fc_seq_send() - Send a frame using existing sequence/exchange pair
- * @lport: The local port that the exchange will be sent on
- * @sp:	   The sequence to be sent
- * @fp:	   The frame to be sent on the exchange
- */
-static int fc_seq_send(struct fc_lport *lport, struct fc_seq *sp,
-		       struct fc_frame *fp)
-=======
 static int fc_seq_send_locked(struct fc_lport *lport, struct fc_seq *sp,
 			      struct fc_frame *fp)
->>>>>>> 0d522ee... Merge tag 'scsi-for-linus' of git://git.kernel.org/pub/scm/linux/kernel/git/jejb/scsi
 {
 	struct fc_exch *ep;
 	struct fc_frame_header *fh = fc_frame_header_get(fp);
 	int error = -ENXIO;
 	u32 f_ctl;
+	u8 fh_type = fh->fh_type;
 
 	ep = fc_seq_exch(sp);
-<<<<<<< HEAD
-	WARN_ON((ep->esb_stat & ESB_ST_SEQ_INIT) != ESB_ST_SEQ_INIT);
-=======
 
 	if (ep->esb_stat & (ESB_ST_COMPLETE | ESB_ST_ABNORMAL)) {
 		fc_frame_free(fp);
@@ -540,7 +480,6 @@ static int fc_seq_send_locked(struct fc_lport *lport, struct fc_seq *sp,
 	}
 
 	WARN_ON(!(ep->esb_stat & ESB_ST_SEQ_INIT));
->>>>>>> 0d522ee... Merge tag 'scsi-for-linus' of git://git.kernel.org/pub/scm/linux/kernel/git/jejb/scsi
 
 	f_ctl = ntoh24(fh->fh_f_ctl);
 	fc_exch_setup_hdr(ep, fp, f_ctl);
@@ -562,20 +501,17 @@ static int fc_seq_send_locked(struct fc_lport *lport, struct fc_seq *sp,
 	 */
 	error = lport->tt.frame_send(lport, fp);
 
-	if (fh->fh_type == FC_TYPE_BLS)
-		return error;
+	if (fh_type == FC_TYPE_BLS)
+		goto out;
 
 	/*
 	 * Update the exchange and sequence flags,
 	 * assuming all frames for the sequence have been sent.
 	 * We can only be called to send once for each sequence.
 	 */
-	spin_lock_bh(&ep->ex_lock);
 	ep->f_ctl = f_ctl & ~FC_FC_FIRST_SEQ;	/* not first seq */
 	if (f_ctl & FC_FC_SEQ_INIT)
 		ep->esb_stat &= ~ESB_ST_SEQ_INIT;
-<<<<<<< HEAD
-=======
 out:
 	return error;
 }
@@ -597,7 +533,6 @@ static int fc_seq_send(struct fc_lport *lport, struct fc_seq *sp,
 	ep = fc_seq_exch(sp);
 	spin_lock_bh(&ep->ex_lock);
 	error = fc_seq_send_locked(lport, sp, fp);
->>>>>>> 0d522ee... Merge tag 'scsi-for-linus' of git://git.kernel.org/pub/scm/linux/kernel/git/jejb/scsi
 	spin_unlock_bh(&ep->ex_lock);
 	return error;
 }
@@ -711,25 +646,6 @@ static int fc_exch_abort_locked(struct fc_exch *ep,
 	if (timer_msec)
 		fc_exch_timer_set_locked(ep, timer_msec);
 
-<<<<<<< HEAD
-	/*
-	 * If not logged into the fabric, don't send ABTS but leave
-	 * sequence active until next timeout.
-	 */
-	if (!ep->sid)
-		return 0;
-
-	/*
-	 * Send an abort for the sequence that timed out.
-	 */
-	fp = fc_frame_alloc(ep->lp, 0);
-	if (fp) {
-		fc_fill_fc_hdr(fp, FC_RCTL_BA_ABTS, ep->did, ep->sid,
-			       FC_TYPE_BLS, FC_FC_END_SEQ | FC_FC_SEQ_INIT, 0);
-		error = fc_seq_send(ep->lp, sp, fp);
-	} else
-		error = -ENOBUFS;
-=======
 	if (ep->sid) {
 		/*
 		 * Send an abort for the sequence that timed out.
@@ -752,7 +668,6 @@ static int fc_exch_abort_locked(struct fc_exch *ep,
 		error = 0;
 	}
 	ep->esb_stat |= ESB_ST_ABNORMAL;
->>>>>>> 0d522ee... Merge tag 'scsi-for-linus' of git://git.kernel.org/pub/scm/linux/kernel/git/jejb/scsi
 	return error;
 }
 
@@ -1001,13 +916,8 @@ static struct fc_exch *fc_exch_find(struct fc_exch_mgr *mp, u16 xid)
 		spin_lock_bh(&pool->lock);
 		ep = fc_exch_ptr_get(pool, (xid - mp->min_xid) >> fc_cpu_order);
 		if (ep) {
-<<<<<<< HEAD
-			fc_exch_hold(ep);
-			WARN_ON(ep->xid != xid);
-=======
 			WARN_ON(ep->xid != xid);
 			fc_exch_hold(ep);
->>>>>>> 0d522ee... Merge tag 'scsi-for-linus' of git://git.kernel.org/pub/scm/linux/kernel/git/jejb/scsi
 		}
 		spin_unlock_bh(&pool->lock);
 	}
@@ -1173,10 +1083,6 @@ static enum fc_pf_rjt_reason fc_seq_lookup_recip(struct fc_lport *lport,
 		sp = &ep->seq;
 		if (sp->id != fh->fh_seq_id) {
 			atomic_inc(&mp->stats.seq_not_found);
-<<<<<<< HEAD
-			reject = FC_RJT_SEQ_ID;	/* sequence/exch should exist */
-			goto rel;
-=======
 			if (f_ctl & FC_FC_END_SEQ) {
 				/*
 				 * Update sequence_id based on incoming last
@@ -1201,7 +1107,6 @@ static enum fc_pf_rjt_reason fc_seq_lookup_recip(struct fc_lport *lport,
 				reject = FC_RJT_SEQ_ID;
 				goto rel;
 			}
->>>>>>> 0d522ee... Merge tag 'scsi-for-linus' of git://git.kernel.org/pub/scm/linux/kernel/git/jejb/scsi
 		}
 	}
 	WARN_ON(ep != fc_seq_exch(sp));
@@ -1323,7 +1228,7 @@ static void fc_seq_send_last(struct fc_seq *sp, struct fc_frame *fp,
 	f_ctl = FC_FC_LAST_SEQ | FC_FC_END_SEQ | FC_FC_SEQ_INIT;
 	f_ctl |= ep->f_ctl;
 	fc_fill_fc_hdr(fp, rctl, ep->did, ep->sid, fh_type, f_ctl, 0);
-	fc_seq_send(ep->lp, sp, fp);
+	fc_seq_send_locked(ep->lp, sp, fp);
 }
 
 /**
@@ -1500,16 +1405,11 @@ static void fc_exch_recv_abts(struct fc_exch *ep, struct fc_frame *rx_fp)
 		ap->ba_low_seq_cnt = htons(sp->cnt);
 	}
 	sp = fc_seq_start_next_locked(sp);
-<<<<<<< HEAD
-	spin_unlock_bh(&ep->ex_lock);
-	fc_seq_send_last(sp, fp, FC_RCTL_BA_ACC, FC_TYPE_BLS);
-=======
 	fc_seq_send_last(sp, fp, FC_RCTL_BA_ACC, FC_TYPE_BLS);
 	ep->esb_stat |= ESB_ST_ABNORMAL;
 	spin_unlock_bh(&ep->ex_lock);
 
 free:
->>>>>>> 0d522ee... Merge tag 'scsi-for-linus' of git://git.kernel.org/pub/scm/linux/kernel/git/jejb/scsi
 	fc_frame_free(rx_fp);
 	return;
 
@@ -1747,8 +1647,10 @@ static void fc_exch_abts_resp(struct fc_exch *ep, struct fc_frame *fp)
 	FC_EXCH_DBG(ep, "exch: BLS rctl %x - %s\n", fh->fh_r_ctl,
 		    fc_exch_rctl_name(fh->fh_r_ctl));
 
-	if (cancel_delayed_work_sync(&ep->timeout_work))
+	if (cancel_delayed_work_sync(&ep->timeout_work)) {
+		FC_EXCH_DBG(ep, "Exchange timer canceled due to ABTS response\n");
 		fc_exch_release(ep);	/* release from pending timer hold */
+	}
 
 	spin_lock_bh(&ep->ex_lock);
 	switch (fh->fh_r_ctl) {
@@ -1834,16 +1736,10 @@ static void fc_exch_recv_bls(struct fc_exch_mgr *mp, struct fc_frame *fp)
 		case FC_RCTL_ACK_0:
 			break;
 		default:
-<<<<<<< HEAD
-			FC_EXCH_DBG(ep, "BLS rctl %x - %s received",
-				    fh->fh_r_ctl,
-				    fc_exch_rctl_name(fh->fh_r_ctl));
-=======
 			if (ep)
 				FC_EXCH_DBG(ep, "BLS rctl %x - %s received\n",
 					    fh->fh_r_ctl,
 					    fc_exch_rctl_name(fh->fh_r_ctl));
->>>>>>> 0d522ee... Merge tag 'scsi-for-linus' of git://git.kernel.org/pub/scm/linux/kernel/git/jejb/scsi
 			break;
 		}
 		fc_frame_free(fp);
@@ -1935,14 +1831,7 @@ static void fc_exch_reset(struct fc_exch *ep)
 	spin_lock_bh(&ep->ex_lock);
 	fc_exch_abort_locked(ep, 0);
 	ep->state |= FC_EX_RST_CLEANUP;
-<<<<<<< HEAD
-	if (cancel_delayed_work(&ep->timeout_work))
-		atomic_dec(&ep->ex_refcnt);	/* drop hold for timer */
-	resp = ep->resp;
-	ep->resp = NULL;
-=======
 	fc_exch_timer_cancel(ep);
->>>>>>> 0d522ee... Merge tag 'scsi-for-linus' of git://git.kernel.org/pub/scm/linux/kernel/git/jejb/scsi
 	if (ep->esb_stat & ESB_ST_REC_QUAL)
 		atomic_dec(&ep->ex_refcnt);	/* drop hold for rec_qual */
 	ep->esb_stat &= ~ESB_ST_REC_QUAL;
@@ -2000,6 +1889,9 @@ restart:
 			goto restart;
 		}
 	}
+	pool->next_index = 0;
+	pool->left = FC_XID_UNKNOWN;
+	pool->right = FC_XID_UNKNOWN;
 	spin_unlock_bh(&pool->lock);
 }
 
@@ -2335,10 +2227,8 @@ static void fc_exch_els_rrq(struct fc_frame *fp)
 		ep->esb_stat &= ~ESB_ST_REC_QUAL;
 		atomic_dec(&ep->ex_refcnt);	/* drop hold for rec qual */
 	}
-	if (ep->esb_stat & ESB_ST_COMPLETE) {
-		if (cancel_delayed_work(&ep->timeout_work))
-			atomic_dec(&ep->ex_refcnt);	/* drop timer hold */
-	}
+	if (ep->esb_stat & ESB_ST_COMPLETE)
+		fc_exch_timer_cancel(ep);
 
 	spin_unlock_bh(&ep->ex_lock);
 
@@ -2356,6 +2246,31 @@ out:
 	if (ep)
 		fc_exch_release(ep);	/* drop hold from fc_exch_find */
 }
+
+/**
+ * fc_exch_update_stats() - update exches stats to lport
+ * @lport: The local port to update exchange manager stats
+ */
+void fc_exch_update_stats(struct fc_lport *lport)
+{
+	struct fc_host_statistics *st;
+	struct fc_exch_mgr_anchor *ema;
+	struct fc_exch_mgr *mp;
+
+	st = &lport->host_stats;
+
+	list_for_each_entry(ema, &lport->ema_list, ema_list) {
+		mp = ema->mp;
+		st->fc_no_free_exch += atomic_read(&mp->stats.no_free_exch);
+		st->fc_no_free_exch_xid +=
+				atomic_read(&mp->stats.no_free_exch_xid);
+		st->fc_xid_not_found += atomic_read(&mp->stats.xid_not_found);
+		st->fc_xid_busy += atomic_read(&mp->stats.xid_busy);
+		st->fc_seq_not_found += atomic_read(&mp->stats.seq_not_found);
+		st->fc_non_bls_resp += atomic_read(&mp->stats.non_bls_resp);
+	}
+}
+EXPORT_SYMBOL(fc_exch_update_stats);
 
 /**
  * fc_exch_mgr_add() - Add an exchange manager to a local port's list of EMs
@@ -2465,7 +2380,18 @@ struct fc_exch_mgr *fc_exch_mgr_alloc(struct fc_lport *lport,
 	mp->class = class;
 	/* adjust em exch xid range for offload */
 	mp->min_xid = min_xid;
-	mp->max_xid = max_xid;
+
+       /* reduce range so per cpu pool fits into PCPU_MIN_UNIT_SIZE pool */
+	pool_exch_range = (PCPU_MIN_UNIT_SIZE - sizeof(*pool)) /
+		sizeof(struct fc_exch *);
+	if ((max_xid - min_xid + 1) / (fc_cpu_mask + 1) > pool_exch_range) {
+		mp->max_xid = pool_exch_range * (fc_cpu_mask + 1) +
+			min_xid - 1;
+	} else {
+		mp->max_xid = max_xid;
+		pool_exch_range = (mp->max_xid - mp->min_xid + 1) /
+			(fc_cpu_mask + 1);
+	}
 
 	mp->ep_pool = mempool_create_slab_pool(2, fc_em_cachep);
 	if (!mp->ep_pool)
@@ -2476,7 +2402,6 @@ struct fc_exch_mgr *fc_exch_mgr_alloc(struct fc_lport *lport,
 	 * divided across all cpus. The exch pointers array memory is
 	 * allocated for exch range per pool.
 	 */
-	pool_exch_range = (mp->max_xid - mp->min_xid + 1) / (fc_cpu_mask + 1);
 	mp->pool_max_index = pool_exch_range - 1;
 
 	/*
@@ -2488,6 +2413,7 @@ struct fc_exch_mgr *fc_exch_mgr_alloc(struct fc_lport *lport,
 		goto free_mempool;
 	for_each_possible_cpu(cpu) {
 		pool = per_cpu_ptr(mp->pool, cpu);
+		pool->next_index = 0;
 		pool->left = FC_XID_UNKNOWN;
 		pool->right = FC_XID_UNKNOWN;
 		spin_lock_init(&pool->lock);
@@ -2688,8 +2614,11 @@ int fc_setup_exch_mgr(void)
 
 	fc_exch_workqueue = create_singlethread_workqueue("fc_exch_workqueue");
 	if (!fc_exch_workqueue)
-		return -ENOMEM;
+		goto err;
 	return 0;
+err:
+	kmem_cache_destroy(fc_em_cachep);
+	return -ENOMEM;
 }
 
 /**

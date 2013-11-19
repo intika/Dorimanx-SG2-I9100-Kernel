@@ -61,7 +61,7 @@
 #include "scsiglue.h"
 
 MODULE_DESCRIPTION("Driver for In-System Design, Inc. ISD200 ASIC");
-MODULE_AUTHOR("Björn Stenberg <bjorn@haxx.se>");
+MODULE_AUTHOR("BjÃ¶rn Stenberg <bjorn@haxx.se>");
 MODULE_LICENSE("GPL");
 
 static int isd200_Initialization(struct us_data *us);
@@ -74,16 +74,15 @@ static int isd200_Initialization(struct us_data *us);
 		    vendorName, productName, useProtocol, useTransport, \
 		    initFunction, flags) \
 { USB_DEVICE_VER(id_vendor, id_product, bcdDeviceMin, bcdDeviceMax), \
-  .driver_info = (flags)|(USB_US_TYPE_STOR<<24) }
+  .driver_info = (flags) }
 
-struct usb_device_id isd200_usb_ids[] = {
+static struct usb_device_id isd200_usb_ids[] = {
 #	include "unusual_isd200.h"
 	{ }		/* Terminating entry */
 };
 MODULE_DEVICE_TABLE(usb, isd200_usb_ids);
 
 #undef UNUSUAL_DEV
-#undef USUAL_DEV
 
 /*
  * The flags table
@@ -105,8 +104,6 @@ static struct us_unusual_dev isd200_unusual_dev_list[] = {
 };
 
 #undef UNUSUAL_DEV
-#undef USUAL_DEV
-
 
 /* Timeout defines (in Seconds) */
 
@@ -930,10 +927,6 @@ static int isd200_try_enum(struct us_data *us, unsigned char master_slave,
 
 	/* loop until we detect !BSY or timeout */
 	while(1) {
-#ifdef CONFIG_USB_STORAGE_DEBUG
-		char* mstr = master_slave == ATA_ADDRESS_DEVHEAD_STD ?
-			"Master" : "Slave";
-#endif
 
 		status = isd200_action( us, ACTION_ENUM, NULL, master_slave );
 		if ( status != ISD200_GOOD )
@@ -946,11 +939,6 @@ static int isd200_try_enum(struct us_data *us, unsigned char master_slave,
 
 		if (!detect) {
 			if (regs[ATA_REG_STATUS_OFFSET] & ATA_BUSY) {
-<<<<<<< HEAD
-				US_DEBUGP("   %s status is still BSY, try again...\n",mstr);
-			} else {
-				US_DEBUGP("   %s status !BSY, continue with next operation\n",mstr);
-=======
 				usb_stor_dbg(us, "   %s status is still BSY, try again...\n",
 					     master_slave == ATA_ADDRESS_DEVHEAD_STD ?
 					     "Master" : "Slave");
@@ -958,7 +946,6 @@ static int isd200_try_enum(struct us_data *us, unsigned char master_slave,
 				usb_stor_dbg(us, "   %s status !BSY, continue with next operation\n",
 					     master_slave == ATA_ADDRESS_DEVHEAD_STD ?
 					     "Master" : "Slave");
->>>>>>> 191648d... usb: storage: Convert US_DEBUGP to usb_stor_dbg
 				break;
 			}
 		}
@@ -1475,8 +1462,7 @@ static int isd200_init_info(struct us_data *us)
 		retStatus = ISD200_ERROR;
 	else {
 		info->id = kzalloc(ATA_ID_WORDS * 2, GFP_KERNEL);
-		info->RegsBuf = (unsigned char *)
-				kmalloc(sizeof(info->ATARegs), GFP_KERNEL);
+		info->RegsBuf = kmalloc(sizeof(info->ATARegs), GFP_KERNEL);
 		info->srb.sense_buffer =
 				kmalloc(SCSI_SENSE_BUFFERSIZE, GFP_KERNEL);
 		if (!info->id || !info->RegsBuf || !info->srb.sense_buffer) {
@@ -1580,6 +1566,7 @@ static struct usb_driver isd200_driver = {
 	.post_reset =	usb_stor_post_reset,
 	.id_table =	isd200_usb_ids,
 	.soft_unbind =	1,
+	.no_dynamic_id = 1,
 };
 
 module_usb_driver(isd200_driver);
