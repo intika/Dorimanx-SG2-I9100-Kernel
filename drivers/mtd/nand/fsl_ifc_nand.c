@@ -24,6 +24,7 @@
 #include <linux/types.h>
 #include <linux/init.h>
 #include <linux/kernel.h>
+#include <linux/of_address.h>
 #include <linux/slab.h>
 #include <linux/mtd/mtd.h>
 #include <linux/mtd/nand.h>
@@ -898,7 +899,7 @@ static int fsl_ifc_chip_init(struct fsl_ifc_mtd *priv)
 
 	/* set up nand options */
 	chip->bbt_options = NAND_BBT_USE_FLASH;
-
+	chip->options = NAND_NO_SUBPAGE_WRITE;
 
 	if (ioread32be(&ifc->cspr_cs[priv->bank].cspr) & CSPR_PORT_SIZE_16) {
 		chip->read_byte = fsl_ifc_read_byte16;
@@ -996,11 +997,6 @@ static int fsl_ifc_chip_remove(struct fsl_ifc_mtd *priv)
 		iounmap(priv->vbase);
 
 	ifc_nand_ctrl->chips[priv->bank] = NULL;
-<<<<<<< HEAD
-	dev_set_drvdata(priv->dev, NULL);
-	kfree(priv);
-=======
->>>>>>> 82cb6ac... Merge tag 'for-linus-20131112' of git://git.infradead.org/linux-mtd
 
 	return 0;
 }

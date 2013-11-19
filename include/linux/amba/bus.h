@@ -21,7 +21,7 @@
 #include <linux/resource.h>
 #include <linux/regulator/consumer.h>
 
-#define AMBA_NR_IRQS	2
+#define AMBA_NR_IRQS	9
 #define AMBA_CID	0xb105f00d
 
 struct clk;
@@ -30,11 +30,6 @@ struct amba_device {
 	struct device		dev;
 	struct resource		res;
 	struct clk		*pclk;
-<<<<<<< HEAD
-	struct regulator	*vcore;
-	u64			dma_mask;
-=======
->>>>>>> 8ceafbf... Merge branch 'for-linus-dma-masks' of git://git.linaro.org/people/rmk/linux-arm
 	unsigned int		periphid;
 	unsigned int		irq[AMBA_NR_IRQS];
 };
@@ -63,7 +58,28 @@ extern struct bus_type amba_bustype;
 
 int amba_driver_register(struct amba_driver *);
 void amba_driver_unregister(struct amba_driver *);
+struct amba_device *amba_device_alloc(const char *, resource_size_t, size_t);
+void amba_device_put(struct amba_device *);
+int amba_device_add(struct amba_device *, struct resource *);
 int amba_device_register(struct amba_device *, struct resource *);
+struct amba_device *amba_apb_device_add(struct device *parent, const char *name,
+					resource_size_t base, size_t size,
+					int irq1, int irq2, void *pdata,
+					unsigned int periphid);
+struct amba_device *amba_ahb_device_add(struct device *parent, const char *name,
+					resource_size_t base, size_t size,
+					int irq1, int irq2, void *pdata,
+					unsigned int periphid);
+struct amba_device *
+amba_apb_device_add_res(struct device *parent, const char *name,
+			resource_size_t base, size_t size, int irq1,
+			int irq2, void *pdata, unsigned int periphid,
+			struct resource *resbase);
+struct amba_device *
+amba_ahb_device_add_res(struct device *parent, const char *name,
+			resource_size_t base, size_t size, int irq1,
+			int irq2, void *pdata, unsigned int periphid,
+			struct resource *resbase);
 void amba_device_unregister(struct amba_device *);
 struct amba_device *amba_find_device(const char *, struct device *, unsigned int, unsigned int);
 int amba_request_regions(struct amba_device *, const char *);
@@ -74,12 +90,6 @@ void amba_release_regions(struct amba_device *);
 
 #define amba_pclk_disable(d)	\
 	do { if (!IS_ERR((d)->pclk)) clk_disable((d)->pclk); } while (0)
-
-#define amba_vcore_enable(d)	\
-	(IS_ERR((d)->vcore) ? 0 : regulator_enable((d)->vcore))
-
-#define amba_vcore_disable(d)	\
-	do { if (!IS_ERR((d)->vcore)) regulator_disable((d)->vcore); } while (0)
 
 /* Some drivers don't use the struct amba_device */
 #define AMBA_CONFIG_BITS(a) (((a) >> 24) & 0xff)
@@ -92,8 +102,6 @@ void amba_release_regions(struct amba_device *);
 #define amba_manf(d)	AMBA_MANF_BITS((d)->periphid)
 #define amba_part(d)	AMBA_PART_BITS((d)->periphid)
 
-<<<<<<< HEAD
-=======
 #define __AMBA_DEV(busid, data, mask)				\
 	{							\
 		.coherent_dma_mask = mask,			\
@@ -135,5 +143,4 @@ struct amba_device name##_device = {				\
 #define module_amba_driver(__amba_drv) \
 	module_driver(__amba_drv, amba_driver_register, amba_driver_unregister)
 
->>>>>>> 8ceafbf... Merge branch 'for-linus-dma-masks' of git://git.linaro.org/people/rmk/linux-arm
 #endif

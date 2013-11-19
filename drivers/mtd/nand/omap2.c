@@ -149,20 +149,6 @@ static u_char bch4_vector[] = {0x00, 0x6b, 0x31, 0xdd, 0x41, 0xbc, 0x10};
 
 /* oob info generated runtime depending on ecc algorithm and layout selected */
 static struct nand_ecclayout omap_oobinfo;
-<<<<<<< HEAD
-/* Define some generic bad / good block scan pattern which are used
- * while scanning a device for factory marked good / bad blocks
- */
-static uint8_t scan_ff_pattern[] = { 0xff };
-static struct nand_bbt_descr bb_descrip_flashbased = {
-	.options = NAND_BBT_SCANEMPTY | NAND_BBT_SCANALLPAGES,
-	.offs = 0,
-	.len = 1,
-	.pattern = scan_ff_pattern,
-};
-
-=======
->>>>>>> 82cb6ac... Merge tag 'for-linus-20131112' of git://git.infradead.org/linux-mtd
 
 struct omap_nand_info {
 	struct nand_hw_control		controller;
@@ -1650,7 +1636,7 @@ static int omap_nand_probe(struct platform_device *pdev)
 	struct resource			*res;
 	struct mtd_part_parser_data	ppdata = {};
 
-	pdata = pdev->dev.platform_data;
+	pdata = dev_get_platdata(&pdev->dev);
 	if (pdata == NULL) {
 		dev_err(&pdev->dev, "platform data missing\n");
 		return -ENODEV;
@@ -2035,16 +2021,10 @@ static int omap_nand_remove(struct platform_device *pdev)
 	struct nand_chip *nand_chip = mtd->priv;
 	struct omap_nand_info *info = container_of(mtd, struct omap_nand_info,
 							mtd);
-<<<<<<< HEAD
-	omap3_free_bch(&info->mtd);
-
-	platform_set_drvdata(pdev, NULL);
-=======
 	if (nand_chip->ecc.priv) {
 		nand_bch_free(nand_chip->ecc.priv);
 		nand_chip->ecc.priv = NULL;
 	}
->>>>>>> 82cb6ac... Merge tag 'for-linus-20131112' of git://git.infradead.org/linux-mtd
 	if (info->dma)
 		dma_release_channel(info->dma);
 	nand_release(mtd);
