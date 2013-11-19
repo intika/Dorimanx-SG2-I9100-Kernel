@@ -1066,8 +1066,8 @@ static void sdhci_send_command(struct sdhci_host *host, struct mmc_command *cmd)
 		flags |= SDHCI_CMD_INDEX;
 
 	/* CMD19 is special in that the Data Present Select should be set */
-	if (cmd->data || cmd->opcode == MMC_SEND_TUNING_BLOCK ||
-	    cmd->opcode == MMC_SEND_TUNING_BLOCK_HS200)
+	if (cmd->data || (cmd->opcode == MMC_SEND_TUNING_BLOCK) ||
+	    (cmd->opcode == MMC_SEND_TUNING_BLOCK_HS200))
 		flags |= SDHCI_CMD_DATA;
 
 	sdhci_writew(host, SDHCI_MAKE_CMD(cmd->opcode, flags), SDHCI_COMMAND);
@@ -1082,7 +1082,7 @@ static void sdhci_finish_command(struct sdhci_host *host)
 	if (host->cmd->flags & MMC_RSP_PRESENT) {
 		if (host->cmd->flags & MMC_RSP_136) {
 			/* CRC is stripped so we need to do some shifting. */
-			for (i = 0;i < 4;i++) {
+			for (i = 0 ; i < 4 ; i++) {
 				host->cmd->resp[i] = sdhci_readl(host,
 					SDHCI_RESPONSE + (3-i)*4) << 8;
 				if (i != 3)
@@ -1616,12 +1616,12 @@ static void sdhci_set_ios(struct mmc_host *mmc, struct mmc_ios *ios)
 		mmc_host_sd_clear_prev_stat(mmc);
 		if (host->vmmc && regulator_is_enabled(host->vmmc)) {
 #ifdef CONFIG_MIDAS_COMMON
-		if (host->ops->set_power)
-			host->ops->set_power(0);
+			if (host->ops->set_power)
+				host->ops->set_power(0);
 #endif
 			regulator_disable(host->vmmc);
 			pr_info("%s : MMC Card OFF %s\n", __func__,
-				host->hw_name);
+					host->hw_name);
 		}
 	} else if (mmc_host_sd_present(mmc) &&
 			!mmc_host_sd_prev_stat(mmc)) {
@@ -1633,7 +1633,7 @@ static void sdhci_set_ios(struct mmc_host *mmc, struct mmc_ios *ios)
 #endif
 			regulator_enable(host->vmmc);
 			pr_info("%s : MMC Card ON %s\n", __func__,
-				host->hw_name);
+					host->hw_name);
 		}
 	}
 
@@ -2191,7 +2191,7 @@ static void sdhci_timeout_timer(unsigned long data)
 	struct sdhci_host *host;
 	unsigned long flags;
 
-	host = (struct sdhci_host*)data;
+	host = (struct sdhci_host *)data;
 
 	spin_lock_irqsave(&host->lock, flags);
 
