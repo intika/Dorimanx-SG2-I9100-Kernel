@@ -45,7 +45,7 @@ chmod -R 777 /tmp;
 # gcc x.x.x
 # export CROSS_COMPILE=$PARENT_DIR/toolchain/bin/arm-none-eabi-;
 
-# gcc 4.8.2 (Linaro 13.x)
+# gcc 4.8.3 (Linaro 2013.x)
 export CROSS_COMPILE=$KERNELDIR/android-toolchain/bin/arm-eabi-;
 
 # importing PATCH for GCC depend on GCC version
