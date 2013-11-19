@@ -1,5 +1,5 @@
 /*
- * ZigBee socket interface
+ * IEEE 802.15.4 dgram socket interface
  *
  * Copyright 2007, 2008 Siemens AG
  *
@@ -209,6 +209,7 @@ static int dgram_sendmsg(struct kiocb *iocb, struct sock *sk,
 	unsigned int mtu;
 	struct sk_buff *skb;
 	struct dgram_sock *ro = dgram_sk(sk);
+	int hlen, tlen;
 	int err;
 
 	if (msg->msg_flags & MSG_OOB) {
@@ -229,13 +230,21 @@ static int dgram_sendmsg(struct kiocb *iocb, struct sock *sk,
 	mtu = dev->mtu;
 	pr_debug("name = %s, mtu = %u\n", dev->name, mtu);
 
-	skb = sock_alloc_send_skb(sk, LL_ALLOCATED_SPACE(dev) + size,
+	if (size > mtu) {
+		pr_debug("size = %Zu, mtu = %u\n", size, mtu);
+		err = -EINVAL;
+		goto out_dev;
+	}
+
+	hlen = LL_RESERVED_SPACE(dev);
+	tlen = dev->needed_tailroom;
+	skb = sock_alloc_send_skb(sk, hlen + tlen + size,
 			msg->msg_flags & MSG_DONTWAIT,
 			&err);
 	if (!skb)
 		goto out_dev;
 
-	skb_reserve(skb, LL_RESERVED_SPACE(dev));
+	skb_reserve(skb, hlen);
 
 	skb_reset_network_header(skb);
 
@@ -254,12 +263,6 @@ static int dgram_sendmsg(struct kiocb *iocb, struct sock *sk,
 	err = memcpy_fromiovec(skb_put(skb, size), msg->msg_iov, size);
 	if (err < 0)
 		goto out_skb;
-
-	if (size > mtu) {
-		pr_debug("size = %Zu, mtu = %u\n", size, mtu);
-		err = -EINVAL;
-		goto out_skb;
-	}
 
 	skb->dev = dev;
 	skb->sk  = sk;
@@ -288,6 +291,9 @@ static int dgram_recvmsg(struct kiocb *iocb, struct sock *sk,
 	size_t copied = 0;
 	int err = -EOPNOTSUPP;
 	struct sk_buff *skb;
+	struct sockaddr_ieee802154 *saddr;
+
+	saddr = (struct sockaddr_ieee802154 *)msg->msg_name;
 
 	skb = skb_recv_datagram(sk, flags, noblock, &err);
 	if (!skb)
@@ -305,6 +311,12 @@ static int dgram_recvmsg(struct kiocb *iocb, struct sock *sk,
 		goto done;
 
 	sock_recv_ts_and_drops(msg, sk, skb);
+
+	if (saddr) {
+		saddr->family = AF_IEEE802154;
+		saddr->addr = mac_cb(skb)->sa;
+		*addr_len = sizeof(*saddr);
+	}
 
 	if (flags & MSG_TRUNC)
 		copied = skb->len;

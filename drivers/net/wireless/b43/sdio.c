@@ -66,7 +66,7 @@ static void b43_sdio_interrupt_dispatcher(struct sdio_func *func)
 int b43_sdio_request_irq(struct b43_wldev *dev,
 			 void (*handler)(struct b43_wldev *dev))
 {
-	struct ssb_bus *bus = dev->sdev->bus;
+	struct ssb_bus *bus = dev->dev->sdev->bus;
 	struct sdio_func *func = bus->host_sdio;
 	struct b43_sdio *sdio = sdio_get_drvdata(func);
 	int err;
@@ -82,7 +82,7 @@ int b43_sdio_request_irq(struct b43_wldev *dev,
 
 void b43_sdio_free_irq(struct b43_wldev *dev)
 {
-	struct ssb_bus *bus = dev->sdev->bus;
+	struct ssb_bus *bus = dev->dev->sdev->bus;
 	struct sdio_func *func = bus->host_sdio;
 	struct b43_sdio *sdio = sdio_get_drvdata(func);
 
@@ -94,7 +94,7 @@ void b43_sdio_free_irq(struct b43_wldev *dev)
 }
 
 static int b43_sdio_probe(struct sdio_func *func,
-			  const struct sdio_device_id *id)
+				    const struct sdio_device_id *id)
 {
 	struct b43_sdio *sdio;
 	struct sdio_func_tuple *tuple;

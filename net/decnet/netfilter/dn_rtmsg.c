@@ -19,7 +19,7 @@
 #include <linux/netdevice.h>
 #include <linux/netfilter.h>
 #include <linux/spinlock.h>
-#include <linux/netlink.h>
+#include <net/netlink.h>
 #include <linux/netfilter_decnet.h>
 
 #include <net/sock.h>
@@ -39,27 +39,26 @@ static struct sk_buff *dnrmg_build_message(struct sk_buff *rt_skb, int *errp)
 	unsigned char *ptr;
 	struct nf_dn_rtmsg *rtm;
 
-	size = NLMSG_SPACE(rt_skb->len);
-	size += NLMSG_ALIGN(sizeof(struct nf_dn_rtmsg));
-	skb = alloc_skb(size, GFP_ATOMIC);
-	if (!skb)
-		goto nlmsg_failure;
+	size = NLMSG_ALIGN(rt_skb->len) +
+	       NLMSG_ALIGN(sizeof(struct nf_dn_rtmsg));
+	skb = nlmsg_new(size, GFP_ATOMIC);
+	if (!skb) {
+		*errp = -ENOMEM;
+		return NULL;
+	}
 	old_tail = skb->tail;
-	nlh = NLMSG_PUT(skb, 0, 0, 0, size - sizeof(*nlh));
-	rtm = (struct nf_dn_rtmsg *)NLMSG_DATA(nlh);
+	nlh = nlmsg_put(skb, 0, 0, 0, size, 0);
+	if (!nlh) {
+		kfree_skb(skb);
+		*errp = -ENOMEM;
+		return NULL;
+	}
+	rtm = (struct nf_dn_rtmsg *)nlmsg_data(nlh);
 	rtm->nfdn_ifindex = rt_skb->dev->ifindex;
 	ptr = NFDN_RTMSG(rtm);
 	skb_copy_from_linear_data(rt_skb, ptr, rt_skb->len);
 	nlh->nlmsg_len = skb->tail - old_tail;
 	return skb;
-
-nlmsg_failure:
-	if (skb)
-		kfree_skb(skb);
-	*errp = -ENOMEM;
-	if (net_ratelimit())
-		printk(KERN_ERR "dn_rtmsg: error creating netlink message\n");
-	return NULL;
 }
 
 static void dnrmg_send_peer(struct sk_buff *skb)
@@ -69,15 +68,15 @@ static void dnrmg_send_peer(struct sk_buff *skb)
 	int group = 0;
 	unsigned char flags = *skb->data;
 
-	switch(flags & DN_RT_CNTL_MSK) {
-		case DN_RT_PKT_L1RT:
-			group = DNRNG_NLGRP_L1;
-			break;
-		case DN_RT_PKT_L2RT:
-			group = DNRNG_NLGRP_L2;
-			break;
-		default:
-			return;
+	switch (flags & DN_RT_CNTL_MSK) {
+	case DN_RT_PKT_L1RT:
+		group = DNRNG_NLGRP_L1;
+		break;
+	case DN_RT_PKT_L2RT:
+		group = DNRNG_NLGRP_L2;
+		break;
+	default:
+		return;
 	}
 
 	skb2 = dnrmg_build_message(skb, &status);
@@ -88,7 +87,7 @@ static void dnrmg_send_peer(struct sk_buff *skb)
 }
 
 
-static unsigned int dnrmg_hook(unsigned int hook,
+static unsigned int dnrmg_hook(const struct nf_hook_ops *ops,
 			struct sk_buff *skb,
 			const struct net_device *in,
 			const struct net_device *out,
@@ -118,7 +117,7 @@ static inline void dnrmg_receive_user_skb(struct sk_buff *skb)
 
 static struct nf_hook_ops dnrmg_ops __read_mostly = {
 	.hook		= dnrmg_hook,
-	.pf		= PF_DECnet,
+	.pf		= NFPROTO_DECNET,
 	.hooknum	= NF_DN_ROUTE,
 	.priority	= NF_DN_PRI_DNRTMSG,
 };

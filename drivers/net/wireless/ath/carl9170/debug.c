@@ -654,8 +654,8 @@ static ssize_t carl9170_debugfs_bug_write(struct ar9170 *ar, const char *buf,
 		goto out;
 
 	case 'P':
-		err = carl9170_set_channel(ar, ar->hw->conf.channel,
-			ar->hw->conf.channel_type, CARL9170_RFI_COLD);
+		err = carl9170_set_channel(ar, ar->hw->conf.chandef.chan,
+			cfg80211_get_chandef_type(&ar->hw->conf.chandef));
 		if (err < 0)
 			count = err;
 
@@ -690,7 +690,7 @@ static char *carl9170_debugfs_bug_read(struct ar9170 *ar, char *buf,
 }
 __DEBUGFS_DECLARE_RW_FILE(bug, 400, CARL9170_STOPPED);
 
-static const char *erp_modes[] = {
+static const char *const erp_modes[] = {
 	[CARL9170_ERP_INVALID] = "INVALID",
 	[CARL9170_ERP_AUTO] = "Automatic",
 	[CARL9170_ERP_MAC80211] = "Set by MAC80211",
