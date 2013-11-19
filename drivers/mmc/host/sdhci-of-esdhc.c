@@ -1,7 +1,7 @@
 /*
  * Freescale eSDHC controller driver.
  *
- * Copyright (c) 2007 Freescale Semiconductor, Inc.
+ * Copyright (c) 2007, 2010, 2012 Freescale Semiconductor, Inc.
  * Copyright (c) 2009 MontaVista Software, Inc.
  *
  * Authors: Xiaobo Xie <X.Xie@freescale.com>
@@ -13,12 +13,13 @@
  * your option) any later version.
  */
 
+#include <linux/err.h>
 #include <linux/io.h>
+#include <linux/of.h>
 #include <linux/delay.h>
 #include <linux/module.h>
 #include <linux/mmc/host.h>
-#include "sdhci-of.h"
-#include "sdhci.h"
+#include "sdhci-pltfm.h"
 #include "sdhci-esdhc.h"
 
 #define VENDOR_V_22	0x12
@@ -51,11 +52,38 @@ static u32 esdhc_readl(struct sdhci_host *host, int reg)
 static u16 esdhc_readw(struct sdhci_host *host, int reg)
 {
 	u16 ret;
+	int base = reg & ~0x3;
+	int shift = (reg & 0x2) * 8;
 
 	if (unlikely(reg == SDHCI_HOST_VERSION))
-		ret = in_be16(host->ioaddr + reg);
+		ret = in_be32(host->ioaddr + base) & 0xffff;
 	else
-		ret = sdhci_be32bs_readw(host, reg);
+		ret = (in_be32(host->ioaddr + base) >> shift) & 0xffff;
+	return ret;
+}
+
+static u8 esdhc_readb(struct sdhci_host *host, int reg)
+{
+	int base = reg & ~0x3;
+	int shift = (reg & 0x3) * 8;
+	u8 ret = (in_be32(host->ioaddr + base) >> shift) & 0xff;
+
+	/*
+	 * "DMA select" locates at offset 0x28 in SD specification, but on
+	 * P5020 or P3041, it locates at 0x29.
+	 */
+	if (reg == SDHCI_HOST_CONTROL) {
+		u32 dma_bits;
+
+		dma_bits = in_be32(host->ioaddr + reg);
+		/* DMA select is 22,23 bits in Protocol Control Register */
+		dma_bits = (dma_bits >> 5) & SDHCI_CTRL_DMA_MASK;
+
+		/* fixup the result */
+		ret &= ~SDHCI_CTRL_DMA_MASK;
+		ret |= dma_bits;
+	}
+
 	return ret;
 }
 
@@ -86,6 +114,28 @@ static void esdhc_writew(struct sdhci_host *host, u16 val, int reg)
 
 static void esdhc_writeb(struct sdhci_host *host, u8 val, int reg)
 {
+	/*
+	 * "DMA select" location is offset 0x28 in SD specification, but on
+	 * P5020 or P3041, it's located at 0x29.
+	 */
+	if (reg == SDHCI_HOST_CONTROL) {
+		u32 dma_bits;
+
+		/*
+		 * If host control register is not standard, exit
+		 * this function
+		 */
+		if (host->quirks2 & SDHCI_QUIRK2_BROKEN_HOST_CONTROL)
+			return;
+
+		/* DMA select is 22,23 bits in Protocol Control Register */
+		dma_bits = (val & SDHCI_CTRL_DMA_MASK) << 5;
+		clrsetbits_be32(host->ioaddr + reg , SDHCI_CTRL_DMA_MASK << 5,
+			dma_bits);
+		val &= ~SDHCI_CTRL_DMA_MASK;
+		val |= in_be32(host->ioaddr + reg) & SDHCI_CTRL_DMA_MASK;
+	}
+
 	/* Prevent SDHCI core from writing reserved bits (e.g. HISPD). */
 	if (reg == SDHCI_HOST_CONTROL)
 		val &= ~ESDHC_HOST_CONTROL_RES;
@@ -135,16 +185,68 @@ static int esdhc_of_enable_dma(struct sdhci_host *host)
 
 static unsigned int esdhc_of_get_max_clock(struct sdhci_host *host)
 {
-	struct sdhci_of_host *of_host = sdhci_priv(host);
+	struct sdhci_pltfm_host *pltfm_host = sdhci_priv(host);
 
-	return of_host->clock;
+	return pltfm_host->clock;
 }
 
 static unsigned int esdhc_of_get_min_clock(struct sdhci_host *host)
 {
-	struct sdhci_of_host *of_host = sdhci_priv(host);
+	struct sdhci_pltfm_host *pltfm_host = sdhci_priv(host);
 
-	return of_host->clock / 256 / 16;
+	return pltfm_host->clock / 256 / 16;
+}
+
+static void esdhc_of_set_clock(struct sdhci_host *host, unsigned int clock)
+{
+
+	int pre_div = 2;
+	int div = 1;
+	u32 temp;
+
+	if (clock == 0)
+		goto out;
+
+	/* Workaround to reduce the clock frequency for p1010 esdhc */
+	if (of_find_compatible_node(NULL, NULL, "fsl,p1010-esdhc")) {
+		if (clock > 20000000)
+			clock -= 5000000;
+		if (clock > 40000000)
+			clock -= 5000000;
+	}
+
+	temp = sdhci_readl(host, ESDHC_SYSTEM_CONTROL);
+	temp &= ~(ESDHC_CLOCK_IPGEN | ESDHC_CLOCK_HCKEN | ESDHC_CLOCK_PEREN
+		| ESDHC_CLOCK_MASK);
+	sdhci_writel(host, temp, ESDHC_SYSTEM_CONTROL);
+
+	while (host->max_clk / pre_div / 16 > clock && pre_div < 256)
+		pre_div *= 2;
+
+	while (host->max_clk / pre_div / div > clock && div < 16)
+		div++;
+
+	dev_dbg(mmc_dev(host->mmc), "desired SD clock: %d, actual: %d\n",
+		clock, host->max_clk / pre_div / div);
+
+	pre_div >>= 1;
+	div--;
+
+	temp = sdhci_readl(host, ESDHC_SYSTEM_CONTROL);
+	temp |= (ESDHC_CLOCK_IPGEN | ESDHC_CLOCK_HCKEN | ESDHC_CLOCK_PEREN
+		| (div << ESDHC_DIVIDER_SHIFT)
+		| (pre_div << ESDHC_PREDIV_SHIFT));
+	sdhci_writel(host, temp, ESDHC_SYSTEM_CONTROL);
+	mdelay(1);
+out:
+	host->clock = clock;
+}
+
+#ifdef CONFIG_PM
+static u32 esdhc_proctl;
+static void esdhc_of_suspend(struct sdhci_host *host)
+{
+	esdhc_proctl = sdhci_be32bs_readl(host, SDHCI_HOST_CONTROL);
 }
 
 static void esdhc_of_resume(struct sdhci_host *host)
@@ -162,9 +264,36 @@ static void esdhc_of_platform_init(struct sdhci_host *host)
 	vvn = (vvn & SDHCI_VENDOR_VER_MASK) >> SDHCI_VENDOR_VER_SHIFT;
 	if (vvn == VENDOR_V_22)
 		host->quirks2 |= SDHCI_QUIRK2_HOST_NO_CMD23;
+
+	if (vvn > VENDOR_V_22)
+		host->quirks &= ~SDHCI_QUIRK_NO_BUSY_IRQ;
 }
 
-static struct sdhci_ops sdhci_esdhc_ops = {
+static int esdhc_pltfm_bus_width(struct sdhci_host *host, int width)
+{
+	u32 ctrl;
+
+	switch (width) {
+	case MMC_BUS_WIDTH_8:
+		ctrl = ESDHC_CTRL_8BITBUS;
+		break;
+
+	case MMC_BUS_WIDTH_4:
+		ctrl = ESDHC_CTRL_4BITBUS;
+		break;
+
+	default:
+		ctrl = 0;
+		break;
+	}
+
+	clrsetbits_be32(host->ioaddr + SDHCI_HOST_CONTROL,
+			ESDHC_CTRL_BUSWIDTH_MASK, ctrl);
+
+	return 0;
+}
+
+static const struct sdhci_ops sdhci_esdhc_ops = {
 	.read_l = esdhc_readl,
 	.read_w = esdhc_readw,
 	.read_b = esdhc_readb,
@@ -181,25 +310,79 @@ static struct sdhci_ops sdhci_esdhc_ops = {
 	.platform_resume = esdhc_of_resume,
 #endif
 	.adma_workaround = esdhci_of_adma_workaround,
+	.platform_bus_width = esdhc_pltfm_bus_width,
 };
 
-static struct sdhci_pltfm_data sdhci_esdhc_pdata = {
+static const struct sdhci_pltfm_data sdhci_esdhc_pdata = {
 	/*
 	 * card detection could be handled via GPIO
 	 * eSDHC cannot support End Attribute in NOP ADMA descriptor
 	 */
 	.quirks = ESDHC_DEFAULT_QUIRKS | SDHCI_QUIRK_BROKEN_CARD_DETECTION
-		| SDHCI_QUIRK_NO_CARD_NO_RESET,
-	.ops = {
-		.read_l = sdhci_be32bs_readl,
-		.read_w = esdhc_readw,
-		.read_b = sdhci_be32bs_readb,
-		.write_l = sdhci_be32bs_writel,
-		.write_w = esdhc_writew,
-		.write_b = esdhc_writeb,
-		.set_clock = esdhc_set_clock,
-		.enable_dma = esdhc_of_enable_dma,
-		.get_max_clock = esdhc_of_get_max_clock,
-		.get_min_clock = esdhc_of_get_min_clock,
-	},
+		| SDHCI_QUIRK_NO_CARD_NO_RESET
+		| SDHCI_QUIRK_NO_ENDATTR_IN_NOPDESC,
+	.ops = &sdhci_esdhc_ops,
 };
+
+static int sdhci_esdhc_probe(struct platform_device *pdev)
+{
+	struct sdhci_host *host;
+	struct device_node *np;
+	int ret;
+
+	host = sdhci_pltfm_init(pdev, &sdhci_esdhc_pdata, 0);
+	if (IS_ERR(host))
+		return PTR_ERR(host);
+
+	sdhci_get_of_property(pdev);
+
+	np = pdev->dev.of_node;
+	if (of_device_is_compatible(np, "fsl,p2020-esdhc")) {
+		/*
+		 * Freescale messed up with P2020 as it has a non-standard
+		 * host control register
+		 */
+		host->quirks2 |= SDHCI_QUIRK2_BROKEN_HOST_CONTROL;
+	}
+
+	/* call to generic mmc_of_parse to support additional capabilities */
+	mmc_of_parse(host->mmc);
+	mmc_of_parse_voltage(np, &host->ocr_mask);
+
+	ret = sdhci_add_host(host);
+	if (ret)
+		sdhci_pltfm_free(pdev);
+
+	return ret;
+}
+
+static int sdhci_esdhc_remove(struct platform_device *pdev)
+{
+	return sdhci_pltfm_unregister(pdev);
+}
+
+static const struct of_device_id sdhci_esdhc_of_match[] = {
+	{ .compatible = "fsl,mpc8379-esdhc" },
+	{ .compatible = "fsl,mpc8536-esdhc" },
+	{ .compatible = "fsl,esdhc" },
+	{ }
+};
+MODULE_DEVICE_TABLE(of, sdhci_esdhc_of_match);
+
+static struct platform_driver sdhci_esdhc_driver = {
+	.driver = {
+		.name = "sdhci-esdhc",
+		.owner = THIS_MODULE,
+		.of_match_table = sdhci_esdhc_of_match,
+		.pm = SDHCI_PLTFM_PMOPS,
+	},
+	.probe = sdhci_esdhc_probe,
+	.remove = sdhci_esdhc_remove,
+};
+
+module_platform_driver(sdhci_esdhc_driver);
+
+MODULE_DESCRIPTION("SDHCI OF driver for Freescale MPC eSDHC");
+MODULE_AUTHOR("Xiaobo Xie <X.Xie@freescale.com>, "
+	      "Anton Vorontsov <avorontsov@ru.mvista.com>");
+MODULE_LICENSE("GPL v2");
