@@ -1,3 +1,6 @@
+#ifndef __LINUX_CPU_RMAP_H
+#define __LINUX_CPU_RMAP_H
+
 /*
  * cpu_rmap.c: CPU affinity reverse-map support
  * Copyright 2011 Solarflare Communications Inc.
@@ -62,3 +65,5 @@ static inline struct cpu_rmap *alloc_irq_cpu_rmap(unsigned int size)
 extern void free_irq_cpu_rmap(struct cpu_rmap *rmap);
 
 extern int irq_cpu_rmap_add(struct cpu_rmap *rmap, int irq);
+
+#endif /* __LINUX_CPU_RMAP_H */
