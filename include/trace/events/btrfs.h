@@ -142,11 +142,13 @@ DEFINE_EVENT(btrfs__inode, btrfs_inode_evict,
 		{ EXTENT_FLAG_VACANCY, 		"VACANCY" 	},	\
 		{ EXTENT_FLAG_PREALLOC, 	"PREALLOC" 	})
 
-TRACE_EVENT(btrfs_get_extent,
+TRACE_EVENT_CONDITION(btrfs_get_extent,
 
 	TP_PROTO(struct btrfs_root *root, struct extent_map *map),
 
 	TP_ARGS(root, map),
+
+	TP_CONDITION(map),
 
 	TP_STRUCT__entry(
 		__field(	u64,  root_objectid	)
