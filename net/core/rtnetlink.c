@@ -1306,6 +1306,10 @@ static int do_setlink(struct net_device *dev, struct ifinfomsg *ifm,
 			err = PTR_ERR(net);
 			goto errout;
 		}
+		if (!ns_capable(net->user_ns, CAP_NET_ADMIN)) {
+			err = -EPERM;
+			goto errout;
+		}
 		err = dev_change_net_namespace(dev, net, ifname);
 		put_net(net);
 		if (err)
@@ -2004,7 +2008,7 @@ static int rtnetlink_rcv_msg(struct sk_buff *skb, struct nlmsghdr *nlh)
 	sz_idx = type>>2;
 	kind = type&3;
 
-	if (kind != 2 && !capable(CAP_NET_ADMIN))
+	if (kind != 2 && !ns_capable(net->user_ns, CAP_NET_ADMIN))
 		return -EPERM;
 
 	if (kind == 2 && nlh->nlmsg_flags&NLM_F_DUMP) {

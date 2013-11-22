@@ -586,10 +586,10 @@ retry:
 	return err;
 }
 
-static inline int netlink_capable(struct socket *sock, unsigned int flag)
+static inline int netlink_capable(const struct socket *sock, unsigned int flag)
 {
 	return (nl_table[sock->sk->sk_protocol].flags & flag) ||
-	       capable(CAP_NET_ADMIN);
+		ns_capable(sock_net(sock->sk)->user_ns, CAP_NET_ADMIN);
 }
 
 static void

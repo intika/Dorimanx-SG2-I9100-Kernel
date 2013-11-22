@@ -5,7 +5,7 @@
  *
  * Copyright (C) 2008 Nokia Corporation.
  *
- * Author: Rémi Denis-Courmont <remi.denis-courmont@nokia.com>
+ * Author: Rémi Denis-Courmont
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -30,6 +30,7 @@
 #include <asm/ioctls.h>
 
 #include <linux/phonet.h>
+#include <linux/module.h>
 #include <net/phonet/phonet.h>
 #include <net/phonet/pep.h>
 #include <net/phonet/gprs.h>
