@@ -5,8 +5,8 @@
  *
  * Copyright (C) 2008 Nokia Corporation.
  *
- * Contact: Remi Denis-Courmont <remi.denis-courmont@nokia.com>
- * Original author: Sakari Ailus <sakari.ailus@nokia.com>
+ * Authors: Sakari Ailus <sakari.ailus@nokia.com>
+ *          Rémi Denis-Courmont
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -68,10 +68,8 @@ static int pn_socket_create(struct net *net, struct socket *sock, int protocol,
 	struct phonet_protocol *pnp;
 	int err;
 
-#if !defined(CONFIG_SAMSUNG_PHONE_SVNET)
 	if (!capable(CAP_SYS_ADMIN))
 		return -EPERM;
-#endif
 
 	if (protocol == 0) {
 		/* Default protocol selection */

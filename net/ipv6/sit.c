@@ -17,6 +17,8 @@
  * Fred Templin <fred.l.templin@boeing.com>:	isatap support
  */
 
+#define pr_fmt(fmt) KBUILD_MODNAME ": " fmt
+
 #include <linux/module.h>
 #include <linux/capability.h>
 #include <linux/errno.h>
@@ -115,7 +117,7 @@ static struct net_device_stats *ipip6_get_stats(struct net_device *dev)
 /*
  * Must be invoked with rcu_read_lock
  */
-static struct ip_tunnel * ipip6_tunnel_lookup(struct net *net,
+static struct ip_tunnel *ipip6_tunnel_lookup(struct net *net,
 		struct net_device *dev, __be32 remote, __be32 local)
 {
 	unsigned int h0 = HASH(remote);
@@ -690,7 +692,7 @@ static netdev_tx_t ipip6_tunnel_xmit(struct sk_buff *skb,
 			goto tx_error;
 		}
 
-		addr6 = (const struct in6_addr*)&neigh->primary_key;
+		addr6 = (const struct in6_addr *)&neigh->primary_key;
 		addr_type = ipv6_addr_type(addr6);
 
 		if ((addr_type & IPV6_ADDR_UNICAST) &&
@@ -715,7 +717,7 @@ static netdev_tx_t ipip6_tunnel_xmit(struct sk_buff *skb,
 			goto tx_error;
 		}
 
-		addr6 = (const struct in6_addr*)&neigh->primary_key;
+		addr6 = (const struct in6_addr *)&neigh->primary_key;
 		addr_type = ipv6_addr_type(addr6);
 
 		if (addr_type == IPV6_ADDR_ANY) {
@@ -931,7 +933,7 @@ ipip6_tunnel_ioctl (struct net_device *dev, struct ifreq *ifr, int cmd)
 	case SIOCADDTUNNEL:
 	case SIOCCHGTUNNEL:
 		err = -EPERM;
-		if (!capable(CAP_NET_ADMIN))
+		if (!ns_capable(net->user_ns, CAP_NET_ADMIN))
 			goto done;
 
 		err = -EFAULT;
@@ -990,7 +992,7 @@ ipip6_tunnel_ioctl (struct net_device *dev, struct ifreq *ifr, int cmd)
 
 	case SIOCDELTUNNEL:
 		err = -EPERM;
-		if (!capable(CAP_NET_ADMIN))
+		if (!ns_capable(net->user_ns, CAP_NET_ADMIN))
 			goto done;
 
 		if (dev == sitn->fb_tunnel_dev) {
@@ -1023,7 +1025,7 @@ ipip6_tunnel_ioctl (struct net_device *dev, struct ifreq *ifr, int cmd)
 	case SIOCDELPRL:
 	case SIOCCHGPRL:
 		err = -EPERM;
-		if (!capable(CAP_NET_ADMIN))
+		if (!ns_capable(net->user_ns, CAP_NET_ADMIN))
 			goto done;
 		err = -EINVAL;
 		if (dev == sitn->fb_tunnel_dev)
@@ -1052,7 +1054,7 @@ ipip6_tunnel_ioctl (struct net_device *dev, struct ifreq *ifr, int cmd)
 	case SIOCCHG6RD:
 	case SIOCDEL6RD:
 		err = -EPERM;
-		if (!capable(CAP_NET_ADMIN))
+		if (!ns_capable(net->user_ns, CAP_NET_ADMIN))
 			goto done;
 
 		err = -EFAULT;
@@ -1277,7 +1279,7 @@ static int __init sit_init(void)
 {
 	int err;
 
-	printk(KERN_INFO "IPv6 over IPv4 tunneling driver\n");
+	pr_info("IPv6 over IPv4 tunneling driver\n");
 
 	err = register_pernet_device(&sit_net_ops);
 	if (err < 0)
