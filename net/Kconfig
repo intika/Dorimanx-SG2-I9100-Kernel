@@ -230,19 +230,19 @@ source "net/dns_resolver/Kconfig"
 source "net/batman-adv/Kconfig"
 
 config RPS
-	boolean
+	boolean "RPS"
 	depends on SMP && SYSFS
-	default y
+	default n
 
 config RFS_ACCEL
-	boolean
+	boolean "RFS_ACCEL"
 	depends on RPS
 	select CPU_RMAP
 	default y
 
 config XPS
-	boolean
-	depends on SMP
+	boolean "XPS"
+	depends on SMP && RPS
 	default y
 
 config HAVE_BPF_JIT
