@@ -29,7 +29,7 @@ static int
 noop_merge(struct request_queue *q, struct request **rqp, struct bio *bio)
 {
 	struct noop_data *nd = q->elevator->elevator_data;
-	sector_t sector = bio->bi_sector + bio_sectors(bio);
+	sector_t sector = bio->bi_iter.bi_sector + bio_sectors(bio);
 	struct request *rq = elv_rb_find(&nd->sort_list, sector);
 
 	if (rq && elv_rq_merge_ok(rq, bio)) {
