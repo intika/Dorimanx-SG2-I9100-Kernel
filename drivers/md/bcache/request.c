@@ -163,7 +163,6 @@ static struct cgroup_subsys_state *bcachecg_create(struct cgroup *cgroup)
 static void bcachecg_destroy(struct cgroup *cgroup)
 {
 	struct bch_cgroup *cg = cgroup_to_bcache(cgroup);
-	free_css_id(&bcache_subsys, &cg->css);
 	kfree(cg);
 }
 
@@ -354,13 +353,13 @@ static void bch_data_insert_start(struct closure *cl)
 	struct data_insert_op *op = container_of(cl, struct data_insert_op, cl);
 	struct bio *bio = op->bio, *n;
 
-	if (op->bypass)
-		return bch_data_invalidate(cl);
-
 	if (atomic_sub_return(bio_sectors(bio), &op->c->sectors_to_gc) < 0) {
 		set_gc_sectors(op->c);
 		wake_up_gc(op->c);
 	}
+
+	if (op->bypass)
+		return bch_data_invalidate(cl);
 
 	/*
 	 * Journal writes are marked REQ_FLUSH; if the original write was a
@@ -389,7 +388,7 @@ static void bch_data_insert_start(struct closure *cl)
 				       op->writeback))
 			goto err;
 
-		n = bch_bio_split(bio, KEY_SIZE(k), GFP_NOIO, split);
+		n = bio_next_split(bio, KEY_SIZE(k), GFP_NOIO, split);
 
 		n->bi_end_io	= bch_data_insert_endio;
 		n->bi_private	= cl;
@@ -622,7 +621,6 @@ struct search {
 
 	unsigned		insert_bio_sectors;
 	unsigned		recoverable:1;
-	unsigned		unaligned_bvec:1;
 	unsigned		write:1;
 	unsigned		read_dirty_data:1;
 
@@ -697,9 +695,9 @@ static int cache_lookup_fn(struct btree_op *op, struct btree *b, struct bkey *k)
 	if (KEY_DIRTY(k))
 		s->read_dirty_data = true;
 
-	n = bch_bio_split(bio, min_t(uint64_t, INT_MAX,
-				     KEY_OFFSET(k) - bio->bi_iter.bi_sector),
-			  GFP_NOIO, s->d->bio_split);
+	n = bio_next_split(bio, min_t(uint64_t, INT_MAX,
+				      KEY_OFFSET(k) - bio->bi_iter.bi_sector),
+			   GFP_NOIO, s->d->bio_split);
 
 	bio_key = &container_of(n, struct bbio, bio)->key;
 	bch_bkey_copy_single_ptr(bio_key, k, ptr);
@@ -779,15 +777,12 @@ static void bio_complete(struct search *s)
 static void do_bio_hook(struct search *s, struct bio *orig_bio)
 {
 	struct bio *bio = &s->bio.bio;
-	memcpy(bio, s->orig_bio, sizeof(struct bio));
 
-<<<<<<< HEAD
-=======
 	bio_init(bio);
 	__bio_clone_fast(bio, orig_bio);
->>>>>>> 53d8ab2... Merge branch 'for-3.14/drivers' of git://git.kernel.dk/linux-block
 	bio->bi_end_io		= request_endio;
 	bio->bi_private		= &s->cl;
+
 	atomic_set(&bio->bi_cnt, 3);
 }
 
@@ -799,9 +794,6 @@ static void search_free(struct closure *cl)
 	if (s->iop.bio)
 		bio_put(s->iop.bio);
 
-	if (s->unaligned_bvec)
-		mempool_free(s->bio.bio.bi_io_vec, s->d->unaligned_bvec);
-
 	closure_debug_destroy(cl);
 	mempool_free(s, s->d->c->search);
 }
@@ -810,7 +802,6 @@ static inline struct search *search_alloc(struct bio *bio,
 					  struct bcache_device *d)
 {
 	struct search *s;
-	struct bio_vec *bv;
 
 	s = mempool_alloc(d->c->search, GFP_NOIO);
 
@@ -833,15 +824,6 @@ static inline struct search *search_alloc(struct bio *bio,
 	s->iop.error		= 0;
 	s->iop.flags		= 0;
 	s->iop.flush_journal	= (bio->bi_rw & (REQ_FLUSH|REQ_FUA)) != 0;
-
-	if (bio->bi_size != bio_segments(bio) * PAGE_SIZE) {
-		bv = mempool_alloc(d->unaligned_bvec, GFP_NOIO);
-		memcpy(bv, bio_iovec(bio),
-		       sizeof(struct bio_vec) * bio_segments(bio));
-
-		s->bio.bio.bi_io_vec	= bv;
-		s->unaligned_bvec	= 1;
-	}
 
 	return s;
 }
@@ -881,30 +863,13 @@ static void cached_dev_read_error(struct closure *cl)
 {
 	struct search *s = container_of(cl, struct search, cl);
 	struct bio *bio = &s->bio.bio;
-	struct bio_vec *bv;
-	int i;
 
 	if (s->recoverable) {
 		/* Retry from the backing device: */
 		trace_bcache_read_retry(s->orig_bio);
 
 		s->iop.error = 0;
-<<<<<<< HEAD
-		bv = s->bio.bio.bi_io_vec;
-		do_bio_hook(s);
-		s->bio.bio.bi_io_vec = bv;
-
-		if (!s->unaligned_bvec)
-			bio_for_each_segment(bv, s->orig_bio, i)
-				bv->bv_offset = 0, bv->bv_len = PAGE_SIZE;
-		else
-			memcpy(s->bio.bio.bi_io_vec,
-			       bio_iovec(s->orig_bio),
-			       sizeof(struct bio_vec) *
-			       bio_segments(s->orig_bio));
-=======
 		do_bio_hook(s, s->orig_bio);
->>>>>>> 53d8ab2... Merge branch 'for-3.14/drivers' of git://git.kernel.dk/linux-block
 
 		/* XXX: invalidate cache */
 
@@ -940,8 +905,7 @@ static void cached_dev_read_done(struct closure *cl)
 		s->cache_miss = NULL;
 	}
 
-	if (verify(dc, &s->bio.bio) && s->recoverable &&
-	    !s->unaligned_bvec && !s->read_dirty_data)
+	if (verify(dc, &s->bio.bio) && s->recoverable && !s->read_dirty_data)
 		bch_data_verify(dc, s->orig_bio);
 
 	bio_complete(s);
@@ -981,7 +945,7 @@ static int cached_dev_cache_miss(struct btree *b, struct search *s,
 	struct bio *miss, *cache_bio;
 
 	if (s->cache_miss || s->iop.bypass) {
-		miss = bch_bio_split(bio, sectors, GFP_NOIO, s->d->bio_split);
+		miss = bio_next_split(bio, sectors, GFP_NOIO, s->d->bio_split);
 		ret = miss == bio ? MAP_DONE : MAP_CONTINUE;
 		goto out_submit;
 	}
@@ -1004,7 +968,7 @@ static int cached_dev_cache_miss(struct btree *b, struct search *s,
 
 	s->iop.replace = true;
 
-	miss = bch_bio_split(bio, sectors, GFP_NOIO, s->d->bio_split);
+	miss = bio_next_split(bio, sectors, GFP_NOIO, s->d->bio_split);
 
 	/* btree_search_recurse()'s btree iterator is no good anymore */
 	ret = miss == bio ? MAP_DONE : -EINTR;
@@ -1123,8 +1087,7 @@ static void cached_dev_write(struct cached_dev *dc, struct search *s)
 			closure_bio_submit(flush, cl, s->d);
 		}
 	} else {
-		s->iop.bio = bio_clone_bioset(bio, GFP_NOIO,
-					      dc->disk.bio_split);
+		s->iop.bio = bio_clone_fast(bio, GFP_NOIO, dc->disk.bio_split);
 
 		closure_bio_submit(bio, cl, s->d);
 	}
