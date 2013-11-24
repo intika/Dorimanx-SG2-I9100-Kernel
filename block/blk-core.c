@@ -1420,7 +1420,7 @@ bool bio_attempt_back_merge(struct request_queue *q, struct request *req,
 	if (!ll_back_merge_fn(q, req, bio))
 		return false;
 
-	trace_block_bio_backmerge(q, bio);
+	trace_block_bio_backmerge(q, req, bio);
 
 	if ((req->cmd_flags & REQ_FAILFAST_MASK) != ff)
 		blk_rq_set_mixed_merge(req);
@@ -1442,7 +1442,7 @@ bool bio_attempt_front_merge(struct request_queue *q, struct request *req,
 	if (!ll_front_merge_fn(q, req, bio))
 		return false;
 
-	trace_block_bio_frontmerge(q, bio);
+	trace_block_bio_frontmerge(q, req, bio);
 
 	if ((req->cmd_flags & REQ_FAILFAST_MASK) != ff)
 		blk_rq_set_mixed_merge(req);
@@ -2830,10 +2830,10 @@ void blk_rq_bio_prep(struct request_queue *q, struct request *rq,
 void rq_flush_dcache_pages(struct request *rq)
 {
 	struct req_iterator iter;
-	struct bio_vec *bvec;
+	struct bio_vec bvec;
 
 	rq_for_each_segment(bvec, rq, iter)
-		flush_dcache_page(bvec->bv_page);
+		flush_dcache_page(bvec.bv_page);
 }
 EXPORT_SYMBOL_GPL(rq_flush_dcache_pages);
 #endif
