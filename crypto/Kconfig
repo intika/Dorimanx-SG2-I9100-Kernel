@@ -119,7 +119,7 @@ config CRYPTO_MANAGER_TESTS
 	  registered.
 
 config CRYPTO_GF128MUL
-	tristate "GF(2^128) multiplication functions (EXPERIMENTAL)"
+	tristate "GF(2^128) multiplication functions"
 	help
 	  Efficient table driven implementation of multiplications in the
 	  field GF(2^128).  This is needed by some cypher modes. This
@@ -136,8 +136,8 @@ config CRYPTO_NULL
 	  These are 'Null' algorithms, used by IPsec, which do nothing.
 
 config CRYPTO_PCRYPT
-	tristate "Parallel crypto engine (EXPERIMENTAL)"
-	depends on SMP && EXPERIMENTAL
+	tristate "Parallel crypto engine"
+	depends on SMP
 	select PADATA
 	select CRYPTO_MANAGER
 	select CRYPTO_AEAD
@@ -171,9 +171,19 @@ config CRYPTO_AUTHENC
 
 config CRYPTO_TEST
 	tristate "Testing module"
+	depends on m
 	select CRYPTO_MANAGER
 	help
 	  Quick & dirty crypto test module.
+
+config CRYPTO_ABLK_HELPER
+	tristate
+	select CRYPTO_CRYPTD
+
+config CRYPTO_GLUE_HELPER_X86
+	tristate
+	depends on X86
+	select CRYPTO_ALGAPI
 
 comment "Authenticated Encryption with Associated Data"
 
@@ -242,8 +252,7 @@ config CRYPTO_ECB
 	  the input block by block.
 
 config CRYPTO_LRW
-	tristate "LRW support (EXPERIMENTAL)"
-	depends on EXPERIMENTAL
+	tristate "LRW support"
 	select CRYPTO_BLKCIPHER
 	select CRYPTO_MANAGER
 	select CRYPTO_GF128MUL
@@ -263,8 +272,7 @@ config CRYPTO_PCBC
 	  This block cipher algorithm is required for RxRPC.
 
 config CRYPTO_XTS
-	tristate "XTS support (EXPERIMENTAL)"
-	depends on EXPERIMENTAL
+	tristate "XTS support"
 	select CRYPTO_BLKCIPHER
 	select CRYPTO_MANAGER
 	select CRYPTO_GF128MUL
@@ -296,7 +304,6 @@ config CRYPTO_HMAC
 
 config CRYPTO_XCBC
 	tristate "XCBC support"
-	depends on EXPERIMENTAL
 	select CRYPTO_HASH
 	select CRYPTO_MANAGER
 	help
@@ -307,7 +314,6 @@ config CRYPTO_XCBC
 
 config CRYPTO_VMAC
 	tristate "VMAC support"
-	depends on EXPERIMENTAL
 	select CRYPTO_HASH
 	select CRYPTO_MANAGER
 	help
@@ -567,7 +573,11 @@ config CRYPTO_AES_NI_INTEL
 	select CRYPTO_AES_X86_64 if 64BIT
 	select CRYPTO_AES_586 if !64BIT
 	select CRYPTO_CRYPTD
+	select CRYPTO_ABLK_HELPER
 	select CRYPTO_ALGAPI
+	select CRYPTO_GLUE_HELPER_X86 if 64BIT
+	select CRYPTO_LRW
+	select CRYPTO_XTS
 	help
 	  Use Intel AES-NI instructions for AES algorithm.
 
@@ -737,7 +747,7 @@ config CRYPTO_CAMELLIA_AESNI_AVX_X86_64
 	depends on CRYPTO
 	select CRYPTO_ALGAPI
 	select CRYPTO_CRYPTD
-	select CRYPTO_ABLK_HELPER_X86
+	select CRYPTO_ABLK_HELPER
 	select CRYPTO_GLUE_HELPER_X86
 	select CRYPTO_CAMELLIA_X86_64
 	select CRYPTO_LRW
@@ -759,7 +769,7 @@ config CRYPTO_CAMELLIA_AESNI_AVX2_X86_64
 	depends on CRYPTO
 	select CRYPTO_ALGAPI
 	select CRYPTO_CRYPTD
-	select CRYPTO_ABLK_HELPER_X86
+	select CRYPTO_ABLK_HELPER
 	select CRYPTO_GLUE_HELPER_X86
 	select CRYPTO_CAMELLIA_X86_64
 	select CRYPTO_CAMELLIA_AESNI_AVX_X86_64
@@ -804,7 +814,8 @@ config CRYPTO_CAST5_AVX_X86_64
 	depends on X86 && 64BIT
 	select CRYPTO_ALGAPI
 	select CRYPTO_CRYPTD
-	select CRYPTO_ABLK_HELPER_X86
+	select CRYPTO_ABLK_HELPER
+	select CRYPTO_CAST_COMMON
 	select CRYPTO_CAST5
 	help
 	  The CAST5 encryption algorithm (synonymous with CAST-128) is
@@ -825,7 +836,7 @@ config CRYPTO_CAST6_AVX_X86_64
 	depends on X86 && 64BIT
 	select CRYPTO_ALGAPI
 	select CRYPTO_CRYPTD
-	select CRYPTO_ABLK_HELPER_X86
+	select CRYPTO_ABLK_HELPER
 	select CRYPTO_GLUE_HELPER_X86
 	select CRYPTO_CAST6
 	select CRYPTO_LRW
@@ -864,8 +875,7 @@ config CRYPTO_KHAZAD
 	  <http://www.larc.usp.br/~pbarreto/KhazadPage.html>
 
 config CRYPTO_SALSA20
-	tristate "Salsa20 stream cipher algorithm (EXPERIMENTAL)"
-	depends on EXPERIMENTAL
+	tristate "Salsa20 stream cipher algorithm"
 	select CRYPTO_BLKCIPHER
 	help
 	  Salsa20 stream cipher algorithm.
@@ -877,9 +887,8 @@ config CRYPTO_SALSA20
 	  Bernstein <djb@cr.yp.to>. See <http://cr.yp.to/snuffle.html>
 
 config CRYPTO_SALSA20_586
-	tristate "Salsa20 stream cipher algorithm (i586) (EXPERIMENTAL)"
+	tristate "Salsa20 stream cipher algorithm (i586)"
 	depends on (X86 || UML_X86) && !64BIT
-	depends on EXPERIMENTAL
 	select CRYPTO_BLKCIPHER
 	help
 	  Salsa20 stream cipher algorithm.
@@ -891,9 +900,8 @@ config CRYPTO_SALSA20_586
 	  Bernstein <djb@cr.yp.to>. See <http://cr.yp.to/snuffle.html>
 
 config CRYPTO_SALSA20_X86_64
-	tristate "Salsa20 stream cipher algorithm (x86_64) (EXPERIMENTAL)"
+	tristate "Salsa20 stream cipher algorithm (x86_64)"
 	depends on (X86 || UML_X86) && 64BIT
-	depends on EXPERIMENTAL
 	select CRYPTO_BLKCIPHER
 	help
 	  Salsa20 stream cipher algorithm.
@@ -935,7 +943,12 @@ config CRYPTO_SERPENT_SSE2_X86_64
 	tristate "Serpent cipher algorithm (x86_64/SSE2)"
 	depends on X86 && 64BIT
 	select CRYPTO_ALGAPI
+	select CRYPTO_CRYPTD
+	select CRYPTO_ABLK_HELPER
+	select CRYPTO_GLUE_HELPER_X86
 	select CRYPTO_SERPENT
+	select CRYPTO_LRW
+	select CRYPTO_XTS
 	help
 	  Serpent cipher algorithm, by Anderson, Biham & Knudsen.
 
@@ -953,6 +966,8 @@ config CRYPTO_SERPENT_SSE2_586
 	depends on X86 && !64BIT
 	select CRYPTO_ALGAPI
 	select CRYPTO_CRYPTD
+	select CRYPTO_ABLK_HELPER
+	select CRYPTO_GLUE_HELPER_X86
 	select CRYPTO_SERPENT
 	select CRYPTO_LRW
 	select CRYPTO_XTS
@@ -973,6 +988,8 @@ config CRYPTO_SERPENT_AVX_X86_64
 	depends on X86 && 64BIT
 	select CRYPTO_ALGAPI
 	select CRYPTO_CRYPTD
+	select CRYPTO_ABLK_HELPER
+	select CRYPTO_GLUE_HELPER_X86
 	select CRYPTO_SERPENT
 	select CRYPTO_LRW
 	select CRYPTO_XTS
@@ -993,7 +1010,7 @@ config CRYPTO_SERPENT_AVX2_X86_64
 	depends on X86 && 64BIT
 	select CRYPTO_ALGAPI
 	select CRYPTO_CRYPTD
-	select CRYPTO_ABLK_HELPER_X86
+	select CRYPTO_ABLK_HELPER
 	select CRYPTO_GLUE_HELPER_X86
 	select CRYPTO_SERPENT
 	select CRYPTO_SERPENT_AVX_X86_64
@@ -1087,6 +1104,9 @@ config CRYPTO_TWOFISH_X86_64_3WAY
 	select CRYPTO_ALGAPI
 	select CRYPTO_TWOFISH_COMMON
 	select CRYPTO_TWOFISH_X86_64
+	select CRYPTO_GLUE_HELPER_X86
+	select CRYPTO_LRW
+	select CRYPTO_XTS
 	help
 	  Twofish cipher algorithm (x86_64, 3-way parallel).
 
@@ -1106,6 +1126,8 @@ config CRYPTO_TWOFISH_AVX_X86_64
 	depends on X86 && 64BIT
 	select CRYPTO_ALGAPI
 	select CRYPTO_CRYPTD
+	select CRYPTO_ABLK_HELPER
+	select CRYPTO_GLUE_HELPER_X86
 	select CRYPTO_TWOFISH_COMMON
 	select CRYPTO_TWOFISH_X86_64
 	select CRYPTO_TWOFISH_X86_64_3WAY
@@ -1251,5 +1273,6 @@ config CRYPTO_HASH_INFO
 	bool
 
 source "drivers/crypto/Kconfig"
+source crypto/asymmetric_keys/Kconfig
 
 endif	# if CRYPTO

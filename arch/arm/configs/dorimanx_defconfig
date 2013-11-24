@@ -1,6 +1,6 @@
 #
 # Automatically generated file; DO NOT EDIT.
-# Linux/arm 3.12.0 Kernel Configuration
+# Linux/arm 3.13.0-rc1 Kernel Configuration
 #
 CONFIG_ARM=y
 CONFIG_GENERIC_GPIO=y
@@ -1725,6 +1725,8 @@ CONFIG_SERIAL_CORE_CONSOLE=y
 # CONFIG_IPMI_HANDLER is not set
 CONFIG_HW_RANDOM=y
 # CONFIG_HW_RANDOM_TIMERIOMEM is not set
+# CONFIG_HW_RANDOM_ATMEL is not set
+CONFIG_HW_RANDOM_EXYNOS=y
 # CONFIG_R3964 is not set
 # CONFIG_RAW_DRIVER is not set
 # CONFIG_TCG_TPM is not set
@@ -3391,6 +3393,7 @@ CONFIG_CRYPTO_ANSI_CPRNG=y
 # CONFIG_CRYPTO_USER_API_HASH is not set
 # CONFIG_CRYPTO_USER_API_SKCIPHER is not set
 CONFIG_CRYPTO_HW=y
+# CONFIG_ASYMMETRIC_KEY_TYPE is not set
 # CONFIG_BINARY_PRINTF is not set
 
 #
