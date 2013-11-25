@@ -458,7 +458,4 @@ extern void ams369fg06_gpio_cfg(void);
 extern void lms501kf03_ldi_disable(void);
 #endif
 
-
-extern int lcdfreq_init(struct fb_info *fb);
-
 #endif /* _S3CFB_H */
