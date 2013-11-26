@@ -82,7 +82,6 @@
 #include "mdnie_dmb.h"
 #endif
 
-#define MDNIE_SYSFS_PREFIX		"/sdcard/mdnie/"
 #if defined(CONFIG_FB_MDNIE_PWM)
 #define MIN_BRIGHTNESS		0
 #define MAX_BRIGHTNESS_LEVEL		255
@@ -143,21 +142,7 @@ int mdnie_send_sequence(struct mdnie_info *mdnie, const unsigned short *seq)
 	mdnie_mask();
 
 	while (wbuf[i] != END_SEQ) {
-		if (g_mdnie->user_mode != 0x0000) {
-			switch (wbuf[i]) {
-				case 0x0063:
-					ret += mdnie_write(wbuf[i], g_mdnie->user_cb);
-					break;
-				case 0x0065:
-					ret += mdnie_write(wbuf[i], g_mdnie->user_cr);
-					break;
-				default:
-					ret += mdnie_write(wbuf[i], wbuf[i+1]);
-					break;
-			}
-		} else {
-			ret += mdnie_write(wbuf[i], wbuf[i+1]);
-		}
+		ret += mdnie_write(wbuf[i], wbuf[i+1]);
 		i += 2;
 	}
 
@@ -810,81 +795,6 @@ static ssize_t accessibility_store(struct device *dev,
 	return count;
 }
 
-static ssize_t user_mode_show(struct device *dev,
-		struct device_attribute *attr, char *buf)
-{
-	struct mdnie_info *mdnie = dev_get_drvdata(dev);
-	return sprintf(buf, "%d\n", mdnie->user_mode);
-}
-
-static ssize_t user_mode_store(struct device *dev,
-		struct device_attribute *attr, const char *buf, size_t size)
-{
-	struct mdnie_info *mdnie = dev_get_drvdata(dev);
-	int value = 0;
-
-	sscanf(buf, "%d", &value);
-
-	mdnie->user_mode = value;
-	mdnie_update(mdnie);
-
-	return size;
-}
-
-static ssize_t user_cb_show(struct device *dev,
-		struct device_attribute *attr, char *buf)
-{
-	struct mdnie_info *mdnie = dev_get_drvdata(dev);
-	return sprintf(buf, "%u\n", (mdnie->user_cb >> 8));
-}
-
-static ssize_t user_cb_store(struct device *dev,
-		struct device_attribute *attr, const char *buf, size_t size)
-{
-	struct mdnie_info *mdnie = dev_get_drvdata(dev);
-	int value;
-
-	sscanf(buf, "%d", &value);
-
-	if (value >= 0 || value <= 255)
-		mdnie->user_cb = (u16)(value << 8);
-	else {
-		printk(KERN_ERR "[mDNIe] invalid user mcm cb value. 0 <= value <= 255\n");
-		mdnie->user_cb = (128 << 8);
-	}
-
-	mdnie_update(mdnie);
-
-	return size;
-}
-
-static ssize_t user_cr_show(struct device *dev,
-		struct device_attribute *attr, char *buf)
-{
-	struct mdnie_info *mdnie = dev_get_drvdata(dev);
-	return sprintf(buf, "%u\n", mdnie->user_cr);
-}
-
-static ssize_t user_cr_store(struct device *dev,
-		struct device_attribute *attr, const char *buf, size_t size)
-{
-	struct mdnie_info *mdnie = dev_get_drvdata(dev);
-	int value;
-
-	sscanf(buf, "%d", &value);
-
-	if (value >= 0 || value <= 255)
-		mdnie->user_cr = (u16)value;
-	else {
-		printk(KERN_ERR "[mDNIe] invalid user mcm cr value. 0 <= value <= 255\n");
-		mdnie->user_cr = 128;
-	}
-
-	mdnie_update(mdnie);
-
-	return size;
-}
-
 #if !defined(CONFIG_FB_MDNIE_PWM)
 static ssize_t color_correct_show(struct device *dev,
 		struct device_attribute *attr, char *buf)
@@ -913,9 +823,6 @@ static struct device_attribute mdnie_attributes[] = {
 	__ATTR(cabc, 0664, cabc_show, cabc_store),
 #endif
 	__ATTR(tuning, 0664, tuning_show, tuning_store),
-	__ATTR(user_mode, 0666, user_mode_show, user_mode_store),
-	__ATTR(user_cb, 0666, user_cb_show, user_cb_store),
-	__ATTR(user_cr, 0666, user_cr_show, user_cr_store),
 	__ATTR(accessibility, 0664, accessibility_show, accessibility_store),
 #if !defined(CONFIG_FB_MDNIE_PWM)
 	__ATTR(color_correct, 0444, color_correct_show, NULL),
@@ -1047,9 +954,6 @@ static int mdnie_probe(struct platform_device *pdev)
 	mdnie->enable = TRUE;
 	mdnie->tuning = FALSE;
 	mdnie->accessibility = ACCESSIBILITY_OFF;
-	mdnie->user_mode = 0x0000;
-	mdnie->user_cb = 0x8000;
-	mdnie->user_cr = 0x0080;
 	mdnie->cabc = CABC_OFF;
 
 #if defined(CONFIG_FB_MDNIE_PWM)
@@ -1172,3 +1076,4 @@ module_exit(mdnie_exit);
 
 MODULE_DESCRIPTION("mDNIe Driver");
 MODULE_LICENSE("GPL");
+
