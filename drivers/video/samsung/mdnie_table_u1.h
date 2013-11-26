@@ -918,17 +918,6 @@ static unsigned short tune_camera[] = {
 	END_SEQ, 0x0000
 };
 
-static unsigned short tune_normal[] = {
-	/*start U1 normal */
-	0x0001, 0x0044, /*SCR MCM HDTR */
-	0x005b, 0x0064, /*MCM */
-	0x0063, 0x8000, /*cb */
-	0x0065, 0x0080, /*cr */
-	0x0028, 0x0000, /*Register Mask */
-	/*end */
-	END_SEQ, 0x0000,
-};
-
 static struct mdnie_tuning_info tuning_table[CABC_MAX][MODE_MAX][SCENARIO_MAX] = {
 	{
 		{

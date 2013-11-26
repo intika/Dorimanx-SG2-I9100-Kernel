@@ -33,7 +33,7 @@ enum SCENARIO {
 	EMAIL_MODE,
 #endif
 	SCENARIO_MAX,
-	COLOR_TONE_1 = 30,
+	COLOR_TONE_1 = 40,
 	COLOR_TONE_2,
 	COLOR_TONE_3,
 	COLOR_TONE_MAX
@@ -108,9 +108,6 @@ struct mdnie_info {
 #ifdef CONFIG_HAS_EARLYSUSPEND
 	struct early_suspend		early_suspend;
 #endif
-	unsigned short user_mode;
-	unsigned short user_cb;
-	unsigned short user_cr;
 };
 
 extern struct mdnie_info *g_mdnie;
