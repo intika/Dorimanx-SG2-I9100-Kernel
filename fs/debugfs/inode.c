@@ -28,7 +28,7 @@
 #include <linux/magic.h>
 #include <linux/slab.h>
 
-#define DEBUGFS_DEFAULT_MODE	0777
+#define DEBUGFS_DEFAULT_MODE	0700
 
 static struct vfsmount *debugfs_mount;
 static int debugfs_mount_count;
@@ -668,3 +668,4 @@ static int __init debugfs_init(void)
 	return retval;
 }
 core_initcall(debugfs_init);
+
