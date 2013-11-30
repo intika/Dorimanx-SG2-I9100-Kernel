@@ -1506,7 +1506,7 @@ static ssize_t led_fadeout_write( struct device *dev, struct device_attribute *a
 
 static ssize_t led_on_touch_read( struct device *dev, struct device_attribute *attr, char *buf )
 {
-	return sprintf(buf,"%d\n", breathing);
+	return sprintf(buf,"%d\n", led_on_touch);
 }
 static ssize_t led_on_touch_write( struct device *dev, struct device_attribute *attr, const char *buf, size_t size )
 {
@@ -1959,13 +1959,13 @@ static ssize_t touch_led_control(struct device *dev,
 		}
 #endif
 		if (data == 0 || !led_disabled) {
-		errnum = i2c_touchkey_write((u8 *) &data, 1);
-		if (data == 1 && led_timeout > 0)
-			mod_timer(&led_timer, jiffies + msecs_to_jiffies(led_timeout));
-		if (errnum == -ENODEV)
-			touchled_cmd_reversed = 1;
+			errnum = i2c_touchkey_write((u8 *) &data, 1);
+			if (data == 1 && led_timeout > 0)
+				mod_timer(&led_timer, jiffies + msecs_to_jiffies(led_timeout));
+			if (errnum == -ENODEV)
+				touchled_cmd_reversed = 1;
 
-		touchkey_led_status = data;
+			touchkey_led_status = data;
 		}
 	} else {
 		printk(KERN_DEBUG "[TouchKey] touch_led_control Error\n");
@@ -2323,9 +2323,9 @@ static ssize_t force_disable_write( struct device *dev, struct device_attribute 
 	/* change light state if needed*/
 	if (newstate == 1 && led_disabled == 0) {
 		disable_touchkey_backlights();
-		led_disabled=newstate;
+		led_disabled = newstate;
 	} else if (newstate == 0 && led_disabled == 1) {
-		led_disabled=0;
+		led_disabled = 0;
 		schedule_work(&led_fadein_work);
 	}
 
