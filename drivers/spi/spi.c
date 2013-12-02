@@ -641,7 +641,6 @@ done:
 }
 EXPORT_SYMBOL_GPL(spi_register_master);
 
-
 static int __unregister(struct device *dev, void *null)
 {
 	spi_unregister_device(to_spi_device(dev));
