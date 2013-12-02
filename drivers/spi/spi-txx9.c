@@ -432,7 +432,7 @@ exit:
 
 static int txx9spi_remove(struct platform_device *dev)
 {
-	struct spi_master *master = spi_master_get(platform_get_drvdata(dev));
+	struct spi_master *master = platform_get_drvdata(dev);
 	struct txx9spi *c = spi_master_get_devdata(master);
 
 	spi_unregister_master(master);
