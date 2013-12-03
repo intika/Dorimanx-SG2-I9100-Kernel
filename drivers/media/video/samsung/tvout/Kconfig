@@ -84,7 +84,7 @@ config HDMI_SWITCH_HPD
 
 config HDMI_14A_3D
 	bool "HDMI 14A driver support."
-	depends on VIDEO_TVOUT && ARCH_EXYNOS4
+	depends on VIDEO_TVOUT && ARCH_EXYNOS4 && CPU_EXYNOS4212
 	default y
 	---help---
 	  This is a HDMI 1.4A 3D driver for Samsung S5P platform.
@@ -150,9 +150,9 @@ config LSI_HDMI_AUDIO_CH_EVENT
 	default n
 	---help---
 	  receive audio channel info from platform using ioctl.
-		#define AUDIO_CH_SET_STATE _IOR('H', 101, unsigned int)
+	  	#define AUDIO_CH_SET_STATE _IOR('H', 101, unsigned int)
 	  and send this to platform using uevent
-		audio_ch_switch.name = "hdmi_audio_ch";
+	  	audio_ch_switch.name = "hdmi_audio_ch";
 
 config TV_DEBUG
 	bool "TVOUT driver debug message"

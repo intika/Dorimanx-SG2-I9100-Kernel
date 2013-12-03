@@ -21,10 +21,7 @@
 #ifdef CONFIG_HDMI_SWITCH_HPD
 #include <linux/switch.h>
 #endif
-#ifdef CONFIG_MACH_GD2
-#include <linux/power_supply.h>
-#define PSY_BAT_NAME "battery"
-#endif
+
 #include "s5p_tvout_common_lib.h"
 #include "hw_if/hw_if.h"
 
@@ -83,9 +80,6 @@ static int last_uevent_state;
 atomic_t hdmi_status;
 atomic_t poll_state;
 
-#ifdef CONFIG_MACH_GD2
-static void hdmi_set_charger(bool on);
-#endif
 static int s5p_hpd_open(struct inode *inode, struct file *file);
 static int s5p_hpd_release(struct inode *inode, struct file *file);
 static ssize_t s5p_hpd_read(struct file *file, char __user *buffer,
@@ -110,7 +104,7 @@ static struct miscdevice hpd_misc_device = {
 };
 
 #ifdef CONFIG_LSI_HDMI_AUDIO_CH_EVENT
-static struct switch_dev g_audio_ch_switch;
+	static struct switch_dev g_audio_ch_switch;
 #endif
 
 static void s5p_hpd_kobject_uevent(void)
@@ -158,9 +152,6 @@ static void s5p_hpd_kobject_uevent(void)
 #ifdef CONFIG_HDMI_SWITCH_HPD
 			hpd_struct.hpd_switch.state = 0;
 			switch_set_state(&hpd_struct.hpd_switch, 1);
-#ifdef CONFIG_MACH_GD2
-			hdmi_set_charger(true);
-#endif
 #else
 			sprintf(env_buf, "HDMI_STATE=online");
 			envp[env_offset++] = env_buf;
@@ -187,9 +178,6 @@ static void s5p_hpd_kobject_uevent(void)
 #ifdef CONFIG_HDMI_SWITCH_HPD
 			hpd_struct.hpd_switch.state = 1;
 			switch_set_state(&hpd_struct.hpd_switch, 0);
-#ifdef CONFIG_MACH_GD2
-			hdmi_set_charger(false);
-#endif
 #else
 			sprintf(env_buf, "HDMI_STATE=offline");
 			envp[env_offset++] = env_buf;
@@ -539,25 +527,6 @@ static work_func_t  ext_ic_control_func(void)
 }
 #endif
 
-#ifdef CONFIG_MACH_GD2
-static void hdmi_set_charger(bool on)
-{
-	struct power_supply *psy = power_supply_get_by_name(PSY_BAT_NAME);
-	union power_supply_propval power_value;
-
-	if (!psy) {
-		pr_err("%s: fail to get %s psy\n", __func__, PSY_BAT_NAME);
-		return;
-	}
-
-	power_value.intval = on;
-
-	pr_info("%s: on/off %d \n", __func__, on);
-	psy->set_property(psy, POWER_SUPPLY_PROP_HDMI, &power_value);
-
-	return;
-}
-#endif
 
 #ifdef	CONFIG_SAMSUNG_WORKAROUND_HPD_GLANCE
 static irqreturn_t s5p_hpd_irq_default_handler(int irq, void *dev_id)
@@ -659,11 +628,6 @@ static int s5p_hpd_probe(struct platform_device *pdev)
 		last_hpd_state = HPD_LO;
 	}
 
-#ifdef CONFIG_LSI_HDMI_AUDIO_CH_EVENT
-	g_audio_ch_switch.name = "ch_hdmi_audio";
-	switch_dev_register(&g_audio_ch_switch);
-#endif
-
 #ifdef CONFIG_HDMI_SWITCH_HPD
 	hpd_struct.hpd_switch.name = "hdmi";
 	switch_dev_register(&hpd_struct.hpd_switch);
@@ -693,6 +657,10 @@ static int s5p_hpd_probe(struct platform_device *pdev)
 
 	last_uevent_state = -1;
 
+#ifdef CONFIG_LSI_HDMI_AUDIO_CH_EVENT
+	g_audio_ch_switch.name = "ch_hdmi_audio";
+	switch_dev_register(&g_audio_ch_switch);
+#endif
 	return 0;
 }
 
