@@ -26,6 +26,7 @@
 #include <linux/module.h>
 #include <linux/mutex.h>
 #include <linux/slab.h>
+#include <linux/suspend.h>
 #include <linux/syscore_ops.h>
 #include <linux/earlysuspend.h>
 
@@ -48,6 +49,9 @@ static LIST_HEAD(cpufreq_policy_list);
 /* This one keeps track of the previously set governor of a removed CPU */
 static DEFINE_PER_CPU(char[CPUFREQ_NAME_LEN], cpufreq_cpu_governor);
 #endif
+
+/* Flag to suspend/resume CPUFreq governors */
+static bool cpufreq_suspended;
 
 /*
  * cpu_policy_rwsem is a per CPU reader-writer semaphore designed to cure
@@ -1505,6 +1509,41 @@ static struct subsys_interface cpufreq_interface = {
 	.remove_dev	= cpufreq_remove_dev,
 };
 
+void cpufreq_suspend(void)
+{
+	struct cpufreq_policy *policy;
+
+	if (!cpufreq_driver->target)
+		return;
+
+	pr_debug("%s: Suspending Governors\n", __func__);
+
+	list_for_each_entry(policy, &cpufreq_policy_list, policy_list)
+		if (__cpufreq_governor(policy, CPUFREQ_GOV_STOP))
+			pr_err("%s: Failed to stop governor for policy: %p\n",
+				__func__, policy);
+
+	cpufreq_suspended = true;
+}
+
+void cpufreq_resume(void)
+{
+	struct cpufreq_policy *policy;
+
+	if (!cpufreq_driver->target)
+		return;
+
+	pr_debug("%s: Resuming Governors\n", __func__);
+
+	cpufreq_suspended = false;
+
+	list_for_each_entry(policy, &cpufreq_policy_list, policy_list)
+		if (__cpufreq_governor(policy, CPUFREQ_GOV_START)
+		    || __cpufreq_governor(policy, CPUFREQ_GOV_LIMITS))
+			pr_err("%s: Failed to start governor for policy: %p\n",
+				__func__, policy);
+}
+
 /**
  * cpufreq_bp_suspend - Prepare the boot CPU for system suspend.
  *
@@ -1757,6 +1796,10 @@ static int __cpufreq_governor(struct cpufreq_policy *policy,
 #else
 	struct cpufreq_governor *gov = NULL;
 #endif
+
+	/* Don't start any governor operations if we are entering suspend */
+	if (cpufreq_suspended)
+		return 0;
 
 	if (policy->governor->max_transition_latency &&
 	    policy->cpuinfo.transition_latency >
@@ -2083,9 +2126,6 @@ static int cpufreq_cpu_callback(struct notifier_block *nfb,
 
 	dev = get_cpu_device(cpu);
 	if (dev) {
-
-		if (action & CPU_TASKS_FROZEN)
-			frozen = true;
 
 		switch (action & ~CPU_TASKS_FROZEN) {
 		case CPU_ONLINE:
