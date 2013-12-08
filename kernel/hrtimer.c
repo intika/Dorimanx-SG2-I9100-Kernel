@@ -1615,8 +1615,7 @@ long hrtimer_nanosleep(struct timespec *rqtp, struct timespec __user *rmtp,
 	int ret = 0;
 	unsigned long slack;
 
-	/* ORIG -> slack = current->timer_slack_ns; */
-	slack = task_get_effective_timer_slack(current); /* (timer slack mode) */
+	slack = current->timer_slack_ns;
 	if (rt_task(current))
 		slack = 0;
 
