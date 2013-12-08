@@ -79,12 +79,6 @@ SUBSYS(net_prio)
 
 /* */
 
-#if IS_SUBSYS_ENABLED(CONFIG_CGROUP_TIMER_SLACK)
-SUBSYS(timer_slack)
-#endif
-
-/* */
-
 #if IS_SUBSYS_ENABLED(CONFIG_CGROUP_HUGETLB)
 SUBSYS(hugetlb)
 #endif
