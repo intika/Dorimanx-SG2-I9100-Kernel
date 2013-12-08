@@ -345,7 +345,9 @@ static void dbs_check_cpu(struct cpu_dbs_info_s *this_dbs_info)
 {
 	/* Extrapolated load of this CPU */
 	unsigned int load_at_max_freq = 0;
-	unsigned int load = 0;
+	unsigned int max_load_freq;
+	/* Current load across this CPU */
+	unsigned int cur_load = 0;
 
 	struct cpufreq_policy *policy;
 	unsigned int j;
@@ -355,16 +357,26 @@ static void dbs_check_cpu(struct cpu_dbs_info_s *this_dbs_info)
 
 	/*
 	 * Every sampling_rate, we check, if current idle time is less
-	 * than 20% (default), then we try to increase frequency. Else, we adjust the frequency
-	 * proportional to load.
+	 * than 20% (default), then we try to increase frequency
+	 * Every sampling_rate, we look for a the lowest
+	 * frequency which can sustain the load while keeping idle time over
+	 * 30%. If such a frequency exist, we try to decrease to this frequency.
+	 *
+	 * Any frequency increase takes it to the maximum frequency.
+	 * Frequency reduction happens at minimum steps of
+	 * 5% (default) of current frequency
 	 */
+
+	/* Get Absolute Load - in terms of freq */
+	max_load_freq = 0;
 
 	for_each_cpu(j, policy->cpus) {
 		struct cpu_dbs_info_s *j_dbs_info;
 		u64 cur_wall_time, cur_idle_time;
 		u64 prev_wall_time, prev_idle_time;
 		unsigned int idle_time, wall_time;
-		unsigned int cur_load;
+		unsigned int load_freq;
+		int freq_avg;
 
 		j_dbs_info = &per_cpu(od_cpu_dbs_info, j);
 		prev_wall_time = j_dbs_info->prev_cpu_wall;
@@ -401,8 +413,14 @@ static void dbs_check_cpu(struct cpu_dbs_info_s *this_dbs_info)
 			continue;
 
 		cur_load = 100 * (wall_time - idle_time) / wall_time;
-		if (cur_load > load)
-			load = cur_load;
+
+		freq_avg = __cpufreq_driver_getavg(policy, j);
+		if (freq_avg <= 0)
+			freq_avg = policy->cur;
+
+		load_freq = cur_load * freq_avg;
+		if (load_freq > max_load_freq)
+			max_load_freq = load_freq;
 
 		/* calculate the scaled load across CPU */
 		load_at_max_freq += (cur_load * policy->cur) /
@@ -417,7 +435,7 @@ static void dbs_check_cpu(struct cpu_dbs_info_s *this_dbs_info)
 		up_threshold = dbs_tuners_ins.up_threshold_at_min_freq;
 	}
 
-	if (load > up_threshold) {
+	if (max_load_freq > up_threshold * policy->cur) {
 		int inc = (policy->max * dbs_tuners_ins.freq_step) / 100;
 		int target = min(policy->max, policy->cur + inc);
 
@@ -445,12 +463,13 @@ static void dbs_check_cpu(struct cpu_dbs_info_s *this_dbs_info)
 
 	up_threshold = dbs_tuners_ins.up_threshold;
 
-	if (load <
-	    (up_threshold - dbs_tuners_ins.down_differential)) {
+	if (max_load_freq <
+	    (up_threshold - dbs_tuners_ins.down_differential) * policy->cur) {
 		unsigned int freq_next;
 		unsigned int down_thres;
 
-		freq_next = load * policy->max / 100;
+		freq_next = max_load_freq /
+			(up_threshold - dbs_tuners_ins.down_differential);
 
 		/* No longer fully busy, reset rate_mult */
 		this_dbs_info->rate_mult = 1;
@@ -462,7 +481,7 @@ static void dbs_check_cpu(struct cpu_dbs_info_s *this_dbs_info)
 			- dbs_tuners_ins.down_differential;
 
 		if (freq_next < dbs_tuners_ins.freq_for_responsiveness
-			&& (load / freq_next) > down_thres)
+			&& (max_load_freq / freq_next) > down_thres)
 			freq_next = dbs_tuners_ins.freq_for_responsiveness;
 
 		if (policy->cur == freq_next)
