@@ -110,7 +110,7 @@ static int s5p_iommu_domain_init(struct iommu_domain *domain)
 	mutex_init(&priv->lock);
 
 	domain->priv = priv;
-	pr_debug("%s: Allocated IOMMU domain %p with pgtable @ %#lx\n",
+	pr_debug("%s: Allocated IOMMU domain %p with pgtable @ %#x\n",
 			__func__, domain, __pa(priv->pgtable));
 	return 0;
 }
@@ -212,7 +212,7 @@ static void s5p_iommu_detach_device(struct iommu_domain *domain,
 
 		s5p_domain->dev = NULL;
 	} else {
-		pr_debug("%s: %s is not attached to domain of pgtable @ %#lx\n",
+		pr_debug("%s: %s is not attached to domain of pgtable @ %#x\n",
 			__func__, dev_name(dev), __pa(s5p_domain->pgtable));
 		mutex_unlock(&s5p_domain->lock);
 	}
@@ -226,7 +226,7 @@ static bool section_available(struct iommu_domain *domain,
 	struct s5p_iommu_domain *s5p_domain = domain->priv;
 
 	if (S5P_SECTION_LV1_ENTRY(*lv1entry)) {
-		pr_err("1MB entry alread exists at %#x // pgtable %#lx\n",
+		pr_err("1MB entry alread exists at %#x // pgtable %#x\n",
 				(lv1entry - s5p_domain->pgtable) * SZ_1M,
 				__pa(s5p_domain->pgtable));
 		return false;
@@ -240,7 +240,7 @@ static bool section_available(struct iommu_domain *domain,
 		while (lv2base != lv2end) {
 			if (!S5P_FAULT_LV2_ENTRY(*lv2base)) {
 				pr_err("Failed to free L2 page table for"
-					"section mapping. // pgtalle %#lx\n",
+					"section mapping. // pgtalle %#x\n",
 					__pa(s5p_domain->pgtable));
 				return false;
 			}
