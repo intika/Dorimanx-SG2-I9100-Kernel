@@ -688,7 +688,7 @@ static int vpfe_attach_irq(struct vpfe_device *vpfe_dev)
 	frame_format = ccdc_dev->hw_ops.get_frame_format();
 	if (frame_format == CCDC_FRMFMT_PROGRESSIVE) {
 		return request_irq(vpfe_dev->ccdc_irq1, vdint1_isr,
-				    IRQF_DISABLED, "vpfe_capture1",
+				    0, "vpfe_capture1",
 				    vpfe_dev);
 	}
 	return 0;
@@ -1837,7 +1837,7 @@ static int vpfe_probe(struct platform_device *pdev)
 	if (NULL == ccdc_cfg) {
 		v4l2_err(pdev->dev.driver,
 			 "Memory allocation failed for ccdc_cfg\n");
-		goto probe_free_lock;
+		goto probe_free_dev_mem;
 	}
 
 	mutex_lock(&ccdc_lock);
@@ -1863,7 +1863,7 @@ static int vpfe_probe(struct platform_device *pdev)
 	}
 	vpfe_dev->ccdc_irq1 = res1->start;
 
-	ret = request_irq(vpfe_dev->ccdc_irq0, vpfe_isr, IRQF_DISABLED,
+	ret = request_irq(vpfe_dev->ccdc_irq0, vpfe_isr, 0,
 			  "vpfe_capture0", vpfe_dev);
 
 	if (0 != ret) {
@@ -1991,7 +1991,6 @@ probe_out_release_irq:
 	free_irq(vpfe_dev->ccdc_irq0, vpfe_dev);
 probe_free_ccdc_cfg_mem:
 	kfree(ccdc_cfg);
-probe_free_lock:
 	mutex_unlock(&ccdc_lock);
 probe_free_dev_mem:
 	kfree(vpfe_dev);
