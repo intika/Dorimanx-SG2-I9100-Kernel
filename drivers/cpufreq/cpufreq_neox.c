@@ -376,13 +376,12 @@ static void dbs_check_cpu(struct cpu_dbs_info_s *this_dbs_info)
 		u64 cur_wall_time, cur_idle_time;
 		u64 prev_wall_time, prev_idle_time;
 		unsigned int idle_time, wall_time;
-		unsigned int cur_load;
+		unsigned int load_freq;
+		int freq_avg;
 		bool deep_sleep_detected = false;
 		/* the evil magic numbers, only 2 at least */
 		const unsigned int deep_sleep_backoff = 10;
 		const unsigned int deep_sleep_factor = 5;
-		unsigned int load_freq;
-		int freq_avg;
 
 		j_dbs_info = &per_cpu(od_cpu_dbs_info, j);
 		prev_wall_time = j_dbs_info->prev_cpu_wall;
