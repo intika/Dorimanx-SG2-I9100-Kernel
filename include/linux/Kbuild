@@ -107,7 +107,6 @@ header-y += tcp.h
 header-y += time.h
 header-y += timex.h
 header-y += tty.h
-header-y += types.h
 header-y += usbdevice_fs.h
 header-y += utsname.h
 header-y += videodev2.h
