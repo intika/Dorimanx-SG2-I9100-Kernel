@@ -83,24 +83,24 @@ touchkey register
 
 #define BL_STANDARD	3000
 
-int notification_timeout = -1;
-int led_disabled = 0; // 1= force disable the touchkey backlight
-int led_timeout;
+static int notification_timeout = -1;
+static int led_disabled = 0; /* 1= force disable the touchkey backlight */
+static int led_timeout;
 
 static DEFINE_SEMAPHORE(enable_sem);
 
 static struct timer_list breathing_timer;
 static void breathe(struct work_struct *breathe_work);
 static DECLARE_WORK(breathe_work, breathe);
-//breathing variables
+/* breathing variables */
 #define MAX_BREATHING_STEPS 10
 static unsigned int breathing = 0;
 static int breathing_step_count = 0;
 struct breathing_step {
-	int start; //mV
-	int end; //mV
-	int period; //ms
-	int step; //mV
+	int start; /* mV */
+	int end; /* mV */
+	int period; /* ms */
+	int step; /* mV */
 };
 struct breathing_step breathing_steps[MAX_BREATHING_STEPS];
 static int breathing_idx = 0;
@@ -112,8 +112,7 @@ static unsigned int touchkey_voltage_saved = 3000;
 static bool dyn_brightness = false;
 static bool blnww = false;
 
-static int led_fadein = 0, led_fadeout = 0;
-static int led_on_touch = 1;
+static int led_fadein = 0, led_fadeout = 0, led_on_touch = 0;
 
 #if defined(CONFIG_TARGET_LOCALE_NAATT_TEMP)
 /* Temp Fix NAGSM_SEL_ANDROID_MOHAMMAD_ANSARI_20111224*/
@@ -1595,7 +1594,7 @@ extern void (*mxt224_touch_cb)(void);
 
 void cypress_notify_touch(void)
 {
-	if (!bln_suspended && led_timeout > 0 && led_on_touch) {
+	if (!bln_suspended && (led_timeout > 0) && (led_on_touch == 1)) {
 		schedule_work(&led_fadein_work);
 		mod_timer(&led_timer, jiffies + msecs_to_jiffies(led_timeout));
 	}
