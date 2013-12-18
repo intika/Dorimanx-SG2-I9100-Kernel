@@ -801,3 +801,253 @@ void tegra_ehci_phy_restore_end(struct usb_phy *x)
 }
 EXPORT_SYMBOL_GPL(tegra_ehci_phy_restore_end);
 
+static int read_utmi_param(struct platform_device *pdev, const char *param,
+			   u8 *dest)
+{
+	u32 value;
+	int err = of_property_read_u32(pdev->dev.of_node, param, &value);
+	*dest = (u8)value;
+	if (err < 0)
+		dev_err(&pdev->dev, "Failed to read USB UTMI parameter %s: %d\n",
+			param, err);
+	return err;
+}
+
+static int utmi_phy_probe(struct tegra_usb_phy *tegra_phy,
+			  struct platform_device *pdev)
+{
+	struct resource *res;
+	int err;
+	struct tegra_utmip_config *config;
+
+	tegra_phy->is_ulpi_phy = false;
+
+	res = platform_get_resource(pdev, IORESOURCE_MEM, 1);
+	if (!res) {
+		dev_err(&pdev->dev, "Failed to get UTMI Pad regs\n");
+		return  -ENXIO;
+	}
+
+	tegra_phy->pad_regs = devm_ioremap(&pdev->dev, res->start,
+		resource_size(res));
+	if (!tegra_phy->pad_regs) {
+		dev_err(&pdev->dev, "Failed to remap UTMI Pad regs\n");
+		return -ENOMEM;
+	}
+
+	tegra_phy->config = devm_kzalloc(&pdev->dev,
+		sizeof(*tegra_phy->config), GFP_KERNEL);
+	if (!tegra_phy->config) {
+		dev_err(&pdev->dev,
+			"unable to allocate memory for USB UTMIP config\n");
+		return -ENOMEM;
+	}
+
+	config = tegra_phy->config;
+
+	err = read_utmi_param(pdev, "nvidia,hssync-start-delay",
+		&config->hssync_start_delay);
+	if (err < 0)
+		return err;
+
+	err = read_utmi_param(pdev, "nvidia,elastic-limit",
+		&config->elastic_limit);
+	if (err < 0)
+		return err;
+
+	err = read_utmi_param(pdev, "nvidia,idle-wait-delay",
+		&config->idle_wait_delay);
+	if (err < 0)
+		return err;
+
+	err = read_utmi_param(pdev, "nvidia,term-range-adj",
+		&config->term_range_adj);
+	if (err < 0)
+		return err;
+
+	err = read_utmi_param(pdev, "nvidia,xcvr-lsfslew",
+		&config->xcvr_lsfslew);
+	if (err < 0)
+		return err;
+
+	err = read_utmi_param(pdev, "nvidia,xcvr-lsrslew",
+		&config->xcvr_lsrslew);
+	if (err < 0)
+		return err;
+
+	if (tegra_phy->soc_config->requires_extra_tuning_parameters) {
+		err = read_utmi_param(pdev, "nvidia,xcvr-hsslew",
+			&config->xcvr_hsslew);
+		if (err < 0)
+			return err;
+
+		err = read_utmi_param(pdev, "nvidia,hssquelch-level",
+			&config->hssquelch_level);
+		if (err < 0)
+			return err;
+
+		err = read_utmi_param(pdev, "nvidia,hsdiscon-level",
+			&config->hsdiscon_level);
+		if (err < 0)
+			return err;
+	}
+
+	config->xcvr_setup_use_fuses = of_property_read_bool(
+		pdev->dev.of_node, "nvidia,xcvr-setup-use-fuses");
+
+	if (!config->xcvr_setup_use_fuses) {
+		err = read_utmi_param(pdev, "nvidia,xcvr-setup",
+			&config->xcvr_setup);
+		if (err < 0)
+			return err;
+	}
+
+	return 0;
+}
+
+static const struct tegra_phy_soc_config tegra20_soc_config = {
+	.utmi_pll_config_in_car_module = false,
+	.has_hostpc = false,
+	.requires_usbmode_setup = false,
+	.requires_extra_tuning_parameters = false,
+};
+
+static const struct tegra_phy_soc_config tegra30_soc_config = {
+	.utmi_pll_config_in_car_module = true,
+	.has_hostpc = true,
+	.requires_usbmode_setup = true,
+	.requires_extra_tuning_parameters = true,
+};
+
+static struct of_device_id tegra_usb_phy_id_table[] = {
+	{ .compatible = "nvidia,tegra30-usb-phy", .data = &tegra30_soc_config },
+	{ .compatible = "nvidia,tegra20-usb-phy", .data = &tegra20_soc_config },
+	{ },
+};
+MODULE_DEVICE_TABLE(of, tegra_usb_phy_id_table);
+
+static int tegra_usb_phy_probe(struct platform_device *pdev)
+{
+	const struct of_device_id *match;
+	struct resource *res;
+	struct tegra_usb_phy *tegra_phy = NULL;
+	struct device_node *np = pdev->dev.of_node;
+	enum usb_phy_interface phy_type;
+	int err;
+
+	tegra_phy = devm_kzalloc(&pdev->dev, sizeof(*tegra_phy), GFP_KERNEL);
+	if (!tegra_phy) {
+		dev_err(&pdev->dev, "unable to allocate memory for USB2 PHY\n");
+		return -ENOMEM;
+	}
+
+	match = of_match_device(tegra_usb_phy_id_table, &pdev->dev);
+	if (!match) {
+		dev_err(&pdev->dev, "Error: No device match found\n");
+		return -ENODEV;
+	}
+	tegra_phy->soc_config = match->data;
+
+	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
+	if (!res) {
+		dev_err(&pdev->dev, "Failed to get I/O memory\n");
+		return  -ENXIO;
+	}
+
+	tegra_phy->regs = devm_ioremap(&pdev->dev, res->start,
+		resource_size(res));
+	if (!tegra_phy->regs) {
+		dev_err(&pdev->dev, "Failed to remap I/O memory\n");
+		return -ENOMEM;
+	}
+
+	tegra_phy->is_legacy_phy =
+		of_property_read_bool(np, "nvidia,has-legacy-mode");
+
+	phy_type = of_usb_get_phy_mode(np);
+	switch (phy_type) {
+	case USBPHY_INTERFACE_MODE_UTMI:
+		err = utmi_phy_probe(tegra_phy, pdev);
+		if (err < 0)
+			return err;
+		break;
+
+	case USBPHY_INTERFACE_MODE_ULPI:
+		tegra_phy->is_ulpi_phy = true;
+
+		tegra_phy->reset_gpio =
+			of_get_named_gpio(np, "nvidia,phy-reset-gpio", 0);
+		if (!gpio_is_valid(tegra_phy->reset_gpio)) {
+			dev_err(&pdev->dev, "invalid gpio: %d\n",
+				tegra_phy->reset_gpio);
+			return tegra_phy->reset_gpio;
+		}
+		tegra_phy->config = NULL;
+		break;
+
+	default:
+		dev_err(&pdev->dev, "phy_type is invalid or unsupported\n");
+		return -EINVAL;
+	}
+
+	if (of_find_property(np, "dr_mode", NULL))
+		tegra_phy->mode = of_usb_get_dr_mode(np);
+	else
+		tegra_phy->mode = USB_DR_MODE_HOST;
+
+	if (tegra_phy->mode == USB_DR_MODE_UNKNOWN) {
+		dev_err(&pdev->dev, "dr_mode is invalid\n");
+		return -EINVAL;
+	}
+
+	/* On some boards, the VBUS regulator doesn't need to be controlled */
+	if (of_find_property(np, "vbus-supply", NULL)) {
+		tegra_phy->vbus = devm_regulator_get(&pdev->dev, "vbus");
+		if (IS_ERR(tegra_phy->vbus))
+			return PTR_ERR(tegra_phy->vbus);
+	} else {
+		dev_notice(&pdev->dev, "no vbus regulator");
+		tegra_phy->vbus = ERR_PTR(-ENODEV);
+	}
+
+	tegra_phy->u_phy.dev = &pdev->dev;
+	err = tegra_usb_phy_init(tegra_phy);
+	if (err < 0)
+		return err;
+
+	tegra_phy->u_phy.shutdown = tegra_usb_phy_close;
+	tegra_phy->u_phy.set_suspend = tegra_usb_phy_suspend;
+
+	platform_set_drvdata(pdev, tegra_phy);
+
+	err = usb_add_phy_dev(&tegra_phy->u_phy);
+	if (err < 0) {
+		tegra_usb_phy_close(&tegra_phy->u_phy);
+		return err;
+	}
+
+	return 0;
+}
+
+static int tegra_usb_phy_remove(struct platform_device *pdev)
+{
+	struct tegra_usb_phy *tegra_phy = platform_get_drvdata(pdev);
+
+	usb_remove_phy(&tegra_phy->u_phy);
+
+	return 0;
+}
+
+static struct platform_driver tegra_usb_phy_driver = {
+	.probe		= tegra_usb_phy_probe,
+	.remove		= tegra_usb_phy_remove,
+	.driver		= {
+		.name	= "tegra-phy",
+		.owner	= THIS_MODULE,
+		.of_match_table = tegra_usb_phy_id_table,
+	},
+};
+module_platform_driver(tegra_usb_phy_driver);
+
+MODULE_DESCRIPTION("Tegra USB PHY driver");
+MODULE_LICENSE("GPL v2");
