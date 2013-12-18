@@ -74,6 +74,15 @@ static int host_start(struct ci13xxx *ci)
 		hw_write(ci, OP_USBMODE, USBMODE_CI_SDIS, USBMODE_CI_SDIS);
 
 	return ret;
+
+disable_reg:
+	if (ci->platdata->reg_vbus)
+		regulator_disable(ci->platdata->reg_vbus);
+
+put_hcd:
+	usb_put_hcd(hcd);
+
+	return ret;
 }
 
 static void host_stop(struct ci13xxx *ci)

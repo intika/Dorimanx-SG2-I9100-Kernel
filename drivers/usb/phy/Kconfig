@@ -32,8 +32,9 @@ config AB8500_USB
 	  in host mode, low speed.
 
 config FSL_USB2_OTG
-	bool "Freescale USB OTG Transceiver Driver"
+	tristate "Freescale USB OTG Transceiver Driver"
 	depends on USB_EHCI_FSL && USB_FSL_USB2 && PM_RUNTIME
+	depends on USB
 	select USB_OTG
 	help
 	  Enable this to support Freescale USB OTG transceiver.
@@ -41,6 +42,8 @@ config FSL_USB2_OTG
 config ISP1301_OMAP
 	tristate "Philips ISP1301 with OMAP OTG"
 	depends on I2C && ARCH_OMAP_OTG
+	depends on USB
+	select USB_PHY
 	help
 	  If you say yes here you get support for the Philips ISP1301
 	  USB-On-The-Go transceiver working with the OMAP OTG controller.
