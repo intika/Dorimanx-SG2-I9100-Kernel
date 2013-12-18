@@ -35,6 +35,8 @@ struct pstore_info {
 	struct mutex	buf_mutex;	/* serialize access to 'buf' */
 	char		*buf;
 	size_t		bufsize;
+	struct mutex	read_mutex;	/* serialize open/read/close */
+	int		flags;
 	int		(*open)(struct pstore_info *psi);
 	int		(*close)(struct pstore_info *psi);
 	ssize_t		(*read)(u64 *id, enum pstore_type_id *type,
@@ -42,6 +44,8 @@ struct pstore_info {
 	u64		(*write)(enum pstore_type_id type, size_t size);
 	int		(*erase)(u64 id);
 };
+
+#define	PSTORE_FLAGS_FRAGILE	1
 
 #ifdef CONFIG_PSTORE
 extern int pstore_register(struct pstore_info *);
