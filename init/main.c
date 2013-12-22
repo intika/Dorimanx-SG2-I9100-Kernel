@@ -823,7 +823,6 @@ void __init load_default_modules(void)
 
 static int run_init_process(const char *init_filename)
 {
-	int ret = 0;
 	argv_init[0] = init_filename;
 	return do_execve(init_filename,
 		(const char __user *const __user *)argv_init,
@@ -881,7 +880,7 @@ static int __ref kernel_init(void *unused)
 		pr_err("Failed to execute %s (error %d).  Attempting defaults...\n",
 			execute_command, ret);
 	}
-	if (!try_to_run_init_process("/sbin/init") ||
+	if (!try_to_run_init_process("/init") ||
 	    !try_to_run_init_process("/etc/init") ||
 	    !try_to_run_init_process("/bin/init") ||
 	    !try_to_run_init_process("/bin/sh"))

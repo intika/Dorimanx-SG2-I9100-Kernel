@@ -43,8 +43,12 @@
 #define FBPIXMAPSIZE	(1024 * 8)
 
 static DEFINE_MUTEX(registration_lock);
+
 struct fb_info *registered_fb[FB_MAX] __read_mostly;
+EXPORT_SYMBOL(registered_fb);
+
 int num_registered_fb __read_mostly;
+EXPORT_SYMBOL(num_registered_fb);
 
 static struct fb_info *get_fb_info(unsigned int idx)
 {
@@ -182,6 +186,7 @@ char* fb_get_buffer_offset(struct fb_info *info, struct fb_pixmap *buf, u32 size
 
 	return addr;
 }
+EXPORT_SYMBOL(fb_get_buffer_offset);
 
 #ifdef CONFIG_LOGO
 
@@ -669,6 +674,7 @@ int fb_show_logo(struct fb_info *info, int rotate)
 int fb_prepare_logo(struct fb_info *info, int rotate) { return 0; }
 int fb_show_logo(struct fb_info *info, int rotate) { return 0; }
 #endif /* CONFIG_LOGO */
+EXPORT_SYMBOL(fb_show_logo);
 
 static void *fb_seq_start(struct seq_file *m, loff_t *pos)
 {
@@ -909,6 +915,7 @@ fb_pan_display(struct fb_info *info, struct fb_var_screeninfo *var)
 		info->var.vmode &= ~FB_VMODE_YWRAP;
 	return 0;
 }
+EXPORT_SYMBOL(fb_pan_display);
 
 static int fb_check_caps(struct fb_info *info, struct fb_var_screeninfo *var,
 			 u32 activate)
@@ -1028,6 +1035,7 @@ fb_set_var(struct fb_info *info, struct fb_var_screeninfo *var)
  done:
 	return ret;
 }
+EXPORT_SYMBOL(fb_set_var);
 
 int
 fb_blank(struct fb_info *info, int blank)
@@ -1059,6 +1067,7 @@ fb_blank(struct fb_info *info, int blank)
 
  	return ret;
 }
+EXPORT_SYMBOL(fb_blank);
 
 static long do_fb_ioctl(struct fb_info *info, unsigned int cmd,
 			unsigned long arg)
@@ -1085,14 +1094,16 @@ static long do_fb_ioctl(struct fb_info *info, unsigned int cmd,
 	case FBIOPUT_VSCREENINFO:
 		if (copy_from_user(&var, argp, sizeof(var)))
 			return -EFAULT;
-		if (!lock_fb_info(info))
-			return -ENODEV;
 		console_lock();
+		if (!lock_fb_info(info)) {
+			console_unlock();
+			return -ENODEV;
+		}
 		info->flags |= FBINFO_MISC_USEREVENT;
 		ret = fb_set_var(info, &var);
 		info->flags &= ~FBINFO_MISC_USEREVENT;
-		console_unlock();
 		unlock_fb_info(info);
+		console_unlock();
 		if (!ret && copy_to_user(argp, &var, sizeof(var)))
 			ret = -EFAULT;
 		break;
@@ -1121,12 +1132,14 @@ static long do_fb_ioctl(struct fb_info *info, unsigned int cmd,
 	case FBIOPAN_DISPLAY:
 		if (copy_from_user(&var, argp, sizeof(var)))
 			return -EFAULT;
-		if (!lock_fb_info(info))
-			return -ENODEV;
 		console_lock();
+		if (!lock_fb_info(info)) {
+			console_unlock();
+			return -ENODEV;
+		}
 		ret = fb_pan_display(info, &var);
-		console_unlock();
 		unlock_fb_info(info);
+		console_unlock();
 		if (ret == 0 && copy_to_user(argp, &var, sizeof(var)))
 			return -EFAULT;
 		break;
@@ -1161,23 +1174,27 @@ static long do_fb_ioctl(struct fb_info *info, unsigned int cmd,
 			break;
 		}
 		event.data = &con2fb;
-		if (!lock_fb_info(info))
-			return -ENODEV;
 		console_lock();
+		if (!lock_fb_info(info)) {
+			console_unlock();
+			return -ENODEV;
+		}
 		event.info = info;
 		ret = fb_notifier_call_chain(FB_EVENT_SET_CONSOLE_MAP, &event);
-		console_unlock();
 		unlock_fb_info(info);
+		console_unlock();
 		break;
 	case FBIOBLANK:
-		if (!lock_fb_info(info))
-			return -ENODEV;
 		console_lock();
+		if (!lock_fb_info(info)) {
+			console_unlock();
+			return -ENODEV;
+		}
 		info->flags |= FBINFO_MISC_USEREVENT;
 		ret = fb_blank(info, arg);
 		info->flags &= ~FBINFO_MISC_USEREVENT;
-		console_unlock();
 		unlock_fb_info(info);
+		console_unlock();
 		break;
 	default:
 		if (!lock_fb_info(info))
@@ -1291,7 +1308,9 @@ static int do_fscreeninfo_to_user(struct fb_fix_screeninfo *fix,
 	err |= copy_to_user(fix32->reserved, fix->reserved,
 			    sizeof(fix->reserved));
 
-	return err;
+	if (err)
+		return -EFAULT;
+	return 0;
 }
 
 static int fb_get_fscreeninfo(struct fb_info *info, unsigned int cmd,
@@ -1385,7 +1404,7 @@ fb_mmap(struct file *file, struct vm_area_struct * vma)
 
 #if defined(CONFIG_CPU_EXYNOS4212) || defined(CONFIG_CPU_EXYNOS4412)
 	if (!cma_is_registered_region(start, len)) {
-		pr_err("%s: %x@%x is allowed to map\n",
+			pr_err("%s: %x@%x is allowed to map\n",
 			__func__, (unsigned int)start,
 			(unsigned int)len);
 		mutex_unlock(&info->mm_lock);
@@ -1395,13 +1414,17 @@ fb_mmap(struct file *file, struct vm_area_struct * vma)
 
 	mmio_pgoff = PAGE_ALIGN((start & ~PAGE_MASK) + len) >> PAGE_SHIFT;
 	if (vma->vm_pgoff >= mmio_pgoff) {
+		if (info->var.accel_flags) {
+			mutex_unlock(&info->mm_lock);
+			return -EINVAL;
+		}
+
 		vma->vm_pgoff -= mmio_pgoff;
 		start = info->fix.mmio_start;
 		len = info->fix.mmio_len;
 	}
 	mutex_unlock(&info->mm_lock);
 
-	/* VM_IO | VM_DONTEXPAND | VM_DONTDUMP are set by io_remap_pfn_range()*/
 	vma->vm_page_prot = vm_get_page_prot(vma->vm_flags);
 	fb_pgprotect(file, vma, start);
 
@@ -1632,17 +1655,25 @@ static int do_register_framebuffer(struct fb_info *fb_info)
 	if (!fb_info->modelist.prev || !fb_info->modelist.next)
 		INIT_LIST_HEAD(&fb_info->modelist);
 
+	if (fb_info->skip_vt_switch)
+		pm_vt_switch_required(fb_info->dev, false);
+	else
+		pm_vt_switch_required(fb_info->dev, true);
+
 	fb_var_to_videomode(&mode, &fb_info->var);
 	fb_add_videomode(&mode, &fb_info->modelist);
 	registered_fb[i] = fb_info;
 
 	event.info = fb_info;
-	if (!lock_fb_info(fb_info))
-		return -ENODEV;
 	console_lock();
+	if (!lock_fb_info(fb_info)) {
+		console_unlock();
+		return -ENODEV;
+	}
+
 	fb_notifier_call_chain(FB_EVENT_FB_REGISTERED, &event);
-	console_unlock();
 	unlock_fb_info(fb_info);
+	console_unlock();
 	return 0;
 }
 
@@ -1655,16 +1686,21 @@ static int do_unregister_framebuffer(struct fb_info *fb_info)
 	if (i < 0 || i >= FB_MAX || registered_fb[i] != fb_info)
 		return -EINVAL;
 
-	if (!lock_fb_info(fb_info))
-		return -ENODEV;
 	console_lock();
+	if (!lock_fb_info(fb_info)) {
+		console_unlock();
+		return -ENODEV;
+	}
+
 	event.info = fb_info;
 	ret = fb_notifier_call_chain(FB_EVENT_FB_UNBIND, &event);
-	console_unlock();
 	unlock_fb_info(fb_info);
+	console_unlock();
 
 	if (ret)
 		return -EINVAL;
+
+	pm_vt_switch_unregister(fb_info->dev);
 
 	unlink_framebuffer(fb_info);
 	if (fb_info->pixmap.addr &&
@@ -1729,6 +1765,7 @@ register_framebuffer(struct fb_info *fb_info)
 
 	return ret;
 }
+EXPORT_SYMBOL(register_framebuffer);
 
 /**
  *	unregister_framebuffer - releases a frame buffer device
@@ -1757,6 +1794,7 @@ unregister_framebuffer(struct fb_info *fb_info)
 
 	return ret;
 }
+EXPORT_SYMBOL(unregister_framebuffer);
 
 /**
  *	fb_set_suspend - low level driver signals suspend
@@ -1780,6 +1818,7 @@ void fb_set_suspend(struct fb_info *info, int state)
 		fb_notifier_call_chain(FB_EVENT_RESUME, &event);
 	}
 }
+EXPORT_SYMBOL(fb_set_suspend);
 
 /**
  *	fbmem_init - init frame buffer subsystem
@@ -1867,7 +1906,7 @@ static int ofonly __read_mostly;
  *
  * NOTE: Needed to maintain backwards compatibility
  */
-int fb_get_options(char *name, char **option)
+int fb_get_options(const char *name, char **option)
 {
 	char *opt, *options = NULL;
 	int retval = 0;
@@ -1896,6 +1935,7 @@ int fb_get_options(char *name, char **option)
 
 	return retval;
 }
+EXPORT_SYMBOL(fb_get_options);
 
 #ifndef MODULE
 /**
@@ -1942,21 +1982,5 @@ static int __init video_setup(char *options)
 }
 __setup("video=", video_setup);
 #endif
-
-    /*
-     *  Visible symbols for modules
-     */
-
-EXPORT_SYMBOL(register_framebuffer);
-EXPORT_SYMBOL(unregister_framebuffer);
-EXPORT_SYMBOL(num_registered_fb);
-EXPORT_SYMBOL(registered_fb);
-EXPORT_SYMBOL(fb_show_logo);
-EXPORT_SYMBOL(fb_set_var);
-EXPORT_SYMBOL(fb_blank);
-EXPORT_SYMBOL(fb_pan_display);
-EXPORT_SYMBOL(fb_get_buffer_offset);
-EXPORT_SYMBOL(fb_set_suspend);
-EXPORT_SYMBOL(fb_get_options);
 
 MODULE_LICENSE("GPL");
