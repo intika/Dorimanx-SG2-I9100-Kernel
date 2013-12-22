@@ -355,13 +355,13 @@ static int frandom_init_module(void)
 	  goto error1;
 	}
 
-	result = register_chrdev_region(MKDEV(frandom_major, frandom_minor), 1, "/dev/frandom");
+	result = register_chrdev_region(MKDEV(frandom_major, frandom_minor), 1, "/dev/hw_random");
 	if (result < 0) {
 		printk(KERN_WARNING "frandom: can't get major/minor %d/%d\n", frandom_major, frandom_minor);
 	  goto error2;
 	}
 
-	frandom_device = device_create(frandom_class, NULL, MKDEV(frandom_major, frandom_minor), NULL, "frandom");
+	frandom_device = device_create(frandom_class, NULL, MKDEV(frandom_major, frandom_minor), NULL, "hw_random");
 
 	if (IS_ERR(frandom_device)) {
 		printk(KERN_WARNING "frandom: Failed to create frandom device\n");
