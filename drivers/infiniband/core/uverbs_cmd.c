@@ -2605,6 +2605,9 @@ out_put:
 static int kern_spec_to_ib_spec(struct ib_kern_spec *kern_spec,
 				union ib_flow_spec *ib_spec)
 {
+	if (kern_spec->reserved)
+		return -EINVAL;
+
 	ib_spec->type = kern_spec->type;
 
 	switch (ib_spec->type) {
@@ -2659,7 +2662,10 @@ ssize_t ib_uverbs_create_flow(struct ib_uverbs_file *file,
 	int i;
 	int kern_attr_size;
 
-	if (out_len < sizeof(resp))
+	if (ucore->inlen < sizeof(cmd))
+		return -EINVAL;
+
+	if (ucore->outlen < sizeof(resp))
 		return -ENOSPC;
 
 	if (copy_from_user(&cmd, buf, sizeof(cmd)))
@@ -2682,6 +2688,10 @@ ssize_t ib_uverbs_create_flow(struct ib_uverbs_file *file,
 	if (cmd.flow_attr.size < 0 || cmd.flow_attr.size > in_len ||
 	    kern_attr_size < 0 || kern_attr_size >
 	    (cmd.flow_attr.num_of_specs * sizeof(struct ib_kern_spec)))
+		return -EINVAL;
+
+	if (cmd.flow_attr.reserved[0] ||
+	    cmd.flow_attr.reserved[1])
 		return -EINVAL;
 
 	if (cmd.flow_attr.num_of_specs) {
@@ -2739,9 +2749,10 @@ ssize_t ib_uverbs_create_flow(struct ib_uverbs_file *file,
 		kern_spec += ((struct ib_kern_spec *) kern_spec)->size;
 		ib_spec += ((union ib_flow_spec *) ib_spec)->size;
 	}
-	if (kern_attr_size) {
-		pr_warn("create flow failed, %d bytes left from uverb cmd\n",
-			kern_attr_size);
+	if (cmd.flow_attr.size || (i != flow_attr->num_of_specs)) {
+		pr_warn("create flow failed, flow %d: %d bytes left from uverb cmd\n",
+			i, cmd.flow_attr.size);
+		err = -EINVAL;
 		goto err_free;
 	}
 	flow_id = ib_create_flow(qp, flow_attr, IB_FLOW_DOMAIN_USER);
@@ -2802,8 +2813,15 @@ ssize_t ib_uverbs_destroy_flow(struct ib_uverbs_file *file,
 	struct ib_uobject		*uobj;
 	int				ret;
 
-	if (copy_from_user(&cmd, buf, sizeof(cmd)))
-		return -EFAULT;
+	if (ucore->inlen < sizeof(cmd))
+		return -EINVAL;
+
+	ret = ib_copy_from_udata(&cmd, ucore, sizeof(cmd));
+	if (ret)
+		return ret;
+
+	if (cmd.comp_mask)
+		return -EINVAL;
 
 	uobj = idr_write_uobj(&ib_uverbs_rule_idr, cmd.flow_handle,
 			      file->ucontext);
