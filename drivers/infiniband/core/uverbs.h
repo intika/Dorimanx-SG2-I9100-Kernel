@@ -47,6 +47,22 @@
 #include <rdma/ib_umem.h>
 #include <rdma/ib_user_verbs.h>
 
+#define INIT_UDATA(udata, ibuf, obuf, ilen, olen)			\
+	do {								\
+		(udata)->inbuf  = (const void __user *) (ibuf);		\
+		(udata)->outbuf = (void __user *) (obuf);		\
+		(udata)->inlen  = (ilen);				\
+		(udata)->outlen = (olen);				\
+	} while (0)
+
+#define INIT_UDATA_BUF_OR_NULL(udata, ibuf, obuf, ilen, olen)			\
+	do {									\
+		(udata)->inbuf  = (ilen) ? (const void __user *) (ibuf) : NULL;	\
+		(udata)->outbuf = (olen) ? (void __user *) (obuf) : NULL;	\
+		(udata)->inlen  = (ilen);					\
+		(udata)->outlen = (olen);					\
+	} while (0)
+
 /*
  * Our lifetime rules for these structs are the following:
  *

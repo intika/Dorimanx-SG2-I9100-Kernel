@@ -628,11 +628,81 @@ static ssize_t ib_uverbs_write(struct file *filp, const char __user *buf,
 		if (hdr.in_words * 4 != count)
 			return -EINVAL;
 
-		return uverbs_cmd_table[hdr.command](file,
-						     buf + sizeof(hdr),
-						     hdr.in_words * 4,
-						     hdr.out_words * 4);
-#ifdef CONFIG_INFINIBAND_EXPERIMENTAL_UVERBS_FLOW_STEERING
+		return uverbs_cmd_table[command](file,
+						 buf + sizeof(hdr),
+						 hdr.in_words * 4,
+						 hdr.out_words * 4);
+
+	} else if (flags == IB_USER_VERBS_CMD_FLAG_EXTENDED) {
+		__u32 command;
+
+		struct ib_uverbs_ex_cmd_hdr ex_hdr;
+		struct ib_udata ucore;
+		struct ib_udata uhw;
+		int err;
+		size_t written_count = count;
+
+		if (hdr.command & ~(__u32)(IB_USER_VERBS_CMD_FLAGS_MASK |
+					   IB_USER_VERBS_CMD_COMMAND_MASK))
+			return -EINVAL;
+
+		command = hdr.command & IB_USER_VERBS_CMD_COMMAND_MASK;
+
+		if (command >= ARRAY_SIZE(uverbs_ex_cmd_table) ||
+		    !uverbs_ex_cmd_table[command])
+			return -ENOSYS;
+
+		if (!file->ucontext)
+			return -EINVAL;
+
+		if (!(file->device->ib_dev->uverbs_ex_cmd_mask & (1ull << command)))
+			return -ENOSYS;
+
+		if (count < (sizeof(hdr) + sizeof(ex_hdr)))
+			return -EINVAL;
+
+		if (copy_from_user(&ex_hdr, buf + sizeof(hdr), sizeof(ex_hdr)))
+			return -EFAULT;
+
+		count -= sizeof(hdr) + sizeof(ex_hdr);
+		buf += sizeof(hdr) + sizeof(ex_hdr);
+
+		if ((hdr.in_words + ex_hdr.provider_in_words) * 8 != count)
+			return -EINVAL;
+
+		if (ex_hdr.cmd_hdr_reserved)
+			return -EINVAL;
+
+		if (ex_hdr.response) {
+			if (!hdr.out_words && !ex_hdr.provider_out_words)
+				return -EINVAL;
+
+			if (!access_ok(VERIFY_WRITE,
+				       (void __user *) (unsigned long) ex_hdr.response,
+				       (hdr.out_words + ex_hdr.provider_out_words) * 8))
+				return -EFAULT;
+		} else {
+			if (hdr.out_words || ex_hdr.provider_out_words)
+				return -EINVAL;
+		}
+
+		INIT_UDATA_BUF_OR_NULL(&ucore, buf, (unsigned long) ex_hdr.response,
+				       hdr.in_words * 8, hdr.out_words * 8);
+
+		INIT_UDATA_BUF_OR_NULL(&uhw,
+				       buf + ucore.inlen,
+				       (unsigned long) ex_hdr.response + ucore.outlen,
+				       ex_hdr.provider_in_words * 8,
+				       ex_hdr.provider_out_words * 8);
+
+		err = uverbs_ex_cmd_table[command](file,
+						   &ucore,
+						   &uhw);
+
+		if (err)
+			return err;
+
+		return written_count;
 	}
 #endif /* CONFIG_INFINIBAND_EXPERIMENTAL_UVERBS_FLOW_STEERING */
 }
