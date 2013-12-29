@@ -303,7 +303,7 @@
  */
 
 // Yank: Added a sysfs interface to display current zzmanX version
-#define ZZMANX_VERSION "1.1"
+#define ZZMANX_VERSION "1.2"
 
 #include "cpufreq_governor.h"
 
@@ -393,6 +393,7 @@ static int hotplug_thresholds_tuneable[8] = { 0, 0, 0, 0, 0, 0, 0, 0 };
 // ZZ: midnight and zzmanX momentum defaults
 #define LATENCY_MULTIPLIER			(1000)
 #define MIN_LATENCY_MULTIPLIER			(100)
+#define MICRO_FREQUENCY_MIN_SAMPLE_RATE (10000)
 #define DEF_SAMPLING_DOWN_FACTOR		(1)	// ZZ: default for sampling down factor (stratosk default = 4) here disabled by default
 #define MAX_SAMPLING_DOWN_FACTOR		(100000)// ZZ: changed from 10 to 100000 for sampling down momentum implementation
 #define TRANSITION_LATENCY_LIMIT		(10 * 1000 * 1000)
@@ -1906,12 +1907,6 @@ static int cpufreq_governor_dbs(struct cpufreq_policy *policy,
 					return rc;
 				}
 
-				/*
-				 * conservative does not implement micro like ondemand
-				 * governor, thus we are bound to jiffes/HZ
-				 */
-				min_sampling_rate =
-					MIN_SAMPLING_RATE_RATIO * jiffies_to_usecs(3);
 				/* Bring kernel and HW constraints together */
 				min_sampling_rate = max(min_sampling_rate,
 						MIN_LATENCY_MULTIPLIER * latency);
@@ -2036,8 +2031,26 @@ struct cpufreq_governor cpufreq_gov_zzmanX = {
 
 static int __init cpufreq_gov_dbs_init(void) // ZZ: added idle exit time handling
 {
+	u64 idle_time;
+	int cpu = get_cpu();
 	unsigned int i;
 	struct cpu_dbs_info_s *this_dbs_info;
+
+	idle_time = get_cpu_idle_time_us(cpu, NULL);
+	put_cpu();
+	if (idle_time != -1ULL) {
+		/*
+		* * In nohz/micro accounting case we set the minimum frequency
+		* * not depending on HZ, but fixed (very low). The deferred
+		* * timer might skip some samples if idle/sleeping as needed.
+		* */
+		min_sampling_rate = MICRO_FREQUENCY_MIN_SAMPLE_RATE;
+	} else {
+		/* For correct statistics, we need 10 ticks for each measure */
+		min_sampling_rate =
+		MIN_SAMPLING_RATE_RATIO * jiffies_to_usecs(10);
+	}
+
 	/* Initalize per-cpu data: */
 	for_each_possible_cpu(i) {
 		this_dbs_info = &per_cpu(cs_cpu_dbs_info, i);

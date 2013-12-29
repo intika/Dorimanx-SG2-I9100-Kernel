@@ -19,6 +19,7 @@
 #include <linux/cpumask.h>
 #include <linux/suspend.h>
 #include <linux/reboot.h>
+#include <linux/boostpulse.h>
 
 /*
  * dbs is used in this file as a shortform for demandbased switching
@@ -26,6 +27,7 @@
  */
 
 #define DEF_SAMPLING_DOWN_FACTOR		(1)
+#define BOOSTED_SAMPLING_DOWN_FACTOR		(10)
 #define MAX_SAMPLING_DOWN_FACTOR		(100000)
 #define DEF_FREQUENCY_DOWN_DIFFERENTIAL		(5)
 #define DEF_FREQUENCY_UP_THRESHOLD		(82)
@@ -98,6 +100,9 @@ static struct dbs_tuners {
 	unsigned int freq_step;
 	unsigned int max_freq;
 	unsigned int min_freq;
+	unsigned int boosted;
+	unsigned int freq_boost_time;
+	unsigned int boostfreq;
 	unsigned int up_threshold_at_min_freq;
 	unsigned int freq_for_responsiveness;
 } dbs_tuners_ins = {
@@ -108,6 +113,9 @@ static struct dbs_tuners {
 	.freq_step = DEF_FREQ_STEP,
 	.up_threshold_at_min_freq = UP_THRESHOLD_AT_MIN_FREQ,
 	.freq_for_responsiveness = FREQ_FOR_RESPONSIVENESS,
+	.freq_boost_time = DEFAULT_FREQ_BOOST_TIME,
+	.boosted = 1,
+	.boostfreq = 1200000,
 };
 
 static inline cputime64_t get_cpu_iowait_time(unsigned int cpu, cputime64_t *wall)
@@ -147,6 +155,8 @@ show_one(freq_step, freq_step);
 show_one(up_threshold_at_min_freq, up_threshold_at_min_freq);
 show_one(freq_for_responsiveness, freq_for_responsiveness);
 
+show_one(boostpulse, boosted);
+show_one(boostfreq, boostfreq);
 static ssize_t show_cpucore_table(struct kobject *kobj,
 				struct attribute *attr, char *buf)
 {
@@ -277,6 +287,8 @@ static ssize_t store_down_differential(struct kobject *a, struct attribute *b,
 	return count;
 }
 
+#include <linux/store_boostpulse.h>
+
 static ssize_t store_freq_step(struct kobject *a, struct attribute *b,
 				   const char *buf, size_t count)
 {
@@ -329,6 +341,8 @@ define_one_global_rw(down_differential);
 define_one_global_rw(freq_step);
 define_one_global_rw(up_threshold_at_min_freq);
 define_one_global_rw(freq_for_responsiveness);
+define_one_global_rw(boostpulse);
+define_one_global_rw(boostfreq);
 define_one_global_ro(cpucore_table);
 
 static struct attribute *dbs_attributes[] = {
@@ -339,6 +353,8 @@ static struct attribute *dbs_attributes[] = {
 	&ignore_nice_load.attr,
 	&io_is_busy.attr,
 	&down_differential.attr,
+	&boostpulse.attr,
+	&boostfreq.attr,
 	&freq_step.attr,
 	&up_threshold_at_min_freq.attr,
 	&freq_for_responsiveness.attr,
@@ -376,6 +392,24 @@ static void dbs_check_cpu(struct cpu_dbs_info_s *this_dbs_info)
 	int up_threshold = dbs_tuners_ins.up_threshold;
 
 	policy = this_dbs_info->cur_policy;
+
+	/* Only core0 controls the boost */
+	if (dbs_tuners_ins.boosted && policy->cpu == 0) {
+		if (ktime_to_us(ktime_get()) - freq_boosted_time >=
+					dbs_tuners_ins.freq_boost_time) {
+			dbs_tuners_ins.boosted = 0;
+		}
+	}
+
+	/* Only core0 controls the timer_rate */
+	if (sampling_rate_boosted && policy->cpu == 0) {
+		if (ktime_to_us(ktime_get()) - sampling_rate_boosted_time >=
+					TIMER_RATE_BOOST_TIME) {
+
+			dbs_tuners_ins.sampling_rate = current_sampling_rate;
+			sampling_rate_boosted = 0;
+		}
+	}
 
 	/* Get Absolute Load - in terms of freq */
 	max_load_freq = 0;
@@ -457,16 +491,32 @@ static void dbs_check_cpu(struct cpu_dbs_info_s *this_dbs_info)
 	if (max_load_freq > up_threshold * policy->cur) {
 		int inc = (policy->max * dbs_tuners_ins.freq_step) / 100;
 		int target = min(policy->max, policy->cur + inc);
+
 		/* If switching to max speed, apply sampling_down_factor */
-		if (policy->cur < policy->max && target == policy->max)
-			this_dbs_info->rate_mult =
-				dbs_tuners_ins.sampling_down_factor;
+		if (policy->cur < policy->max && target == policy->max) {
+			if (sampling_rate_boosted &&
+				(dbs_tuners_ins.sampling_down_factor <
+					BOOSTED_SAMPLING_DOWN_FACTOR)) {
+				this_dbs_info->rate_mult =
+					BOOSTED_SAMPLING_DOWN_FACTOR;
+			} else {
+				this_dbs_info->rate_mult =
+					dbs_tuners_ins.sampling_down_factor;
+			}
+		}
 		dbs_freq_increase(policy, target);
 		return;
 	}
 
+	/* check for frequency boost */
+	if (dbs_tuners_ins.boosted && policy->cur < dbs_tuners_ins.boostfreq) {
+		dbs_freq_increase(policy, dbs_tuners_ins.boostfreq);
+		dbs_tuners_ins.boostfreq = policy->cur;
+		return;
+	}
+
 	/* Check for frequency decrease */
-#ifndef CONFIG_ARCH_EXYNOS4
+#if !defined(CONFIG_ARCH_EXYNOS4) && !defined(CONFIG_ARCH_EXYNOS5)
 	/* if we cannot reduce the frequency anymore, break out early */
 	if (policy->cur == policy->min)
 		return;
@@ -487,8 +537,12 @@ static void dbs_check_cpu(struct cpu_dbs_info_s *this_dbs_info)
 		unsigned int down_thres;
 
 		freq_next = max_load_freq /
-			(up_threshold - dbs_tuners_ins.down_differential);
+				(up_threshold - dbs_tuners_ins.down_differential);
 
+		if (dbs_tuners_ins.boosted &&
+				freq_next < dbs_tuners_ins.boostfreq) {
+			freq_next = dbs_tuners_ins.boostfreq;
+		}
 		/* No longer fully busy, reset rate_mult */
 		this_dbs_info->rate_mult = 1;
 
