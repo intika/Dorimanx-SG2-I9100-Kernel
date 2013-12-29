@@ -218,7 +218,7 @@ vr_expired_request(struct vr_data *vd, int ddir)
 		return NULL;
 
 	rq = rq_entry_fifo(vd->fifo_list[ddir].next);
-	if (time_after(jiffies, rq_fifo_time(rq)))
+	if (time_after_eq(jiffies, rq_fifo_time(rq)))
 		return rq;
 
 	return NULL;
