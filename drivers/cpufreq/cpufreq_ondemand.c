@@ -16,6 +16,7 @@
 
 #include <linux/pm_qos.h>
 #include <linux/input.h>
+#include <linux/boostpulse.h>
 
 /*
  * dbs is used in this file as a shortform for demandbased switching
@@ -35,12 +36,9 @@
 #define MAX_FREQUENCY_UP_THRESHOLD		(100)
 #define MIN_FREQUENCY_DOWN_DIFFERENTIAL		(1)
 #define FREQ_STEP				(20)
-#define DEFAULT_FREQ_BOOST_TIME			(500000)
-#define MAX_FREQ_BOOST_TIME			(5000000)
 #define UP_THRESHOLD_AT_MIN_FREQ		(70)
 #define FREQ_FOR_RESPONSIVENESS			(300000)
 
-static u64 freq_boosted_time;
 
 /*
  * The polling frequency of this governor depends on the capability of
@@ -56,16 +54,10 @@ static u64 freq_boosted_time;
 
 static unsigned int min_sampling_rate;
 #define DEFAULT_SAMPLING_RATE			(60000)
-#define BOOSTED_SAMPLING_RATE			(20000)
 #define LATENCY_MULTIPLIER			(1000)
 #define MIN_LATENCY_MULTIPLIER			(20)
 #define TRANSITION_LATENCY_LIMIT		(10 * 1000 * 1000)
 
-/* have the timer rate booted for this much time 2.5s*/
-#define TIMER_RATE_BOOST_TIME 2500000
-static int sampling_rate_boosted;
-static u64 sampling_rate_boosted_time;
-unsigned int current_sampling_rate;
 
 static void do_dbs_timer(struct work_struct *work);
 static int cpufreq_governor_dbs(struct cpufreq_policy *policy,
@@ -134,7 +126,6 @@ static struct dbs_tuners {
 	unsigned int dvfs_lat_qos_wants;
 	unsigned int freq_step;
 	unsigned int freq_responsiveness;
-
 } dbs_tuners_ins = {
 	.up_threshold = DEF_FREQUENCY_UP_THRESHOLD,
 	.up_threshold_min_freq = UP_THRESHOLD_AT_MIN_FREQ,
@@ -143,7 +134,8 @@ static struct dbs_tuners {
 	.ignore_nice = 0,
 	.powersave_bias = 0,
 	.freq_boost_time = DEFAULT_FREQ_BOOST_TIME,
-	.boostfreq = 1000000,
+	.boosted = 1,
+	.boostfreq = 1200000,
 	.freq_step = FREQ_STEP,
 	.freq_responsiveness = FREQ_FOR_RESPONSIVENESS
 };
@@ -260,7 +252,7 @@ define_one_global_ro(sampling_rate_min);
 /* cpufreq_ondemand Governor Tunables */
 #define show_one(file_name, object)					\
 static ssize_t show_##file_name						\
-(struct kobject *kobj, struct attribute *attr, char *buf)              \
+(struct kobject *kobj, struct attribute *attr, char *buf)		\
 {									\
 	return sprintf(buf, "%u\n", dbs_tuners_ins.object);		\
 }
@@ -376,45 +368,6 @@ static void update_sampling_rate(unsigned int new_rate)
 
 		mutex_unlock(&dbs_mutex);
 	}
-}
-
-static ssize_t store_boostpulse(struct kobject *kobj, struct attribute *attr,
-				const char *buf, size_t count)
-{
-	int ret;
-	unsigned int input;
-
-	ret = sscanf(buf, "%u", &input);
-	if (ret < 0)
-		return ret;
-
-	if (input > 1 && input <= MAX_FREQ_BOOST_TIME)
-		dbs_tuners_ins.freq_boost_time = input;
-	else
-		dbs_tuners_ins.freq_boost_time = DEFAULT_FREQ_BOOST_TIME;
-
-	dbs_tuners_ins.boosted = 1;
-	freq_boosted_time = ktime_to_us(ktime_get());
-
-	if (sampling_rate_boosted) {
-		sampling_rate_boosted = 0;
-		dbs_tuners_ins.sampling_rate = current_sampling_rate;
-	}
-	return count;
-}
-
-static ssize_t store_boostfreq(struct kobject *a, struct attribute *b,
-				   const char *buf, size_t count)
-{
-	unsigned int input;
-	int ret;
-
-	ret = sscanf(buf, "%u", &input);
-	if (ret != 1)
-		return -EINVAL;
-
-	dbs_tuners_ins.boostfreq = input;
-	return count;
 }
 
 static ssize_t store_sampling_rate(struct kobject *a, struct attribute *b,
@@ -567,6 +520,8 @@ static ssize_t store_powersave_bias(struct kobject *a, struct attribute *b,
 
 	return count;
 }
+
+#include <linux/store_boostpulse.h>
 
 static ssize_t store_freq_step(struct kobject *a, struct attribute *b,
 				   const char *buf, size_t count)

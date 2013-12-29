@@ -20,11 +20,8 @@
 
 #define DEF_FREQUENCY_UP_THRESHOLD		(80)
 #define DEF_FREQUENCY_DOWN_THRESHOLD		(20)
-#define DEFAULT_FREQ_BOOST_TIME			(500000)
-#define MAX_FREQ_BOOST_TIME			(5000000)
 #define DEF_SMOOTH_UI				(0)
 
-static u64 freq_boosted_time;
 
 /*
  * The polling frequency of this governor depends on the capability of
@@ -36,7 +33,7 @@ static u64 freq_boosted_time;
  * this governor will not work.
  * All times here are in uS.
  */
-#define MIN_SAMPLING_RATE_RATIO			(1)
+#define MIN_SAMPLING_RATE_RATIO			(2)
 
 static unsigned int min_sampling_rate;
 
@@ -44,6 +41,7 @@ extern unsigned int touch_is_pressed;
 
 #define LATENCY_MULTIPLIER			(500)
 #define MIN_LATENCY_MULTIPLIER			(20)
+#define MICRO_FREQUENCY_MIN_SAMPLE_RATE (10000)
 #define DEF_SAMPLING_DOWN_FACTOR		(1)
 #define MAX_SAMPLING_DOWN_FACTOR		(10)
 #define TRANSITION_LATENCY_LIMIT		(10 * 1000 * 1000)
@@ -53,7 +51,7 @@ static void do_dbs_timer(struct work_struct *work);
 struct cpu_dbs_info_s {
 	u64 prev_cpu_idle;
 	u64 prev_cpu_wall;
-	cputime64_t prev_cpu_nice;
+	u64 prev_cpu_nice;
 	struct cpufreq_policy *cur_policy;
 	struct delayed_work work;
 	unsigned int down_skip;
@@ -84,9 +82,6 @@ static struct dbs_tuners {
 	unsigned int ignore_nice;
 	unsigned int freq_step;
 	unsigned int smooth_ui;
-	unsigned int boosted;
-	unsigned int freq_boost_time;
-	unsigned int boostfreq;
 } dbs_tuners_ins = {
 	.up_threshold = DEF_FREQUENCY_UP_THRESHOLD,
 	.down_threshold = DEF_FREQUENCY_DOWN_THRESHOLD,
@@ -94,8 +89,6 @@ static struct dbs_tuners {
 	.ignore_nice = 0,
 	.freq_step = 10,
 	.smooth_ui = DEF_SMOOTH_UI,
-	.freq_boost_time = DEFAULT_FREQ_BOOST_TIME,
-	.boostfreq = 1000000,
 };
 
 /* keep track of frequency transitions */
@@ -154,8 +147,6 @@ show_one(down_threshold, down_threshold);
 show_one(ignore_nice_load, ignore_nice);
 show_one(freq_step, freq_step);
 show_one(smooth_ui, smooth_ui);
-show_one(boostpulse, boosted);
-show_one(boostfreq, boostfreq);
 
 static ssize_t show_cpucore_table(struct kobject *kobj,
 				struct attribute *attr, char *buf)
@@ -269,7 +260,7 @@ static ssize_t store_ignore_nice_load(struct kobject *a, struct attribute *b,
 }
 
 static ssize_t store_freq_step(struct kobject *a, struct attribute *b,
-			       const char *buf, size_t count)
+				   const char *buf, size_t count)
 {
 	unsigned int input;
 	int ret;
@@ -285,38 +276,6 @@ static ssize_t store_freq_step(struct kobject *a, struct attribute *b,
 	 * want this, they would be crazy though :) */
 	dbs_tuners_ins.freq_step = input;
 
-	return count;
-}
-
-static ssize_t store_boostpulse(struct kobject *kobj, struct attribute *attr,
-				const char *buf, size_t count)
-{
-	int ret;
-	unsigned int input;
-
-	ret = sscanf(buf, "%u", &input);
-	if (ret < 0)
-		return ret;
-
-	if (input > 1 && input <= MAX_FREQ_BOOST_TIME)
-		dbs_tuners_ins.freq_boost_time = input;
-	else
-		dbs_tuners_ins.freq_boost_time = DEFAULT_FREQ_BOOST_TIME;
-
-	dbs_tuners_ins.boosted = 1;
-	freq_boosted_time = ktime_to_us(ktime_get());
-	return count;
-}
-
-static ssize_t store_boostfreq(struct kobject *a, struct attribute *b,
-				   const char *buf, size_t count)
-{
-	unsigned int input;
-	int ret;
-	ret = sscanf(buf, "%u", &input);
-	if (ret != 1)
-		return -EINVAL;
-	dbs_tuners_ins.boostfreq = input;
 	return count;
 }
 
@@ -339,8 +298,6 @@ define_one_global_rw(down_threshold);
 define_one_global_rw(ignore_nice_load);
 define_one_global_rw(freq_step);
 define_one_global_rw(smooth_ui);
-define_one_global_rw(boostpulse);
-define_one_global_rw(boostfreq);
 define_one_global_ro(cpucore_table);
 
 static struct attribute *dbs_attributes[] = {
@@ -352,8 +309,6 @@ static struct attribute *dbs_attributes[] = {
 	&ignore_nice_load.attr,
 	&freq_step.attr,
 	&smooth_ui.attr,
-	&boostpulse.attr,
-	&boostfreq.attr,
 	&cpucore_table.attr,
 	NULL
 };
@@ -375,14 +330,6 @@ static void dbs_check_cpu(struct cpu_dbs_info_s *this_dbs_info)
 	unsigned int j;
 
 	policy = this_dbs_info->cur_policy;
-
-	/* Only core0 controls the boost */
-	if (dbs_tuners_ins.boosted && policy->cpu == 0) {
-		if (ktime_to_us(ktime_get()) - freq_boosted_time >=
-					dbs_tuners_ins.freq_boost_time) {
-			dbs_tuners_ins.boosted = 0;
-		}
-	}
 
 	/*
 	 * Every sampling_rate, we check, if current idle time is less
@@ -446,14 +393,6 @@ static void dbs_check_cpu(struct cpu_dbs_info_s *this_dbs_info)
 	if (dbs_tuners_ins.freq_step == 0)
 		return;
 
-	/* check for frequency boost */
-	if (dbs_tuners_ins.boosted && policy->cur < dbs_tuners_ins.boostfreq) {
-		__cpufreq_driver_target(policy, dbs_tuners_ins.boostfreq,
-			CPUFREQ_RELATION_L);
-		dbs_tuners_ins.boostfreq = policy->cur;
-		return;
-	}
-
 	/* Check for frequency increase */
 	if ((dbs_tuners_ins.smooth_ui && touch_is_pressed) || max_load > dbs_tuners_ins.up_threshold) {
 		this_dbs_info->down_skip = 0;
@@ -483,17 +422,9 @@ static void dbs_check_cpu(struct cpu_dbs_info_s *this_dbs_info)
 	 * policy. To be safe, we focus 10 points under the threshold.
 	 */
 	if (max_load < (dbs_tuners_ins.down_threshold - 10)) {
-		if (dbs_tuners_ins.boosted &&
-				this_dbs_info->requested_freq < dbs_tuners_ins.boostfreq) {
-			__cpufreq_driver_target(policy, this_dbs_info->requested_freq,
-				CPUFREQ_RELATION_H);
-			return;
-		}
-
 		freq_target = (dbs_tuners_ins.freq_step * policy->max) / 100;
 
 		this_dbs_info->requested_freq -= freq_target;
-
 		if (this_dbs_info->requested_freq < policy->min)
 			this_dbs_info->requested_freq = policy->min;
 
@@ -598,12 +529,6 @@ static int cpufreq_governor_dbs(struct cpufreq_policy *policy,
 				return rc;
 			}
 
-			/*
-			 * conservative does not implement micro like ondemand
-			 * governor, thus we are bound to jiffes/HZ
-			 */
-			min_sampling_rate =
-				MIN_SAMPLING_RATE_RATIO * jiffies_to_usecs(5);
 			/* Bring kernel and HW constraints together */
 			min_sampling_rate = max(min_sampling_rate,
 					MIN_LATENCY_MULTIPLIER * latency);
@@ -680,6 +605,23 @@ struct cpufreq_governor cpufreq_gov_conservative = {
 static int __init cpufreq_gov_dbs_init(void)
 {
 	int ret;
+	u64 idle_time;
+	int cpu = get_cpu();
+
+	idle_time = get_cpu_idle_time_us(cpu, NULL);
+	put_cpu();
+	if (idle_time != -1ULL) {
+		/*
+		* * In nohz/micro accounting case we set the minimum frequency
+		* * not depending on HZ, but fixed (very low). The deferred
+		* * timer might skip some samples if idle/sleeping as needed.
+		* */
+		min_sampling_rate = MICRO_FREQUENCY_MIN_SAMPLE_RATE;
+	} else {
+		/* For correct statistics, we need 10 ticks for each measure */
+		min_sampling_rate =
+		MIN_SAMPLING_RATE_RATIO * jiffies_to_usecs(10);
+	}
 
 	ret = cpufreq_register_governor(&cpufreq_gov_conservative);
 	if (ret)
