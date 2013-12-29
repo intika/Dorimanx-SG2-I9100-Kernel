@@ -16,6 +16,7 @@
 
 #include <linux/pm_qos.h>
 #include <linux/input.h>
+#include <linux/boostpulse.h>
 
 /*
  * dbs is used in this file as a shortform for demandbased switching
@@ -35,12 +36,9 @@
 #define MAX_FREQUENCY_UP_THRESHOLD		(100)
 #define MIN_FREQUENCY_DOWN_DIFFERENTIAL		(1)
 #define FREQ_STEP				(30)
-#define DEFAULT_FREQ_BOOST_TIME			(500000)
-#define MAX_FREQ_BOOST_TIME			(5000000)
 #define UP_THRESHOLD_AT_MIN_FREQ		(40)
 #define FREQ_FOR_RESPONSIVENESS			(200000)
 
-static u64 hyper_freq_boosted_time;
 
 /*
  * The polling frequency of this governor depends on the capability of
@@ -56,16 +54,10 @@ static u64 hyper_freq_boosted_time;
 
 static unsigned int min_sampling_rate;
 #define DEFAULT_SAMPLING_RATE			(60000)
-#define BOOSTED_SAMPLING_RATE			(20000)
 #define LATENCY_MULTIPLIER			(1000)
 #define MIN_LATENCY_MULTIPLIER			(20)
 #define TRANSITION_LATENCY_LIMIT		(10 * 1000 * 1000)
 
-/* have the timer rate booted for this much time 4s*/
-#define TIMER_RATE_BOOST_TIME 4000000
-static int hyper_sampling_rate_boosted;
-static u64 hyper_sampling_rate_boosted_time;
-unsigned int hyper_current_sampling_rate;
 
 static void do_dbs_timer(struct work_struct *work);
 static int cpufreq_governor_dbs(struct cpufreq_policy *policy,
@@ -142,6 +134,7 @@ static struct dbs_tuners {
 	.ignore_nice = 0,
 	.powersave_bias = 0,
 	.freq_boost_time = DEFAULT_FREQ_BOOST_TIME,
+	.boosted = 1,
 	.boostfreq = 1200000,
 	.freq_step = FREQ_STEP,
 	.freq_responsiveness = FREQ_FOR_RESPONSIVENESS
@@ -377,45 +370,6 @@ static void update_sampling_rate(unsigned int new_rate)
 	}
 }
 
-static ssize_t store_boostpulse(struct kobject *kobj, struct attribute *attr,
-				const char *buf, size_t count)
-{
-	int ret;
-	unsigned int input;
-
-	ret = sscanf(buf, "%u", &input);
-	if (ret < 0)
-		return ret;
-
-	if (input > 1 && input <= MAX_FREQ_BOOST_TIME)
-		dbs_tuners_ins.freq_boost_time = input;
-	else
-		dbs_tuners_ins.freq_boost_time = DEFAULT_FREQ_BOOST_TIME;
-
-	dbs_tuners_ins.boosted = 1;
-	hyper_freq_boosted_time = ktime_to_us(ktime_get());
-
-	if (hyper_sampling_rate_boosted) {
-		hyper_sampling_rate_boosted = 0;
-		dbs_tuners_ins.sampling_rate = hyper_current_sampling_rate;
-	}
-	return count;
-}
-
-static ssize_t store_boostfreq(struct kobject *a, struct attribute *b,
-				   const char *buf, size_t count)
-{
-	unsigned int input;
-	int ret;
-
-	ret = sscanf(buf, "%u", &input);
-	if (ret != 1)
-		return -EINVAL;
-
-	dbs_tuners_ins.boostfreq = input;
-	return count;
-}
-
 static ssize_t store_sampling_rate(struct kobject *a, struct attribute *b,
 				   const char *buf, size_t count)
 {
@@ -427,7 +381,7 @@ static ssize_t store_sampling_rate(struct kobject *a, struct attribute *b,
 		return -EINVAL;
 
 	update_sampling_rate(input);
-	hyper_current_sampling_rate = dbs_tuners_ins.sampling_rate;
+	current_sampling_rate = dbs_tuners_ins.sampling_rate;
 
 	return count;
 }
@@ -567,6 +521,8 @@ static ssize_t store_powersave_bias(struct kobject *a, struct attribute *b,
 	return count;
 }
 
+#include <linux/store_boostpulse.h>
+
 static ssize_t store_freq_step(struct kobject *a, struct attribute *b,
 				   const char *buf, size_t count)
 {
@@ -674,19 +630,19 @@ static void dbs_check_cpu(struct cpu_dbs_info_s *this_dbs_info)
 
 	/* Only core0 controls the boost */
 	if (dbs_tuners_ins.boosted && policy->cpu == 0) {
-		if (ktime_to_us(ktime_get()) - hyper_freq_boosted_time >=
+		if (ktime_to_us(ktime_get()) - freq_boosted_time >=
 					dbs_tuners_ins.freq_boost_time) {
 			dbs_tuners_ins.boosted = 0;
 		}
 	}
 
 	/* Only core0 controls the timer_rate */
-	if (hyper_sampling_rate_boosted && policy->cpu == 0) {
-		if (ktime_to_us(ktime_get()) - hyper_sampling_rate_boosted_time >=
+	if (sampling_rate_boosted && policy->cpu == 0) {
+		if (ktime_to_us(ktime_get()) - sampling_rate_boosted_time >=
 					TIMER_RATE_BOOST_TIME) {
 
-			dbs_tuners_ins.sampling_rate = hyper_current_sampling_rate;
-			hyper_sampling_rate_boosted = 0;
+			dbs_tuners_ins.sampling_rate = current_sampling_rate;
+			sampling_rate_boosted = 0;
 		}
 	}
 
@@ -828,7 +784,7 @@ static void dbs_check_cpu(struct cpu_dbs_info_s *this_dbs_info)
 
 		/* If switching to max speed, apply sampling_down_factor */
 		if (policy->cur < policy->max && target == policy->max) {
-			if (hyper_sampling_rate_boosted &&
+			if (sampling_rate_boosted &&
 				(dbs_tuners_ins.sampling_down_factor <
 					BOOSTED_SAMPLING_DOWN_FACTOR)) {
 				this_dbs_info->rate_mult =
