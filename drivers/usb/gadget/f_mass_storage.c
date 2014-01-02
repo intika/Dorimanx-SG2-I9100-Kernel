@@ -300,6 +300,7 @@
 #ifdef CONFIG_USB_CDFS_SUPPORT
 #ifdef CONFIG_USB_ANDROID_SAMSUNG_COMPOSITE
 #define _SUPPORT_MAC_   /* support to recognize CDFS on OSX (MAC PC) */
+#define VENDER_CMD_VERSION_INFO	0xfa  /* Image version info */
 #endif
 #endif
 
@@ -414,6 +415,8 @@ struct fsg_common {
 #ifdef CONFIG_USB_ANDROID_SAMSUNG_COMPOSITE
 	char vendor_string[8 + 1];
 	char product_string[16 + 1];
+	/* Additional image version info for SUA */
+	char version_string[100 + 1];
 #endif
 
 	struct kref		ref;
@@ -514,6 +517,25 @@ static int do_switch_atmode(struct fsg_common *common)
 	send_message(common, "Load AT");
 
 	return 0;
+}
+
+static int get_version_info(struct fsg_common *common, struct fsg_buffhd *bh)
+{
+	u8	*buf = (u8 *) bh->buf;
+	u8 return_size=common->data_size_from_cmnd;
+
+	memset(buf,0,common->data_size_from_cmnd);
+	if (return_size > sizeof(common->version_string))
+	{
+		/* driver version infor reply */
+		memcpy(buf , common->version_string, sizeof(common->version_string));
+		return_size = sizeof(common->version_string);
+	}
+	else
+	{
+		memcpy(buf , common->version_string, return_size);
+	}
+	return return_size;
 }
 #endif /* CONFIG_USB_ANDROID_SAMSUNG_COMPOSITE */
 #endif
@@ -1780,6 +1802,10 @@ static int do_mode_sense(struct fsg_common *common, struct fsg_buffhd *bh)
 	 * The mode pages, in numerical order.  The only page we support
 	 * is the Caching page.
 	 */
+	/*
+	* When our device works like CD-ROM device, we need to support
+	* Page code 0x2a
+	*/
 	if (page_code == 0x08 || all_pages) {
 		valid_page = 1;
 		buf[0] = 0x08;		/* Page code */
@@ -1787,7 +1813,7 @@ static int do_mode_sense(struct fsg_common *common, struct fsg_buffhd *bh)
 		memset(buf+2, 0, 10);	/* None of the fields are changeable */
 
 		if (!changeable_values) {
-			buf[2] = 0x00;	/* Write cache disable, */
+			buf[2] = 0x04;	/* Write cache enable, */
 					/* Read cache not disabled */
 					/* No cache retention priorities */
 			put_unaligned_be16(0xffff, &buf[4]);
@@ -1800,6 +1826,19 @@ static int do_mode_sense(struct fsg_common *common, struct fsg_buffhd *bh)
 		}
 		buf += 12;
 	}
+#ifdef CONFIG_USB_CDFS_SUPPORT
+	else if (page_code == 0x2A) {
+		valid_page = 1;
+		buf[0] = 0x2A;		/* Page code */
+		buf[1] = 26;		/* Page length */
+		memset(buf+2, 0,26);/* None of the fields are changeable */
+		buf[2] = 0x02;
+		buf[3] = 0x02;
+		buf[4] = 0x04;
+		buf[6] = 0x28;
+		buf += 28;
+	 }
+#endif
 
 	/*
 	 * Check that a valid page was requested and the mode data length
@@ -2596,6 +2635,12 @@ static int do_scsi_command(struct fsg_common *common)
 		break;
 
 #endif /* _SUPPORT_MAC_ */
+
+	/* reply current image version */
+	case VENDER_CMD_VERSION_INFO:
+		common->data_size_from_cmnd = common->cmnd[4];
+		reply = get_version_info(common,bh);
+		break;
 #endif
 #endif
 	/* Some mandatory commands that we recognize but don't implement.
