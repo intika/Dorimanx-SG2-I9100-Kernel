@@ -1902,8 +1902,6 @@ config XEN
 	help
 	  Say Y if you want to run Linux in a Virtual Machine on Xen on ARM.
 
-source "arch/arm/mvp/Kconfig"
-
 endmenu
 
 menu "Boot options"
