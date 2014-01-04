@@ -392,7 +392,7 @@ static int hotplug_thresholds_tuneable[8] = { 0, 0, 0, 0, 0, 0, 0, 0 };
 
 // ZZ: midnight and zzmanX momentum defaults
 #define LATENCY_MULTIPLIER			(1000)
-#define MIN_LATENCY_MULTIPLIER			(100)
+#define MIN_LATENCY_MULTIPLIER			(20)
 #define MICRO_FREQUENCY_MIN_SAMPLE_RATE (10000)
 #define DEF_SAMPLING_DOWN_FACTOR		(1)	// ZZ: default for sampling down factor (stratosk default = 4) here disabled by default
 #define MAX_SAMPLING_DOWN_FACTOR		(100000)// ZZ: changed from 10 to 100000 for sampling down momentum implementation
