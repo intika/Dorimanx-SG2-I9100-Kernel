@@ -43,10 +43,12 @@ sudo systemctl enable sshd.service
 
 # Install normal text editor!
 sudo pacman -S vim
-export EDITOR=/usr/bin/vim
+export EDITOR=/usr/bin/vi
+sudo rm /usr/bin/vi
 sudo cp /usr/bin/vim /usr/bin/vi
 echo "syntax on" > $HOME/.vimrc
 echo "colo elflord" >> $HOME/.vimrc
+echo "export EDITOR=vi" >> ~/.bashrc
 
 # setup git to help you to work :)
 cd ~/samsung-i9100/Dorimanx-SG2-I9100-Kernel
