@@ -212,7 +212,7 @@ static __init int s5p_gpioint_add(struct s3c_gpio_chip *chip)
 	return 0;
 }
 
-int __init s5p_register_gpio_interrupt(int pin)
+int s5p_register_gpio_interrupt(int pin)
 {
 	struct s3c_gpio_chip *my_chip = s3c_gpiolib_getchip(pin);
 	int offset, group;
