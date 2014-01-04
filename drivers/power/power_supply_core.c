@@ -517,6 +517,11 @@ int power_supply_register(struct device *parent, struct power_supply *psy)
 		goto check_supplies_failed;
 	}
 
+	spin_lock_init(&psy->changed_lock);
+	rc = device_init_wakeup(dev, true);
+	if (rc)
+		goto wakeup_init_failed;
+
 	rc = kobject_set_name(&dev->kobj, "%s", psy->name);
 	if (rc)
 		goto kobject_set_name_failed;
@@ -550,6 +555,7 @@ create_triggers_failed:
 register_cooler_failed:
 	psy_unregister_thermal(psy);
 register_thermal_failed:
+wakeup_init_failed:
 	device_del(dev);
 kobject_set_name_failed:
 device_add_failed:
@@ -568,6 +574,7 @@ void power_supply_unregister(struct power_supply *psy)
 	wake_lock_destroy(&psy->work_wake_lock);
 	psy_unregister_cooler(psy);
 	psy_unregister_thermal(psy);
+	device_init_wakeup(psy->dev, false);
 	device_unregister(psy->dev);
 }
 EXPORT_SYMBOL_GPL(power_supply_unregister);
