@@ -77,15 +77,17 @@ static void power_supply_changed_work(struct work_struct *work)
 	if (psy->changed) {
 		psy->changed = false;
 		spin_unlock_irqrestore(&psy->changed_lock, flags);
-
 		class_for_each_device(power_supply_class, NULL, psy,
 				      __power_supply_changed_work);
-
 		power_supply_update_leds(psy);
-
 		kobject_uevent(&psy->dev->kobj, KOBJ_CHANGE);
 		spin_lock_irqsave(&psy->changed_lock, flags);
 	}
+	/*
+	 * Dependent power supplies (e.g. battery) may have changed state
+	 * as a result of this event, so poll again and hold the
+	 * wakeup_source until all events are processed.
+	 */
 	if (!psy->changed)
 		wake_unlock(&psy->work_wake_lock);
 	spin_unlock_irqrestore(&psy->changed_lock, flags);
@@ -375,7 +377,7 @@ static int psy_register_thermal(struct power_supply *psy)
 	/* Register battery zone device psy reports temperature */
 	for (i = 0; i < psy->num_properties; i++) {
 		if (psy->properties[i] == POWER_SUPPLY_PROP_TEMP) {
-			psy->tzd = thermal_zone_device_register(psy->name, 0,
+			psy->tzd = thermal_zone_device_register(psy->name, 0, 0,
 					psy, &psy_tzd_ops, NULL, 0, 0);
 			if (IS_ERR(psy->tzd))
 				return PTR_ERR(psy->tzd);
@@ -522,6 +524,7 @@ int power_supply_register(struct device *parent, struct power_supply *psy)
 	}
 
 	spin_lock_init(&psy->changed_lock);
+	wake_lock_init(&psy->work_wake_lock, WAKE_LOCK_SUSPEND, "power-supply");
 	rc = device_init_wakeup(dev, true);
 	if (rc)
 		goto wakeup_init_failed;
@@ -529,9 +532,6 @@ int power_supply_register(struct device *parent, struct power_supply *psy)
 	rc = device_add(dev);
 	if (rc)
 		goto device_add_failed;
-
-	spin_lock_init(&psy->changed_lock);
-	wake_lock_init(&psy->work_wake_lock, WAKE_LOCK_SUSPEND, "power-supply");
 
 	rc = psy_register_thermal(psy);
 	if (rc)
