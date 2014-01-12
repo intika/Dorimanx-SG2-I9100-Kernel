@@ -4,9 +4,9 @@
 ;;; Don't parse this file wihout knowing GCC gengtype internals.
 ;;; This file should be parsed by the same gengtype which wrote it.
 
-(!version  "4.8.3 20131111 (prerelease)")
+(!version  "4.8.3 20131202 (prerelease)")
 
-(!srcdir  "/android-kernel/ICS/crosstool-ng/.build/src/gcc-linaro-4.8-2013.11/gcc")
+(!srcdir  "/android-kernel/ICS/crosstool-ng/.build/src/gcc-linaro-4.8-2013.12/gcc")
 
 (!languages 9 ada c cp fortran go java lto objc objcp)
 
@@ -335,12 +335,12 @@ nil )
 (!srcfileloc  "tree.h" 437)
 nil )
 (!pair  "u"
-(!type union 12 nil  gc_unused "anonymous:/android-kernel/ICS/crosstool-ng/.build/src/gcc-linaro-4.8-2013.11/gcc/tree.h:439"
+(!type union 12 nil  gc_unused "anonymous:/android-kernel/ICS/crosstool-ng/.build/src/gcc-linaro-4.8-2013.12/gcc/tree.h:439"
 (!srcfileloc  "tree.h" 472)
 
 (!fields 3 
 (!pair  "bits"
-(!type struct 13 nil  gc_unused "anonymous:/android-kernel/ICS/crosstool-ng/.build/src/gcc-linaro-4.8-2013.11/gcc/tree.h:442"
+(!type struct 13 nil  gc_unused "anonymous:/android-kernel/ICS/crosstool-ng/.build/src/gcc-linaro-4.8-2013.12/gcc/tree.h:442"
 (!srcfileloc  "tree.h" 464)
 
 (!fields 15 
@@ -1365,7 +1365,7 @@ nil 32 nil )
 ))
 nil 32 
 (!type lang_struct 56 nil  gc_used "lang_decl_u"
-(!srcfileloc  "cp/cp-tree.h" 2019)
+(!srcfileloc  "cp/cp-tree.h" 2020)
 
 (!fields 0 )
 
@@ -1377,77 +1377,77 @@ nil 32
 (!type already_seen 43)
 
 (!type union 57 nil  gc_used "lang_decl_u"
-(!srcfileloc  "cp/cp-tree.h" 2019)
+(!srcfileloc  "cp/cp-tree.h" 2020)
 
 (!fields 5 
 (!pair  "base"
 (!type struct 58 nil  gc_used "lang_decl_base"
-(!srcfileloc  "cp/cp-tree.h" 1898)
+(!srcfileloc  "cp/cp-tree.h" 1899)
 
 (!fields 12 
 (!pair  "selector"
 (!type already_seen 9)
 
-(!srcfileloc  "cp/cp-tree.h" 1885)
+(!srcfileloc  "cp/cp-tree.h" 1886)
 nil )
 (!pair  "language"
 (!type already_seen 9)
 
-(!srcfileloc  "cp/cp-tree.h" 1886)
+(!srcfileloc  "cp/cp-tree.h" 1887)
 nil )
 (!pair  "use_template"
 (!type already_seen 9)
 
-(!srcfileloc  "cp/cp-tree.h" 1887)
+(!srcfileloc  "cp/cp-tree.h" 1888)
 nil )
 (!pair  "not_really_extern"
 (!type already_seen 9)
 
-(!srcfileloc  "cp/cp-tree.h" 1888)
+(!srcfileloc  "cp/cp-tree.h" 1889)
 nil )
 (!pair  "initialized_in_class"
 (!type already_seen 9)
 
-(!srcfileloc  "cp/cp-tree.h" 1889)
+(!srcfileloc  "cp/cp-tree.h" 1890)
 nil )
 (!pair  "repo_available_p"
 (!type already_seen 9)
 
-(!srcfileloc  "cp/cp-tree.h" 1890)
+(!srcfileloc  "cp/cp-tree.h" 1891)
 nil )
 (!pair  "threadprivate_or_deleted_p"
 (!type already_seen 9)
 
-(!srcfileloc  "cp/cp-tree.h" 1891)
+(!srcfileloc  "cp/cp-tree.h" 1892)
 nil )
 (!pair  "anticipated_p"
 (!type already_seen 9)
 
-(!srcfileloc  "cp/cp-tree.h" 1892)
+(!srcfileloc  "cp/cp-tree.h" 1893)
 nil )
 (!pair  "friend_attr"
 (!type already_seen 9)
 
-(!srcfileloc  "cp/cp-tree.h" 1893)
+(!srcfileloc  "cp/cp-tree.h" 1894)
 nil )
 (!pair  "template_conv_p"
 (!type already_seen 9)
 
-(!srcfileloc  "cp/cp-tree.h" 1894)
+(!srcfileloc  "cp/cp-tree.h" 1895)
 nil )
 (!pair  "odr_used"
 (!type already_seen 9)
 
-(!srcfileloc  "cp/cp-tree.h" 1895)
+(!srcfileloc  "cp/cp-tree.h" 1896)
 nil )
 (!pair  "u2sel"
 (!type already_seen 9)
 
-(!srcfileloc  "cp/cp-tree.h" 1896)
+(!srcfileloc  "cp/cp-tree.h" 1897)
 nil ))
 nil 260 nil )
 
-(!srcfileloc  "cp/cp-tree.h" 2014)
+(!srcfileloc  "cp/cp-tree.h" 2015)
 
 (!options 
 (!option default string  "")
@@ -1455,28 +1455,28 @@ nil 260 nil )
 )
 (!pair  "min"
 (!type struct 59 nil  gc_used "lang_decl_min"
-(!srcfileloc  "cp/cp-tree.h" 1931)
+(!srcfileloc  "cp/cp-tree.h" 1932)
 
 (!fields 3 
 (!pair  "base"
 (!type already_seen 58)
 
-(!srcfileloc  "cp/cp-tree.h" 1913)
+(!srcfileloc  "cp/cp-tree.h" 1914)
 nil )
 (!pair  "template_info"
 (!type already_seen 5)
 
-(!srcfileloc  "cp/cp-tree.h" 1920)
+(!srcfileloc  "cp/cp-tree.h" 1921)
 nil )
 (!pair  "u2"
 (!type union 60 nil  gc_used "lang_decl_u2"
-(!srcfileloc  "cp/cp-tree.h" 1930)
+(!srcfileloc  "cp/cp-tree.h" 1931)
 
 (!fields 2 
 (!pair  "access"
 (!type already_seen 5)
 
-(!srcfileloc  "cp/cp-tree.h" 1926)
+(!srcfileloc  "cp/cp-tree.h" 1927)
 
 (!options 
 (!option tag string  "0")
@@ -1485,7 +1485,7 @@ nil )
 (!pair  "discriminator"
 (!type already_seen 9)
 
-(!srcfileloc  "cp/cp-tree.h" 1929)
+(!srcfileloc  "cp/cp-tree.h" 1930)
 
 (!options 
 (!option tag string  "1")
@@ -1493,7 +1493,7 @@ nil )
 ))
 nil 260 nil )
 
-(!srcfileloc  "cp/cp-tree.h" 1930)
+(!srcfileloc  "cp/cp-tree.h" 1931)
 
 (!options 
 (!option desc string  "%0.u.base.u2sel")
@@ -1501,7 +1501,7 @@ nil 260 nil )
 ))
 nil 260 nil )
 
-(!srcfileloc  "cp/cp-tree.h" 2015)
+(!srcfileloc  "cp/cp-tree.h" 2016)
 
 (!options 
 (!option tag string  "0")
@@ -1509,113 +1509,113 @@ nil 260 nil )
 )
 (!pair  "fn"
 (!type struct 61 nil  gc_used "lang_decl_fn"
-(!srcfileloc  "cp/cp-tree.h" 1991)
+(!srcfileloc  "cp/cp-tree.h" 1992)
 
 (!fields 21 
 (!pair  "min"
 (!type already_seen 59)
 
-(!srcfileloc  "cp/cp-tree.h" 1936)
+(!srcfileloc  "cp/cp-tree.h" 1937)
 nil )
 (!pair  "operator_code"
 (!type already_seen 9)
 
-(!srcfileloc  "cp/cp-tree.h" 1940)
+(!srcfileloc  "cp/cp-tree.h" 1941)
 nil )
 (!pair  "global_ctor_p"
 (!type already_seen 9)
 
-(!srcfileloc  "cp/cp-tree.h" 1942)
+(!srcfileloc  "cp/cp-tree.h" 1943)
 nil )
 (!pair  "global_dtor_p"
 (!type already_seen 9)
 
-(!srcfileloc  "cp/cp-tree.h" 1943)
+(!srcfileloc  "cp/cp-tree.h" 1944)
 nil )
 (!pair  "constructor_attr"
 (!type already_seen 9)
 
-(!srcfileloc  "cp/cp-tree.h" 1944)
+(!srcfileloc  "cp/cp-tree.h" 1945)
 nil )
 (!pair  "destructor_attr"
 (!type already_seen 9)
 
-(!srcfileloc  "cp/cp-tree.h" 1945)
+(!srcfileloc  "cp/cp-tree.h" 1946)
 nil )
 (!pair  "assignment_operator_p"
 (!type already_seen 9)
 
-(!srcfileloc  "cp/cp-tree.h" 1946)
+(!srcfileloc  "cp/cp-tree.h" 1947)
 nil )
 (!pair  "static_function"
 (!type already_seen 9)
 
-(!srcfileloc  "cp/cp-tree.h" 1947)
+(!srcfileloc  "cp/cp-tree.h" 1948)
 nil )
 (!pair  "pure_virtual"
 (!type already_seen 9)
 
-(!srcfileloc  "cp/cp-tree.h" 1948)
+(!srcfileloc  "cp/cp-tree.h" 1949)
 nil )
 (!pair  "defaulted_p"
 (!type already_seen 9)
 
-(!srcfileloc  "cp/cp-tree.h" 1949)
+(!srcfileloc  "cp/cp-tree.h" 1950)
 nil )
 (!pair  "has_in_charge_parm_p"
 (!type already_seen 9)
 
-(!srcfileloc  "cp/cp-tree.h" 1951)
+(!srcfileloc  "cp/cp-tree.h" 1952)
 nil )
 (!pair  "has_vtt_parm_p"
 (!type already_seen 9)
 
-(!srcfileloc  "cp/cp-tree.h" 1952)
+(!srcfileloc  "cp/cp-tree.h" 1953)
 nil )
 (!pair  "pending_inline_p"
 (!type already_seen 9)
 
-(!srcfileloc  "cp/cp-tree.h" 1953)
+(!srcfileloc  "cp/cp-tree.h" 1954)
 nil )
 (!pair  "nonconverting"
 (!type already_seen 9)
 
-(!srcfileloc  "cp/cp-tree.h" 1954)
+(!srcfileloc  "cp/cp-tree.h" 1955)
 nil )
 (!pair  "thunk_p"
 (!type already_seen 9)
 
-(!srcfileloc  "cp/cp-tree.h" 1955)
+(!srcfileloc  "cp/cp-tree.h" 1956)
 nil )
 (!pair  "this_thunk_p"
 (!type already_seen 9)
 
-(!srcfileloc  "cp/cp-tree.h" 1956)
+(!srcfileloc  "cp/cp-tree.h" 1957)
 nil )
 (!pair  "hidden_friend_p"
 (!type already_seen 9)
 
-(!srcfileloc  "cp/cp-tree.h" 1957)
+(!srcfileloc  "cp/cp-tree.h" 1958)
 nil )
 (!pair  "befriending_classes"
 (!type already_seen 5)
 
-(!srcfileloc  "cp/cp-tree.h" 1963)
+(!srcfileloc  "cp/cp-tree.h" 1964)
 nil )
 (!pair  "context"
 (!type already_seen 5)
 
-(!srcfileloc  "cp/cp-tree.h" 1971)
+(!srcfileloc  "cp/cp-tree.h" 1972)
 nil )
 (!pair  "u5"
 (!type union 62 nil  gc_used "lang_decl_u5"
-(!srcfileloc  "cp/cp-tree.h" 1982)
+(!srcfileloc  "cp/cp-tree.h" 1983)
 
 (!fields 2 
 (!pair  "cloned_function"
 (!type already_seen 5)
 
-(!srcfileloc  "cp/cp-tree.h" 1977)
+(!srcfileloc  "cp/cp-tree.h" 1978)
 
 (!options 
 (!option tag string  "0")
@@ -1624,7 +1624,7 @@ nil )
 (!pair  "fixed_offset"
 (!type already_seen 9)
 
-(!srcfileloc  "cp/cp-tree.h" 1981)
+(!srcfileloc  "cp/cp-tree.h" 1982)
 
 (!options 
 (!option tag string  "1")
@@ -1632,7 +1632,7 @@ nil )
 ))
 nil 260 nil )
 
-(!srcfileloc  "cp/cp-tree.h" 1982)
+(!srcfileloc  "cp/cp-tree.h" 1983)
 
 (!options 
 (!option desc string  "%1.thunk_p")
@@ -1640,7 +1640,7 @@ nil 260 nil )
 )
 (!pair  "u"
 (!type union 63 nil  gc_used "lang_decl_u3"
-(!srcfileloc  "cp/cp-tree.h" 1989)
+(!srcfileloc  "cp/cp-tree.h" 1990)
 
 (!fields 2 
 (!pair  "pending_inline_info"
@@ -1732,28 +1732,28 @@ nil )
 nil )
 (!pair  "deferred_access_check"
 (!type struct 73 nil  gc_used "deferred_access_check"
-(!srcfileloc  "cp/cp-tree.h" 5585)
+(!srcfileloc  "cp/cp-tree.h" 5586)
 
 (!fields 4 
 (!pair  "binfo"
 (!type already_seen 5)
 
-(!srcfileloc  "cp/cp-tree.h" 5578)
+(!srcfileloc  "cp/cp-tree.h" 5579)
 nil )
 (!pair  "decl"
 (!type already_seen 5)
 
-(!srcfileloc  "cp/cp-tree.h" 5580)
+(!srcfileloc  "cp/cp-tree.h" 5581)
 nil )
 (!pair  "diag_decl"
 (!type already_seen 5)
 
-(!srcfileloc  "cp/cp-tree.h" 5582)
+(!srcfileloc  "cp/cp-tree.h" 5583)
 nil )
 (!pair  "loc"
 (!type already_seen 9)
 
-(!srcfileloc  "cp/cp-tree.h" 5584)
+(!srcfileloc  "cp/cp-tree.h" 5585)
 nil ))
 nil 260 nil )
 
@@ -1816,7 +1816,7 @@ nil 260 nil )
 nil 260 nil )
 )
 
-(!srcfileloc  "cp/cp-tree.h" 1986)
+(!srcfileloc  "cp/cp-tree.h" 1987)
 
 (!options 
 (!option tag string  "1")
@@ -1986,7 +1986,7 @@ nil 8
 )
 
 (!type struct 86 nil  gc_pointed_to "language_function"
-(!srcfileloc  "cp/cp-tree.h" 1107)
+(!srcfileloc  "cp/cp-tree.h" 1108)
 
 (!fields 19 
 (!pair  "base"
@@ -2024,77 +2024,77 @@ nil )
 nil ))
 nil 390 nil )
 
-(!srcfileloc  "cp/cp-tree.h" 1083)
+(!srcfileloc  "cp/cp-tree.h" 1084)
 nil )
 (!pair  "x_cdtor_label"
 (!type already_seen 5)
 
-(!srcfileloc  "cp/cp-tree.h" 1085)
+(!srcfileloc  "cp/cp-tree.h" 1086)
 nil )
 (!pair  "x_current_class_ptr"
 (!type already_seen 5)
 
-(!srcfileloc  "cp/cp-tree.h" 1086)
+(!srcfileloc  "cp/cp-tree.h" 1087)
 nil )
 (!pair  "x_current_class_ref"
 (!type already_seen 5)
 
-(!srcfileloc  "cp/cp-tree.h" 1087)
+(!srcfileloc  "cp/cp-tree.h" 1088)
 nil )
 (!pair  "x_eh_spec_block"
 (!type already_seen 5)
 
-(!srcfileloc  "cp/cp-tree.h" 1088)
+(!srcfileloc  "cp/cp-tree.h" 1089)
 nil )
 (!pair  "x_in_charge_parm"
 (!type already_seen 5)
 
-(!srcfileloc  "cp/cp-tree.h" 1089)
+(!srcfileloc  "cp/cp-tree.h" 1090)
 nil )
 (!pair  "x_vtt_parm"
 (!type already_seen 5)
 
-(!srcfileloc  "cp/cp-tree.h" 1090)
+(!srcfileloc  "cp/cp-tree.h" 1091)
 nil )
 (!pair  "x_return_value"
 (!type already_seen 5)
 
-(!srcfileloc  "cp/cp-tree.h" 1091)
+(!srcfileloc  "cp/cp-tree.h" 1092)
 nil )
 (!pair  "x_auto_return_pattern"
 (!type already_seen 5)
 
-(!srcfileloc  "cp/cp-tree.h" 1092)
+(!srcfileloc  "cp/cp-tree.h" 1093)
 nil )
 (!pair  "returns_value"
 (!type already_seen 9)
 
-(!srcfileloc  "cp/cp-tree.h" 1094)
+(!srcfileloc  "cp/cp-tree.h" 1095)
 nil )
 (!pair  "returns_null"
 (!type already_seen 9)
 
-(!srcfileloc  "cp/cp-tree.h" 1095)
+(!srcfileloc  "cp/cp-tree.h" 1096)
 nil )
 (!pair  "returns_abnormally"
 (!type already_seen 9)
 
-(!srcfileloc  "cp/cp-tree.h" 1096)
+(!srcfileloc  "cp/cp-tree.h" 1097)
 nil )
 (!pair  "x_in_function_try_handler"
 (!type already_seen 9)
 
-(!srcfileloc  "cp/cp-tree.h" 1097)
+(!srcfileloc  "cp/cp-tree.h" 1098)
 nil )
 (!pair  "x_in_base_initializer"
 (!type already_seen 9)
 
-(!srcfileloc  "cp/cp-tree.h" 1098)
+(!srcfileloc  "cp/cp-tree.h" 1099)
 nil )
 (!pair  "can_throw"
 (!type already_seen 9)
 
-(!srcfileloc  "cp/cp-tree.h" 1101)
+(!srcfileloc  "cp/cp-tree.h" 1102)
 nil )
 (!pair  "x_named_labels"
 (!type pointer 90 nil  gc_used
@@ -2397,7 +2397,7 @@ nil 260 nil )
 nil nil nil nil nil nil nil nil nil nil )
 )
 
-(!srcfileloc  "cp/cp-tree.h" 1103)
+(!srcfileloc  "cp/cp-tree.h" 1104)
 
 (!options 
 (!option param_is type 
@@ -2408,12 +2408,12 @@ nil nil nil nil nil nil nil nil nil nil )
 (!pair  "bindings"
 (!type already_seen 94)
 
-(!srcfileloc  "cp/cp-tree.h" 1104)
+(!srcfileloc  "cp/cp-tree.h" 1105)
 nil )
 (!pair  "x_local_names"
 (!type already_seen 45)
 
-(!srcfileloc  "cp/cp-tree.h" 1105)
+(!srcfileloc  "cp/cp-tree.h" 1106)
 nil )
 (!pair  "extern_decl_map"
 (!type pointer 106 nil  gc_used
@@ -2426,25 +2426,25 @@ nil )
 (!type struct 109 
 (!type already_seen 108)
  gc_pointed_to "cxx_int_tree_map"
-(!srcfileloc  "cp/cp-tree.h" 1075)
+(!srcfileloc  "cp/cp-tree.h" 1076)
 
 (!fields 2 
 (!pair  "uid"
 (!type already_seen 9)
 
-(!srcfileloc  "cp/cp-tree.h" 1073)
+(!srcfileloc  "cp/cp-tree.h" 1074)
 nil )
 (!pair  "to"
 (!type already_seen 5)
 
-(!srcfileloc  "cp/cp-tree.h" 1074)
+(!srcfileloc  "cp/cp-tree.h" 1075)
 nil ))
 nil 260 nil )
 )
 nil nil nil nil nil nil nil nil nil nil )
 )
 
-(!srcfileloc  "cp/cp-tree.h" 1106)
+(!srcfileloc  "cp/cp-tree.h" 1107)
 
 (!options 
 (!option param_is type 
@@ -2713,7 +2713,7 @@ nil 1
 )
 )
 
-(!srcfileloc  "cp/cp-tree.h" 1988)
+(!srcfileloc  "cp/cp-tree.h" 1989)
 
 (!options 
 (!option tag string  "0")
@@ -2721,7 +2721,7 @@ nil 1
 ))
 nil 260 nil )
 
-(!srcfileloc  "cp/cp-tree.h" 1989)
+(!srcfileloc  "cp/cp-tree.h" 1990)
 
 (!options 
 (!option desc string  "%1.pending_inline_p")
@@ -2729,7 +2729,7 @@ nil 260 nil )
 ))
 nil 260 nil )
 
-(!srcfileloc  "cp/cp-tree.h" 2016)
+(!srcfileloc  "cp/cp-tree.h" 2017)
 
 (!options 
 (!option tag string  "1")
@@ -2737,22 +2737,22 @@ nil 260 nil )
 )
 (!pair  "ns"
 (!type struct 128 nil  gc_used "lang_decl_ns"
-(!srcfileloc  "cp/cp-tree.h" 1998)
+(!srcfileloc  "cp/cp-tree.h" 1999)
 
 (!fields 2 
 (!pair  "base"
 (!type already_seen 58)
 
-(!srcfileloc  "cp/cp-tree.h" 1996)
+(!srcfileloc  "cp/cp-tree.h" 1997)
 nil )
 (!pair  "level"
 (!type already_seen 94)
 
-(!srcfileloc  "cp/cp-tree.h" 1997)
+(!srcfileloc  "cp/cp-tree.h" 1998)
 nil ))
 nil 260 nil )
 
-(!srcfileloc  "cp/cp-tree.h" 2017)
+(!srcfileloc  "cp/cp-tree.h" 2018)
 
 (!options 
 (!option tag string  "2")
@@ -2760,27 +2760,27 @@ nil 260 nil )
 )
 (!pair  "parm"
 (!type struct 129 nil  gc_used "lang_decl_parm"
-(!srcfileloc  "cp/cp-tree.h" 2006)
+(!srcfileloc  "cp/cp-tree.h" 2007)
 
 (!fields 3 
 (!pair  "base"
 (!type already_seen 58)
 
-(!srcfileloc  "cp/cp-tree.h" 2003)
+(!srcfileloc  "cp/cp-tree.h" 2004)
 nil )
 (!pair  "level"
 (!type already_seen 9)
 
-(!srcfileloc  "cp/cp-tree.h" 2004)
+(!srcfileloc  "cp/cp-tree.h" 2005)
 nil )
 (!pair  "index"
 (!type already_seen 9)
 
-(!srcfileloc  "cp/cp-tree.h" 2005)
+(!srcfileloc  "cp/cp-tree.h" 2006)
 nil ))
 nil 260 nil )
 
-(!srcfileloc  "cp/cp-tree.h" 2018)
+(!srcfileloc  "cp/cp-tree.h" 2019)
 
 (!options 
 (!option tag string  "3")
@@ -2871,13 +2871,13 @@ nil ))
 )
 
 (!type struct 132 nil  gc_pointed_to "lang_decl"
-(!srcfileloc  "cp/cp-tree.h" 2020)
+(!srcfileloc  "cp/cp-tree.h" 2021)
 
 (!fields 1 
 (!pair  "u"
 (!type already_seen 56)
 
-(!srcfileloc  "cp/cp-tree.h" 2019)
+(!srcfileloc  "cp/cp-tree.h" 2020)
 nil ))
 
 (!options 
@@ -8070,7 +8070,7 @@ nil )
 (!srcfileloc  "gimple.h" 281)
 nil )
 (!pair  "u"
-(!type union 323 nil  gc_used "anonymous:/android-kernel/ICS/crosstool-ng/.build/src/gcc-linaro-4.8-2013.11/gcc/gimple.h:284"
+(!type union 323 nil  gc_used "anonymous:/android-kernel/ICS/crosstool-ng/.build/src/gcc-linaro-4.8-2013.12/gcc/gimple.h:284"
 (!srcfileloc  "gimple.h" 287)
 
 (!fields 2 
@@ -8341,7 +8341,7 @@ nil )
 )
 )
 (!pair  "loc"
-(!type union 336 nil  gc_unused "anonymous:/android-kernel/ICS/crosstool-ng/.build/src/gcc-linaro-4.8-2013.11/gcc/tree.h:1960"
+(!type union 336 nil  gc_unused "anonymous:/android-kernel/ICS/crosstool-ng/.build/src/gcc-linaro-4.8-2013.12/gcc/tree.h:1960"
 (!srcfileloc  "tree.h" 1960)
 
 (!fields 2 
@@ -8988,7 +8988,7 @@ nil 511 nil )
 )
 )
 (!pair  "x"
-(!type struct 361 nil  gc_used "anonymous:/android-kernel/ICS/crosstool-ng/.build/src/gcc-linaro-4.8-2013.11/gcc/basic-block.h:199"
+(!type struct 361 nil  gc_used "anonymous:/android-kernel/ICS/crosstool-ng/.build/src/gcc-linaro-4.8-2013.12/gcc/basic-block.h:199"
 (!srcfileloc  "basic-block.h" 202)
 
 (!fields 2 
@@ -13090,62 +13090,62 @@ nil ))
 )
 
 (!type struct 513 nil  gc_pointed_to "lang_type"
-(!srcfileloc  "cp/cp-tree.h" 1442)
+(!srcfileloc  "cp/cp-tree.h" 1443)
 
 (!fields 1 
 (!pair  "u"
 (!type union 514 nil  gc_used "lang_type_u"
-(!srcfileloc  "cp/cp-tree.h" 1441)
+(!srcfileloc  "cp/cp-tree.h" 1442)
 
 (!fields 3 
 (!pair  "h"
 (!type struct 515 nil  gc_used "lang_type_header"
-(!srcfileloc  "cp/cp-tree.h" 1325)
+(!srcfileloc  "cp/cp-tree.h" 1326)
 
 (!fields 8 
 (!pair  "is_lang_type_class"
 (!type already_seen 9)
 
-(!srcfileloc  "cp/cp-tree.h" 1315)
+(!srcfileloc  "cp/cp-tree.h" 1316)
 nil )
 (!pair  "has_type_conversion"
 (!type already_seen 9)
 
-(!srcfileloc  "cp/cp-tree.h" 1317)
+(!srcfileloc  "cp/cp-tree.h" 1318)
 nil )
 (!pair  "has_copy_ctor"
 (!type already_seen 9)
 
-(!srcfileloc  "cp/cp-tree.h" 1318)
+(!srcfileloc  "cp/cp-tree.h" 1319)
 nil )
 (!pair  "has_default_ctor"
 (!type already_seen 9)
 
-(!srcfileloc  "cp/cp-tree.h" 1319)
+(!srcfileloc  "cp/cp-tree.h" 1320)
 nil )
 (!pair  "const_needs_init"
 (!type already_seen 9)
 
-(!srcfileloc  "cp/cp-tree.h" 1320)
+(!srcfileloc  "cp/cp-tree.h" 1321)
 nil )
 (!pair  "ref_needs_init"
 (!type already_seen 9)
 
-(!srcfileloc  "cp/cp-tree.h" 1321)
+(!srcfileloc  "cp/cp-tree.h" 1322)
 nil )
 (!pair  "has_const_copy_assign"
 (!type already_seen 9)
 
-(!srcfileloc  "cp/cp-tree.h" 1322)
+(!srcfileloc  "cp/cp-tree.h" 1323)
 nil )
 (!pair  "spare"
 (!type already_seen 9)
 
-(!srcfileloc  "cp/cp-tree.h" 1324)
+(!srcfileloc  "cp/cp-tree.h" 1325)
 nil ))
 nil 260 nil )
 
-(!srcfileloc  "cp/cp-tree.h" 1438)
+(!srcfileloc  "cp/cp-tree.h" 1439)
 
 (!options 
 (!option skip string  "")
@@ -13153,261 +13153,261 @@ nil 260 nil )
 )
 (!pair  "c"
 (!type struct 516 nil  gc_used "lang_type_class"
-(!srcfileloc  "cp/cp-tree.h" 1428)
+(!srcfileloc  "cp/cp-tree.h" 1429)
 
 (!fields 64 
 (!pair  "h"
 (!type already_seen 515)
 
-(!srcfileloc  "cp/cp-tree.h" 1341)
+(!srcfileloc  "cp/cp-tree.h" 1342)
 nil )
 (!pair  "align"
 (!type already_seen 28)
 
-(!srcfileloc  "cp/cp-tree.h" 1343)
+(!srcfileloc  "cp/cp-tree.h" 1344)
 nil )
 (!pair  "has_mutable"
 (!type already_seen 9)
 
-(!srcfileloc  "cp/cp-tree.h" 1345)
+(!srcfileloc  "cp/cp-tree.h" 1346)
 nil )
 (!pair  "com_interface"
 (!type already_seen 9)
 
-(!srcfileloc  "cp/cp-tree.h" 1346)
+(!srcfileloc  "cp/cp-tree.h" 1347)
 nil )
 (!pair  "non_pod_class"
 (!type already_seen 9)
 
-(!srcfileloc  "cp/cp-tree.h" 1347)
+(!srcfileloc  "cp/cp-tree.h" 1348)
 nil )
 (!pair  "nearly_empty_p"
 (!type already_seen 9)
 
-(!srcfileloc  "cp/cp-tree.h" 1348)
+(!srcfileloc  "cp/cp-tree.h" 1349)
 nil )
 (!pair  "user_align"
 (!type already_seen 9)
 
-(!srcfileloc  "cp/cp-tree.h" 1349)
+(!srcfileloc  "cp/cp-tree.h" 1350)
 nil )
 (!pair  "has_copy_assign"
 (!type already_seen 9)
 
-(!srcfileloc  "cp/cp-tree.h" 1350)
+(!srcfileloc  "cp/cp-tree.h" 1351)
 nil )
 (!pair  "has_new"
 (!type already_seen 9)
 
-(!srcfileloc  "cp/cp-tree.h" 1351)
+(!srcfileloc  "cp/cp-tree.h" 1352)
 nil )
 (!pair  "has_array_new"
 (!type already_seen 9)
 
-(!srcfileloc  "cp/cp-tree.h" 1352)
+(!srcfileloc  "cp/cp-tree.h" 1353)
 nil )
 (!pair  "gets_delete"
 (!type already_seen 9)
 
-(!srcfileloc  "cp/cp-tree.h" 1354)
+(!srcfileloc  "cp/cp-tree.h" 1355)
 nil )
 (!pair  "interface_only"
 (!type already_seen 9)
 
-(!srcfileloc  "cp/cp-tree.h" 1355)
+(!srcfileloc  "cp/cp-tree.h" 1356)
 nil )
 (!pair  "interface_unknown"
 (!type already_seen 9)
 
-(!srcfileloc  "cp/cp-tree.h" 1356)
+(!srcfileloc  "cp/cp-tree.h" 1357)
 nil )
 (!pair  "contains_empty_class_p"
 (!type already_seen 9)
 
-(!srcfileloc  "cp/cp-tree.h" 1357)
+(!srcfileloc  "cp/cp-tree.h" 1358)
 nil )
 (!pair  "anon_aggr"
 (!type already_seen 9)
 
-(!srcfileloc  "cp/cp-tree.h" 1358)
+(!srcfileloc  "cp/cp-tree.h" 1359)
 nil )
 (!pair  "non_zero_init"
 (!type already_seen 9)
 
-(!srcfileloc  "cp/cp-tree.h" 1359)
+(!srcfileloc  "cp/cp-tree.h" 1360)
 nil )
 (!pair  "empty_p"
 (!type already_seen 9)
 
-(!srcfileloc  "cp/cp-tree.h" 1360)
+(!srcfileloc  "cp/cp-tree.h" 1361)
 nil )
 (!pair  "vec_new_uses_cookie"
 (!type already_seen 9)
 
-(!srcfileloc  "cp/cp-tree.h" 1362)
+(!srcfileloc  "cp/cp-tree.h" 1363)
 nil )
 (!pair  "declared_class"
 (!type already_seen 9)
 
-(!srcfileloc  "cp/cp-tree.h" 1363)
+(!srcfileloc  "cp/cp-tree.h" 1364)
 nil )
 (!pair  "diamond_shaped"
 (!type already_seen 9)
 
-(!srcfileloc  "cp/cp-tree.h" 1364)
+(!srcfileloc  "cp/cp-tree.h" 1365)
 nil )
 (!pair  "repeated_base"
 (!type already_seen 9)
 
-(!srcfileloc  "cp/cp-tree.h" 1365)
+(!srcfileloc  "cp/cp-tree.h" 1366)
 nil )
 (!pair  "being_defined"
 (!type already_seen 9)
 
-(!srcfileloc  "cp/cp-tree.h" 1366)
+(!srcfileloc  "cp/cp-tree.h" 1367)
 nil )
 (!pair  "java_interface"
 (!type already_seen 9)
 
-(!srcfileloc  "cp/cp-tree.h" 1367)
+(!srcfileloc  "cp/cp-tree.h" 1368)
 nil )
 (!pair  "debug_requested"
 (!type already_seen 9)
 
-(!srcfileloc  "cp/cp-tree.h" 1368)
+(!srcfileloc  "cp/cp-tree.h" 1369)
 nil )
 (!pair  "fields_readonly"
 (!type already_seen 9)
 
-(!srcfileloc  "cp/cp-tree.h" 1369)
+(!srcfileloc  "cp/cp-tree.h" 1370)
 nil )
 (!pair  "use_template"
 (!type already_seen 9)
 
-(!srcfileloc  "cp/cp-tree.h" 1371)
+(!srcfileloc  "cp/cp-tree.h" 1372)
 nil )
 (!pair  "ptrmemfunc_flag"
 (!type already_seen 9)
 
-(!srcfileloc  "cp/cp-tree.h" 1372)
+(!srcfileloc  "cp/cp-tree.h" 1373)
 nil )
 (!pair  "was_anonymous"
 (!type already_seen 9)
 
-(!srcfileloc  "cp/cp-tree.h" 1373)
+(!srcfileloc  "cp/cp-tree.h" 1374)
 nil )
 (!pair  "lazy_default_ctor"
 (!type already_seen 9)
 
-(!srcfileloc  "cp/cp-tree.h" 1374)
+(!srcfileloc  "cp/cp-tree.h" 1375)
 nil )
 (!pair  "lazy_copy_ctor"
 (!type already_seen 9)
 
-(!srcfileloc  "cp/cp-tree.h" 1375)
+(!srcfileloc  "cp/cp-tree.h" 1376)
 nil )
 (!pair  "lazy_copy_assign"
 (!type already_seen 9)
 
-(!srcfileloc  "cp/cp-tree.h" 1376)
+(!srcfileloc  "cp/cp-tree.h" 1377)
 nil )
 (!pair  "lazy_destructor"
 (!type already_seen 9)
 
-(!srcfileloc  "cp/cp-tree.h" 1377)
+(!srcfileloc  "cp/cp-tree.h" 1378)
 nil )
 (!pair  "has_const_copy_ctor"
 (!type already_seen 9)
 
-(!srcfileloc  "cp/cp-tree.h" 1379)
+(!srcfileloc  "cp/cp-tree.h" 1380)
 nil )
 (!pair  "has_complex_copy_ctor"
 (!type already_seen 9)
 
-(!srcfileloc  "cp/cp-tree.h" 1380)
+(!srcfileloc  "cp/cp-tree.h" 1381)
 nil )
 (!pair  "has_complex_copy_assign"
 (!type already_seen 9)
 
-(!srcfileloc  "cp/cp-tree.h" 1381)
+(!srcfileloc  "cp/cp-tree.h" 1382)
 nil )
 (!pair  "non_aggregate"
 (!type already_seen 9)
 
-(!srcfileloc  "cp/cp-tree.h" 1382)
+(!srcfileloc  "cp/cp-tree.h" 1383)
 nil )
 (!pair  "has_complex_dflt"
 (!type already_seen 9)
 
-(!srcfileloc  "cp/cp-tree.h" 1383)
+(!srcfileloc  "cp/cp-tree.h" 1384)
 nil )
 (!pair  "has_list_ctor"
 (!type already_seen 9)
 
-(!srcfileloc  "cp/cp-tree.h" 1384)
+(!srcfileloc  "cp/cp-tree.h" 1385)
 nil )
 (!pair  "non_std_layout"
 (!type already_seen 9)
 
-(!srcfileloc  "cp/cp-tree.h" 1385)
+(!srcfileloc  "cp/cp-tree.h" 1386)
 nil )
 (!pair  "is_literal"
 (!type already_seen 9)
 
-(!srcfileloc  "cp/cp-tree.h" 1386)
+(!srcfileloc  "cp/cp-tree.h" 1387)
 nil )
 (!pair  "lazy_move_ctor"
 (!type already_seen 9)
 
-(!srcfileloc  "cp/cp-tree.h" 1388)
+(!srcfileloc  "cp/cp-tree.h" 1389)
 nil )
 (!pair  "lazy_move_assign"
 (!type already_seen 9)
 
-(!srcfileloc  "cp/cp-tree.h" 1389)
+(!srcfileloc  "cp/cp-tree.h" 1390)
 nil )
 (!pair  "has_complex_move_ctor"
 (!type already_seen 9)
 
-(!srcfileloc  "cp/cp-tree.h" 1390)
+(!srcfileloc  "cp/cp-tree.h" 1391)
 nil )
 (!pair  "has_complex_move_assign"
 (!type already_seen 9)
 
-(!srcfileloc  "cp/cp-tree.h" 1391)
+(!srcfileloc  "cp/cp-tree.h" 1392)
 nil )
 (!pair  "has_constexpr_ctor"
 (!type already_seen 9)
 
-(!srcfileloc  "cp/cp-tree.h" 1392)
+(!srcfileloc  "cp/cp-tree.h" 1393)
 nil )
 (!pair  "is_final"
 (!type already_seen 9)
 
-(!srcfileloc  "cp/cp-tree.h" 1393)
+(!srcfileloc  "cp/cp-tree.h" 1394)
 nil )
 (!pair  "dummy"
 (!type already_seen 9)
 
-(!srcfileloc  "cp/cp-tree.h" 1402)
+(!srcfileloc  "cp/cp-tree.h" 1403)
 nil )
 (!pair  "primary_base"
 (!type already_seen 5)
 
-(!srcfileloc  "cp/cp-tree.h" 1404)
+(!srcfileloc  "cp/cp-tree.h" 1405)
 nil )
 (!pair  "vcall_indices"
 (!type pointer 517 nil  gc_used
 (!type user_struct 518 
 (!type already_seen 517)
  gc_pointed_to "vec<tree_pair_s,va_gc>"
-(!srcfileloc  "cp/cp-tree.h" 1405)
+(!srcfileloc  "cp/cp-tree.h" 1406)
 
 (!fields 2 
 (!pair  "va_gc"
 (!type already_seen 3)
 
-(!srcfileloc  "cp/cp-tree.h" 1405)
+(!srcfileloc  "cp/cp-tree.h" 1406)
 nil )
 (!pair  "tree_pair_s"
 (!type struct 519 
@@ -13415,42 +13415,42 @@ nil )
 (!type already_seen 519)
 )
  gc_used "tree_pair_s"
-(!srcfileloc  "cp/cp-tree.h" 1308)
+(!srcfileloc  "cp/cp-tree.h" 1309)
 
 (!fields 2 
 (!pair  "purpose"
 (!type already_seen 5)
 
-(!srcfileloc  "cp/cp-tree.h" 1306)
+(!srcfileloc  "cp/cp-tree.h" 1307)
 nil )
 (!pair  "value"
 (!type already_seen 5)
 
-(!srcfileloc  "cp/cp-tree.h" 1307)
+(!srcfileloc  "cp/cp-tree.h" 1308)
 nil ))
 nil 260 nil )
 
-(!srcfileloc  "cp/cp-tree.h" 1405)
+(!srcfileloc  "cp/cp-tree.h" 1406)
 nil ))
 )
 )
 
-(!srcfileloc  "cp/cp-tree.h" 1405)
+(!srcfileloc  "cp/cp-tree.h" 1406)
 nil )
 (!pair  "vtables"
 (!type already_seen 5)
 
-(!srcfileloc  "cp/cp-tree.h" 1406)
+(!srcfileloc  "cp/cp-tree.h" 1407)
 nil )
 (!pair  "typeinfo_var"
 (!type already_seen 5)
 
-(!srcfileloc  "cp/cp-tree.h" 1407)
+(!srcfileloc  "cp/cp-tree.h" 1408)
 nil )
 (!pair  "vbases"
 (!type already_seen 45)
 
-(!srcfileloc  "cp/cp-tree.h" 1408)
+(!srcfileloc  "cp/cp-tree.h" 1409)
 nil )
 (!pair  "nested_udts"
 (!type pointer 521 nil  gc_used
@@ -13509,27 +13509,27 @@ nil ))
 nil 260 nil )
 )
 
-(!srcfileloc  "cp/cp-tree.h" 1409)
+(!srcfileloc  "cp/cp-tree.h" 1410)
 nil )
 (!pair  "as_base"
 (!type already_seen 5)
 
-(!srcfileloc  "cp/cp-tree.h" 1410)
+(!srcfileloc  "cp/cp-tree.h" 1411)
 nil )
 (!pair  "pure_virtuals"
 (!type already_seen 45)
 
-(!srcfileloc  "cp/cp-tree.h" 1411)
+(!srcfileloc  "cp/cp-tree.h" 1412)
 nil )
 (!pair  "friend_classes"
 (!type already_seen 5)
 
-(!srcfileloc  "cp/cp-tree.h" 1412)
+(!srcfileloc  "cp/cp-tree.h" 1413)
 nil )
 (!pair  "methods"
 (!type already_seen 45)
 
-(!srcfileloc  "cp/cp-tree.h" 1413)
+(!srcfileloc  "cp/cp-tree.h" 1414)
 
 (!options 
 (!option reorder string  "resort_type_method_vec")
@@ -13538,27 +13538,27 @@ nil )
 (!pair  "key_method"
 (!type already_seen 5)
 
-(!srcfileloc  "cp/cp-tree.h" 1414)
+(!srcfileloc  "cp/cp-tree.h" 1415)
 nil )
 (!pair  "decl_list"
 (!type already_seen 5)
 
-(!srcfileloc  "cp/cp-tree.h" 1415)
+(!srcfileloc  "cp/cp-tree.h" 1416)
 nil )
 (!pair  "template_info"
 (!type already_seen 5)
 
-(!srcfileloc  "cp/cp-tree.h" 1416)
+(!srcfileloc  "cp/cp-tree.h" 1417)
 nil )
 (!pair  "befriending_classes"
 (!type already_seen 5)
 
-(!srcfileloc  "cp/cp-tree.h" 1417)
+(!srcfileloc  "cp/cp-tree.h" 1418)
 nil )
 (!pair  "objc_info"
 (!type already_seen 5)
 
-(!srcfileloc  "cp/cp-tree.h" 1421)
+(!srcfileloc  "cp/cp-tree.h" 1422)
 nil )
 (!pair  "sorted_fields"
 (!type pointer 526 nil  gc_used
@@ -13591,7 +13591,7 @@ nil )
 390 nil )
 )
 
-(!srcfileloc  "cp/cp-tree.h" 1425)
+(!srcfileloc  "cp/cp-tree.h" 1426)
 
 (!options 
 (!option reorder string  "resort_sorted_fields")
@@ -13600,11 +13600,11 @@ nil )
 (!pair  "lambda_expr"
 (!type already_seen 5)
 
-(!srcfileloc  "cp/cp-tree.h" 1427)
+(!srcfileloc  "cp/cp-tree.h" 1428)
 nil ))
 nil 260 nil )
 
-(!srcfileloc  "cp/cp-tree.h" 1439)
+(!srcfileloc  "cp/cp-tree.h" 1440)
 
 (!options 
 (!option tag string  "1")
@@ -13612,22 +13612,22 @@ nil 260 nil )
 )
 (!pair  "ptrmem"
 (!type struct 529 nil  gc_used "lang_type_ptrmem"
-(!srcfileloc  "cp/cp-tree.h" 1433)
+(!srcfileloc  "cp/cp-tree.h" 1434)
 
 (!fields 2 
 (!pair  "h"
 (!type already_seen 515)
 
-(!srcfileloc  "cp/cp-tree.h" 1431)
+(!srcfileloc  "cp/cp-tree.h" 1432)
 nil )
 (!pair  "record"
 (!type already_seen 5)
 
-(!srcfileloc  "cp/cp-tree.h" 1432)
+(!srcfileloc  "cp/cp-tree.h" 1433)
 nil ))
 nil 260 nil )
 
-(!srcfileloc  "cp/cp-tree.h" 1440)
+(!srcfileloc  "cp/cp-tree.h" 1441)
 
 (!options 
 (!option tag string  "0")
@@ -13635,7 +13635,7 @@ nil 260 nil )
 ))
 nil 260 nil )
 
-(!srcfileloc  "cp/cp-tree.h" 1441)
+(!srcfileloc  "cp/cp-tree.h" 1442)
 
 (!options 
 (!option desc string  "%h.h.is_lang_type_class")
@@ -15774,7 +15774,7 @@ nil )
 
 (!fields 11 
 (!pair  "u"
-(!type union 586 nil  gc_used "anonymous:/android-kernel/ICS/crosstool-ng/.build/src/gcc-linaro-4.8-2013.11/gcc/c/c-decl.c:188"
+(!type union 586 nil  gc_used "anonymous:/android-kernel/ICS/crosstool-ng/.build/src/gcc-linaro-4.8-2013.12/gcc/c/c-decl.c:188"
 (!srcfileloc  "c/c-decl.c" 191)
 
 (!fields 2 
@@ -16134,13 +16134,13 @@ nil 130
 )
 
 (!type union 598 nil  gc_pointed_to "lang_tree_node"
-(!srcfileloc  "cp/cp-tree.h" 798)
+(!srcfileloc  "cp/cp-tree.h" 799)
 
 (!fields 14 
 (!pair  "generic"
 (!type already_seen 7)
 
-(!srcfileloc  "cp/cp-tree.h" 778)
+(!srcfileloc  "cp/cp-tree.h" 779)
 
 (!options 
 (!option desc string  "tree_node_structure (&%h)")
@@ -16180,7 +16180,7 @@ nil )
 nil ))
 nil 260 nil )
 
-(!srcfileloc  "cp/cp-tree.h" 779)
+(!srcfileloc  "cp/cp-tree.h" 780)
 
 (!options 
 (!option tag string  "TS_CP_TPI")
@@ -16207,7 +16207,7 @@ nil )
 nil ))
 nil 260 nil )
 
-(!srcfileloc  "cp/cp-tree.h" 780)
+(!srcfileloc  "cp/cp-tree.h" 781)
 
 (!options 
 (!option tag string  "TS_CP_PTRMEM")
@@ -16230,7 +16230,7 @@ nil )
 nil ))
 nil 260 nil )
 
-(!srcfileloc  "cp/cp-tree.h" 781)
+(!srcfileloc  "cp/cp-tree.h" 782)
 
 (!options 
 (!option tag string  "TS_CP_OVERLOAD")
@@ -16238,32 +16238,32 @@ nil 260 nil )
 )
 (!pair  "baselink"
 (!type struct 603 nil  gc_used "tree_baselink"
-(!srcfileloc  "cp/cp-tree.h" 375)
+(!srcfileloc  "cp/cp-tree.h" 376)
 
 (!fields 4 
 (!pair  "common"
 (!type already_seen 15)
 
-(!srcfileloc  "cp/cp-tree.h" 371)
+(!srcfileloc  "cp/cp-tree.h" 372)
 nil )
 (!pair  "binfo"
 (!type already_seen 5)
 
-(!srcfileloc  "cp/cp-tree.h" 372)
+(!srcfileloc  "cp/cp-tree.h" 373)
 nil )
 (!pair  "functions"
 (!type already_seen 5)
 
-(!srcfileloc  "cp/cp-tree.h" 373)
+(!srcfileloc  "cp/cp-tree.h" 374)
 nil )
 (!pair  "access_binfo"
 (!type already_seen 5)
 
-(!srcfileloc  "cp/cp-tree.h" 374)
+(!srcfileloc  "cp/cp-tree.h" 375)
 nil ))
 nil 260 nil )
 
-(!srcfileloc  "cp/cp-tree.h" 782)
+(!srcfileloc  "cp/cp-tree.h" 783)
 
 (!options 
 (!option tag string  "TS_CP_BASELINK")
@@ -16271,27 +16271,27 @@ nil 260 nil )
 )
 (!pair  "default_arg"
 (!type struct 604 nil  gc_used "tree_default_arg"
-(!srcfileloc  "cp/cp-tree.h" 540)
+(!srcfileloc  "cp/cp-tree.h" 541)
 
 (!fields 3 
 (!pair  "common"
 (!type already_seen 15)
 
-(!srcfileloc  "cp/cp-tree.h" 537)
+(!srcfileloc  "cp/cp-tree.h" 538)
 nil )
 (!pair  "tokens"
 (!type already_seen 64)
 
-(!srcfileloc  "cp/cp-tree.h" 538)
+(!srcfileloc  "cp/cp-tree.h" 539)
 nil )
 (!pair  "instantiations"
 (!type already_seen 45)
 
-(!srcfileloc  "cp/cp-tree.h" 539)
+(!srcfileloc  "cp/cp-tree.h" 540)
 nil ))
 nil 260 nil )
 
-(!srcfileloc  "cp/cp-tree.h" 783)
+(!srcfileloc  "cp/cp-tree.h" 784)
 
 (!options 
 (!option tag string  "TS_CP_DEFAULT_ARG")
@@ -16299,27 +16299,27 @@ nil 260 nil )
 )
 (!pair  "deferred_noexcept"
 (!type struct 605 nil  gc_used "tree_deferred_noexcept"
-(!srcfileloc  "cp/cp-tree.h" 556)
+(!srcfileloc  "cp/cp-tree.h" 557)
 
 (!fields 3 
 (!pair  "base"
 (!type already_seen 8)
 
-(!srcfileloc  "cp/cp-tree.h" 553)
+(!srcfileloc  "cp/cp-tree.h" 554)
 nil )
 (!pair  "pattern"
 (!type already_seen 5)
 
-(!srcfileloc  "cp/cp-tree.h" 554)
+(!srcfileloc  "cp/cp-tree.h" 555)
 nil )
 (!pair  "args"
 (!type already_seen 5)
 
-(!srcfileloc  "cp/cp-tree.h" 555)
+(!srcfileloc  "cp/cp-tree.h" 556)
 nil ))
 nil 260 nil )
 
-(!srcfileloc  "cp/cp-tree.h" 784)
+(!srcfileloc  "cp/cp-tree.h" 785)
 
 (!options 
 (!option tag string  "TS_CP_DEFERRED_NOEXCEPT")
@@ -16328,7 +16328,7 @@ nil 260 nil )
 (!pair  "identifier"
 (!type already_seen 560)
 
-(!srcfileloc  "cp/cp-tree.h" 785)
+(!srcfileloc  "cp/cp-tree.h" 786)
 
 (!options 
 (!option tag string  "TS_CP_IDENTIFIER")
@@ -16336,32 +16336,32 @@ nil 260 nil )
 )
 (!pair  "static_assertion"
 (!type struct 606 nil  gc_used "tree_static_assert"
-(!srcfileloc  "cp/cp-tree.h" 579)
+(!srcfileloc  "cp/cp-tree.h" 580)
 
 (!fields 4 
 (!pair  "common"
 (!type already_seen 15)
 
-(!srcfileloc  "cp/cp-tree.h" 575)
+(!srcfileloc  "cp/cp-tree.h" 576)
 nil )
 (!pair  "condition"
 (!type already_seen 5)
 
-(!srcfileloc  "cp/cp-tree.h" 576)
+(!srcfileloc  "cp/cp-tree.h" 577)
 nil )
 (!pair  "message"
 (!type already_seen 5)
 
-(!srcfileloc  "cp/cp-tree.h" 577)
+(!srcfileloc  "cp/cp-tree.h" 578)
 nil )
 (!pair  "location"
 (!type already_seen 9)
 
-(!srcfileloc  "cp/cp-tree.h" 578)
+(!srcfileloc  "cp/cp-tree.h" 579)
 nil ))
 nil 260 nil )
 
-(!srcfileloc  "cp/cp-tree.h" 787)
+(!srcfileloc  "cp/cp-tree.h" 788)
 
 (!options 
 (!option tag string  "TS_CP_STATIC_ASSERT")
@@ -16369,27 +16369,27 @@ nil 260 nil )
 )
 (!pair  "argument_pack_select"
 (!type struct 607 nil  gc_used "tree_argument_pack_select"
-(!srcfileloc  "cp/cp-tree.h" 585)
+(!srcfileloc  "cp/cp-tree.h" 586)
 
 (!fields 3 
 (!pair  "common"
 (!type already_seen 15)
 
-(!srcfileloc  "cp/cp-tree.h" 582)
+(!srcfileloc  "cp/cp-tree.h" 583)
 nil )
 (!pair  "argument_pack"
 (!type already_seen 5)
 
-(!srcfileloc  "cp/cp-tree.h" 583)
+(!srcfileloc  "cp/cp-tree.h" 584)
 nil )
 (!pair  "index"
 (!type already_seen 9)
 
-(!srcfileloc  "cp/cp-tree.h" 584)
+(!srcfileloc  "cp/cp-tree.h" 585)
 nil ))
 nil 260 nil )
 
-(!srcfileloc  "cp/cp-tree.h" 789)
+(!srcfileloc  "cp/cp-tree.h" 790)
 
 (!options 
 (!option tag string  "TS_CP_ARGUMENT_PACK_SELECT")
@@ -16397,32 +16397,32 @@ nil 260 nil )
 )
 (!pair  "trait_expression"
 (!type struct 608 nil  gc_used "tree_trait_expr"
-(!srcfileloc  "cp/cp-tree.h" 633)
+(!srcfileloc  "cp/cp-tree.h" 634)
 
 (!fields 4 
 (!pair  "common"
 (!type already_seen 15)
 
-(!srcfileloc  "cp/cp-tree.h" 629)
+(!srcfileloc  "cp/cp-tree.h" 630)
 nil )
 (!pair  "type1"
 (!type already_seen 5)
 
-(!srcfileloc  "cp/cp-tree.h" 630)
+(!srcfileloc  "cp/cp-tree.h" 631)
 nil )
 (!pair  "type2"
 (!type already_seen 5)
 
-(!srcfileloc  "cp/cp-tree.h" 631)
+(!srcfileloc  "cp/cp-tree.h" 632)
 nil )
 (!pair  "kind"
 (!type already_seen 9)
 
-(!srcfileloc  "cp/cp-tree.h" 632)
+(!srcfileloc  "cp/cp-tree.h" 633)
 nil ))
 nil 260 nil )
 
-(!srcfileloc  "cp/cp-tree.h" 791)
+(!srcfileloc  "cp/cp-tree.h" 792)
 
 (!options 
 (!option tag string  "TS_CP_TRAIT_EXPR")
@@ -16430,62 +16430,62 @@ nil 260 nil )
 )
 (!pair  "lambda_expression"
 (!type struct 609 nil  gc_used "tree_lambda_expr"
-(!srcfileloc  "cp/cp-tree.h" 718)
+(!srcfileloc  "cp/cp-tree.h" 719)
 
 (!fields 10 
 (!pair  "typed"
 (!type already_seen 14)
 
-(!srcfileloc  "cp/cp-tree.h" 708)
+(!srcfileloc  "cp/cp-tree.h" 709)
 nil )
 (!pair  "capture_list"
 (!type already_seen 5)
 
-(!srcfileloc  "cp/cp-tree.h" 709)
+(!srcfileloc  "cp/cp-tree.h" 710)
 nil )
 (!pair  "this_capture"
 (!type already_seen 5)
 
-(!srcfileloc  "cp/cp-tree.h" 710)
+(!srcfileloc  "cp/cp-tree.h" 711)
 nil )
 (!pair  "return_type"
 (!type already_seen 5)
 
-(!srcfileloc  "cp/cp-tree.h" 711)
+(!srcfileloc  "cp/cp-tree.h" 712)
 nil )
 (!pair  "extra_scope"
 (!type already_seen 5)
 
-(!srcfileloc  "cp/cp-tree.h" 712)
+(!srcfileloc  "cp/cp-tree.h" 713)
 nil )
 (!pair  "closure"
 (!type already_seen 5)
 
-(!srcfileloc  "cp/cp-tree.h" 713)
+(!srcfileloc  "cp/cp-tree.h" 714)
 nil )
 (!pair  "pending_proxies"
 (!type already_seen 45)
 
-(!srcfileloc  "cp/cp-tree.h" 714)
+(!srcfileloc  "cp/cp-tree.h" 715)
 nil )
 (!pair  "locus"
 (!type already_seen 9)
 
-(!srcfileloc  "cp/cp-tree.h" 715)
+(!srcfileloc  "cp/cp-tree.h" 716)
 nil )
 (!pair  "default_capture_mode"
 (!type already_seen 9)
 
-(!srcfileloc  "cp/cp-tree.h" 716)
+(!srcfileloc  "cp/cp-tree.h" 717)
 nil )
 (!pair  "discriminator"
 (!type already_seen 9)
 
-(!srcfileloc  "cp/cp-tree.h" 717)
+(!srcfileloc  "cp/cp-tree.h" 718)
 nil ))
 nil 260 nil )
 
-(!srcfileloc  "cp/cp-tree.h" 793)
+(!srcfileloc  "cp/cp-tree.h" 794)
 
 (!options 
 (!option tag string  "TS_CP_LAMBDA_EXPR")
@@ -16493,59 +16493,59 @@ nil 260 nil )
 )
 (!pair  "template_info"
 (!type struct 610 nil  gc_used "tree_template_info"
-(!srcfileloc  "cp/cp-tree.h" 752)
+(!srcfileloc  "cp/cp-tree.h" 753)
 
 (!fields 2 
 (!pair  "common"
 (!type already_seen 15)
 
-(!srcfileloc  "cp/cp-tree.h" 750)
+(!srcfileloc  "cp/cp-tree.h" 751)
 nil )
 (!pair  "typedefs_needing_access_checking"
 (!type pointer 611 nil  gc_used
 (!type user_struct 612 
 (!type already_seen 611)
  gc_pointed_to "vec<qualified_typedef_usage_t,va_gc>"
-(!srcfileloc  "cp/cp-tree.h" 751)
+(!srcfileloc  "cp/cp-tree.h" 752)
 
 (!fields 2 
 (!pair  "va_gc"
 (!type already_seen 3)
 
-(!srcfileloc  "cp/cp-tree.h" 751)
+(!srcfileloc  "cp/cp-tree.h" 752)
 nil )
 (!pair  "qualified_typedef_usage_t"
 (!type struct 613 nil  gc_used "qualified_typedef_usage_s"
-(!srcfileloc  "cp/cp-tree.h" 738)
+(!srcfileloc  "cp/cp-tree.h" 739)
 
 (!fields 3 
 (!pair  "typedef_decl"
 (!type already_seen 5)
 
-(!srcfileloc  "cp/cp-tree.h" 735)
+(!srcfileloc  "cp/cp-tree.h" 736)
 nil )
 (!pair  "context"
 (!type already_seen 5)
 
-(!srcfileloc  "cp/cp-tree.h" 736)
+(!srcfileloc  "cp/cp-tree.h" 737)
 nil )
 (!pair  "locus"
 (!type already_seen 9)
 
-(!srcfileloc  "cp/cp-tree.h" 737)
+(!srcfileloc  "cp/cp-tree.h" 738)
 nil ))
 nil 260 nil )
 
-(!srcfileloc  "cp/cp-tree.h" 751)
+(!srcfileloc  "cp/cp-tree.h" 752)
 nil ))
 )
 )
 
-(!srcfileloc  "cp/cp-tree.h" 751)
+(!srcfileloc  "cp/cp-tree.h" 752)
 nil ))
 nil 260 nil )
 
-(!srcfileloc  "cp/cp-tree.h" 795)
+(!srcfileloc  "cp/cp-tree.h" 796)
 
 (!options 
 (!option tag string  "TS_CP_TEMPLATE_INFO")
@@ -16583,7 +16583,7 @@ nil )
 nil ))
 nil 390 nil )
 
-(!srcfileloc  "cp/cp-tree.h" 797)
+(!srcfileloc  "cp/cp-tree.h" 798)
 
 (!options 
 (!option tag string  "TS_CP_USERDEF_LITERAL")
@@ -17014,7 +17014,7 @@ nil 0 nil )
 (!fields 0 )
 nil 0 nil )
 
-(!type struct 649 nil  gc_unused "anonymous:/android-kernel/ICS/crosstool-ng/.build/src/gcc-linaro-4.8-2013.11/gcc/java/expr.c:2058"nil 
+(!type struct 649 nil  gc_unused "anonymous:/android-kernel/ICS/crosstool-ng/.build/src/gcc-linaro-4.8-2013.12/gcc/java/expr.c:2058"nil 
 (!fields 0 )
 nil 0 nil )
 
@@ -17151,11 +17151,11 @@ nil )
 nil ))
 nil 8 nil )
 
-(!type struct 659 nil  gc_unused "anonymous:/android-kernel/ICS/crosstool-ng/.build/src/gcc-linaro-4.8-2013.11/gcc/fortran/trans.h:334"nil 
+(!type struct 659 nil  gc_unused "anonymous:/android-kernel/ICS/crosstool-ng/.build/src/gcc-linaro-4.8-2013.12/gcc/fortran/trans.h:334"nil 
 (!fields 0 )
 nil 0 nil )
 
-(!type struct 660 nil  gc_unused "anonymous:/android-kernel/ICS/crosstool-ng/.build/src/gcc-linaro-4.8-2013.11/gcc/fortran/trans.h:322"nil 
+(!type struct 660 nil  gc_unused "anonymous:/android-kernel/ICS/crosstool-ng/.build/src/gcc-linaro-4.8-2013.12/gcc/fortran/trans.h:322"nil 
 (!fields 0 )
 nil 0 nil )
 
@@ -17179,7 +17179,7 @@ nil 0 nil )
 (!fields 0 )
 nil 0 nil )
 
-(!type struct 666 nil  gc_unused "anonymous:/android-kernel/ICS/crosstool-ng/.build/src/gcc-linaro-4.8-2013.11/gcc/fortran/trans.h:31"nil 
+(!type struct 666 nil  gc_unused "anonymous:/android-kernel/ICS/crosstool-ng/.build/src/gcc-linaro-4.8-2013.12/gcc/fortran/trans.h:31"nil 
 (!fields 0 )
 nil 0 nil )
 
@@ -18011,33 +18011,33 @@ nil )
 (!type struct 723 
 (!type already_seen 722)
  gc_pointed_to "tinst_level"
-(!srcfileloc  "cp/cp-tree.h" 4909)
+(!srcfileloc  "cp/cp-tree.h" 4910)
 
 (!fields 5 
 (!pair  "next"
 (!type already_seen 722)
 
-(!srcfileloc  "cp/cp-tree.h" 4894)
+(!srcfileloc  "cp/cp-tree.h" 4895)
 nil )
 (!pair  "decl"
 (!type already_seen 5)
 
-(!srcfileloc  "cp/cp-tree.h" 4899)
+(!srcfileloc  "cp/cp-tree.h" 4900)
 nil )
 (!pair  "locus"
 (!type already_seen 9)
 
-(!srcfileloc  "cp/cp-tree.h" 4902)
+(!srcfileloc  "cp/cp-tree.h" 4903)
 nil )
 (!pair  "errors"
 (!type already_seen 9)
 
-(!srcfileloc  "cp/cp-tree.h" 4905)
+(!srcfileloc  "cp/cp-tree.h" 4906)
 nil )
 (!pair  "in_system_header_p"
 (!type already_seen 9)
 
-(!srcfileloc  "cp/cp-tree.h" 4908)
+(!srcfileloc  "cp/cp-tree.h" 4909)
 nil ))
 
 (!options 
@@ -18155,28 +18155,28 @@ nil 0 nil )
 nil 0 nil )
 
 (!type struct 742 nil  gc_used "operator_name_info_t"
-(!srcfileloc  "cp/cp-tree.h" 4653)
+(!srcfileloc  "cp/cp-tree.h" 4654)
 
 (!fields 4 
 (!pair  "identifier"
 (!type already_seen 5)
 
-(!srcfileloc  "cp/cp-tree.h" 4646)
+(!srcfileloc  "cp/cp-tree.h" 4647)
 nil )
 (!pair  "name"
 (!type already_seen 36)
 
-(!srcfileloc  "cp/cp-tree.h" 4648)
+(!srcfileloc  "cp/cp-tree.h" 4649)
 nil )
 (!pair  "mangled_name"
 (!type already_seen 36)
 
-(!srcfileloc  "cp/cp-tree.h" 4650)
+(!srcfileloc  "cp/cp-tree.h" 4651)
 nil )
 (!pair  "arity"
 (!type already_seen 9)
 
-(!srcfileloc  "cp/cp-tree.h" 4652)
+(!srcfileloc  "cp/cp-tree.h" 4653)
 nil ))
 nil 260 nil )
 
@@ -18221,13 +18221,13 @@ nil 0 nil )
 (!type already_seen 744)
 )
  gc_pointed_to "vec<cxx_saved_binding,va_gc>"
-(!srcfileloc  "cp/cp-tree.h" 989)
+(!srcfileloc  "cp/cp-tree.h" 990)
 
 (!fields 2 
 (!pair  "va_gc"
 (!type already_seen 3)
 
-(!srcfileloc  "cp/cp-tree.h" 989)
+(!srcfileloc  "cp/cp-tree.h" 990)
 nil )
 (!pair  "cxx_saved_binding"
 (!type struct 746 nil  gc_used "cxx_saved_binding"
@@ -18251,7 +18251,7 @@ nil )
 nil ))
 nil 260 nil )
 
-(!srcfileloc  "cp/cp-tree.h" 989)
+(!srcfileloc  "cp/cp-tree.h" 990)
 nil ))
 )
 
@@ -18288,128 +18288,128 @@ nil ))
 (!type already_seen 747)
 )
  gc_pointed_to "saved_scope"
-(!srcfileloc  "cp/cp-tree.h" 1020)
+(!srcfileloc  "cp/cp-tree.h" 1021)
 
 (!fields 24 
 (!pair  "old_bindings"
 (!type already_seen 745)
 
-(!srcfileloc  "cp/cp-tree.h" 989)
+(!srcfileloc  "cp/cp-tree.h" 990)
 nil )
 (!pair  "old_namespace"
 (!type already_seen 5)
 
-(!srcfileloc  "cp/cp-tree.h" 990)
+(!srcfileloc  "cp/cp-tree.h" 991)
 nil )
 (!pair  "decl_ns_list"
 (!type already_seen 45)
 
-(!srcfileloc  "cp/cp-tree.h" 991)
+(!srcfileloc  "cp/cp-tree.h" 992)
 nil )
 (!pair  "class_name"
 (!type already_seen 5)
 
-(!srcfileloc  "cp/cp-tree.h" 992)
+(!srcfileloc  "cp/cp-tree.h" 993)
 nil )
 (!pair  "class_type"
 (!type already_seen 5)
 
-(!srcfileloc  "cp/cp-tree.h" 993)
+(!srcfileloc  "cp/cp-tree.h" 994)
 nil )
 (!pair  "access_specifier"
 (!type already_seen 5)
 
-(!srcfileloc  "cp/cp-tree.h" 994)
+(!srcfileloc  "cp/cp-tree.h" 995)
 nil )
 (!pair  "function_decl"
 (!type already_seen 5)
 
-(!srcfileloc  "cp/cp-tree.h" 995)
+(!srcfileloc  "cp/cp-tree.h" 996)
 nil )
 (!pair  "lang_base"
 (!type already_seen 45)
 
-(!srcfileloc  "cp/cp-tree.h" 996)
+(!srcfileloc  "cp/cp-tree.h" 997)
 nil )
 (!pair  "lang_name"
 (!type already_seen 5)
 
-(!srcfileloc  "cp/cp-tree.h" 997)
+(!srcfileloc  "cp/cp-tree.h" 998)
 nil )
 (!pair  "template_parms"
 (!type already_seen 5)
 
-(!srcfileloc  "cp/cp-tree.h" 998)
+(!srcfileloc  "cp/cp-tree.h" 999)
 nil )
 (!pair  "x_previous_class_level"
 (!type already_seen 94)
 
-(!srcfileloc  "cp/cp-tree.h" 999)
+(!srcfileloc  "cp/cp-tree.h" 1000)
 nil )
 (!pair  "x_saved_tree"
 (!type already_seen 5)
 
-(!srcfileloc  "cp/cp-tree.h" 1000)
+(!srcfileloc  "cp/cp-tree.h" 1001)
 nil )
 (!pair  "x_current_class_ptr"
 (!type already_seen 5)
 
-(!srcfileloc  "cp/cp-tree.h" 1003)
+(!srcfileloc  "cp/cp-tree.h" 1004)
 nil )
 (!pair  "x_current_class_ref"
 (!type already_seen 5)
 
-(!srcfileloc  "cp/cp-tree.h" 1004)
+(!srcfileloc  "cp/cp-tree.h" 1005)
 nil )
 (!pair  "x_processing_template_decl"
 (!type already_seen 9)
 
-(!srcfileloc  "cp/cp-tree.h" 1006)
+(!srcfileloc  "cp/cp-tree.h" 1007)
 nil )
 (!pair  "x_processing_specialization"
 (!type already_seen 9)
 
-(!srcfileloc  "cp/cp-tree.h" 1007)
+(!srcfileloc  "cp/cp-tree.h" 1008)
 nil )
 (!pair  "x_processing_explicit_instantiation"
 (!type already_seen 9)
 
-(!srcfileloc  "cp/cp-tree.h" 1008)
+(!srcfileloc  "cp/cp-tree.h" 1009)
 nil )
 (!pair  "need_pop_function_context"
 (!type already_seen 9)
 
-(!srcfileloc  "cp/cp-tree.h" 1009)
+(!srcfileloc  "cp/cp-tree.h" 1010)
 nil )
 (!pair  "unevaluated_operand"
 (!type already_seen 9)
 
-(!srcfileloc  "cp/cp-tree.h" 1011)
+(!srcfileloc  "cp/cp-tree.h" 1012)
 nil )
 (!pair  "inhibit_evaluation_warnings"
 (!type already_seen 9)
 
-(!srcfileloc  "cp/cp-tree.h" 1012)
+(!srcfileloc  "cp/cp-tree.h" 1013)
 nil )
 (!pair  "x_stmt_tree"
 (!type already_seen 88)
 
-(!srcfileloc  "cp/cp-tree.h" 1014)
+(!srcfileloc  "cp/cp-tree.h" 1015)
 nil )
 (!pair  "class_bindings"
 (!type already_seen 94)
 
-(!srcfileloc  "cp/cp-tree.h" 1016)
+(!srcfileloc  "cp/cp-tree.h" 1017)
 nil )
 (!pair  "bindings"
 (!type already_seen 94)
 
-(!srcfileloc  "cp/cp-tree.h" 1017)
+(!srcfileloc  "cp/cp-tree.h" 1018)
 nil )
 (!pair  "prev"
 (!type already_seen 748)
 
-(!srcfileloc  "cp/cp-tree.h" 1019)
+(!srcfileloc  "cp/cp-tree.h" 1020)
 nil ))
 nil 260 nil )
 
@@ -18516,7 +18516,7 @@ nil ))
 
 (!type already_seen 112)
 
-(!type struct 755 nil  gc_unused "anonymous:/android-kernel/ICS/crosstool-ng/.build/src/gcc-linaro-4.8-2013.11/gcc/c/c-parser.c:5589"nil 
+(!type struct 755 nil  gc_unused "anonymous:/android-kernel/ICS/crosstool-ng/.build/src/gcc-linaro-4.8-2013.12/gcc/c/c-parser.c:5589"nil 
 (!fields 0 )
 nil 0 nil )
 
@@ -18627,7 +18627,7 @@ nil 130 nil )
 (!fields 0 )
 nil 0 nil )
 
-(!type struct 761 nil  gc_unused "anonymous:/android-kernel/ICS/crosstool-ng/.build/src/gcc-linaro-4.8-2013.11/gcc/c-family/c-pragma.c:1153"nil 
+(!type struct 761 nil  gc_unused "anonymous:/android-kernel/ICS/crosstool-ng/.build/src/gcc-linaro-4.8-2013.12/gcc/c-family/c-pragma.c:1153"nil 
 (!fields 0 )
 nil 0 nil )
 
@@ -18817,18 +18817,18 @@ nil 0 nil )
 (!type already_seen 777)
 )
  gc_pointed_to "vec<tree_gc_vec,va_gc>"
-(!srcfileloc  "c-family/c-common.c" 11242)
+(!srcfileloc  "c-family/c-common.c" 11246)
 
 (!fields 2 
 (!pair  "va_gc"
 (!type already_seen 3)
 
-(!srcfileloc  "c-family/c-common.c" 11242)
+(!srcfileloc  "c-family/c-common.c" 11246)
 nil )
 (!pair  "tree_gc_vec"
 (!type already_seen 45)
 
-(!srcfileloc  "c-family/c-common.c" 11242)
+(!srcfileloc  "c-family/c-common.c" 11246)
 nil ))
 )
 
@@ -18843,18 +18843,18 @@ nil 0 nil )
 (!type already_seen 780)
 )
  gc_pointed_to "vec<const_char_p,va_gc>"
-(!srcfileloc  "c-family/c-common.c" 8794)
+(!srcfileloc  "c-family/c-common.c" 8798)
 
 (!fields 2 
 (!pair  "va_gc"
 (!type already_seen 3)
 
-(!srcfileloc  "c-family/c-common.c" 8794)
+(!srcfileloc  "c-family/c-common.c" 8798)
 nil )
 (!pair  "const_char_p"
 (!type already_seen 36)
 
-(!srcfileloc  "c-family/c-common.c" 8794)
+(!srcfileloc  "c-family/c-common.c" 8798)
 nil ))
 )
 
@@ -19200,7 +19200,7 @@ nil ))
 (!fields 0 )
 nil 0 nil )
 
-(!type struct 817 nil  gc_unused "anonymous:/android-kernel/ICS/crosstool-ng/.build/src/gcc-linaro-4.8-2013.11/gcc/ada/gcc-interface/decl.c:172"nil 
+(!type struct 817 nil  gc_unused "anonymous:/android-kernel/ICS/crosstool-ng/.build/src/gcc-linaro-4.8-2013.12/gcc/ada/gcc-interface/decl.c:172"nil 
 (!fields 0 )
 nil 0 nil )
 
@@ -19903,7 +19903,7 @@ nil 0 nil )
 nil ))
 nil 511 nil )
 
-(!type struct 895 nil  gc_unused "anonymous:/android-kernel/ICS/crosstool-ng/.build/src/gcc-linaro-4.8-2013.11/gcc/lto-streamer.h:451"nil 
+(!type struct 895 nil  gc_unused "anonymous:/android-kernel/ICS/crosstool-ng/.build/src/gcc-linaro-4.8-2013.12/gcc/lto-streamer.h:451"nil 
 (!fields 0 )
 nil 0 nil )
 
@@ -19915,7 +19915,7 @@ nil 0 nil )
 (!fields 0 )
 nil 0 nil )
 
-(!type struct 898 nil  gc_unused "anonymous:/android-kernel/ICS/crosstool-ng/.build/src/gcc-linaro-4.8-2013.11/gcc/lto-streamer.h:426"nil 
+(!type struct 898 nil  gc_unused "anonymous:/android-kernel/ICS/crosstool-ng/.build/src/gcc-linaro-4.8-2013.12/gcc/lto-streamer.h:426"nil 
 (!fields 0 )
 nil 0 nil )
 
@@ -21288,7 +21288,7 @@ nil 0 nil )
 (!fields 0 )
 nil 0 nil )
 
-(!type struct 992 nil  gc_unused "anonymous:/android-kernel/ICS/crosstool-ng/.build/src/gcc-linaro-4.8-2013.11/gcc/config/arm/arm.c:26737"nil 
+(!type struct 992 nil  gc_unused "anonymous:/android-kernel/ICS/crosstool-ng/.build/src/gcc-linaro-4.8-2013.12/gcc/config/arm/arm.c:26752"nil 
 (!fields 0 )
 nil 0 nil )
 
@@ -21296,15 +21296,15 @@ nil 0 nil )
 (!fields 0 )
 nil 0 nil )
 
-(!type struct 994 nil  gc_unused "anonymous:/android-kernel/ICS/crosstool-ng/.build/src/gcc-linaro-4.8-2013.11/gcc/config/arm/arm.c:20333"nil 
+(!type struct 994 nil  gc_unused "anonymous:/android-kernel/ICS/crosstool-ng/.build/src/gcc-linaro-4.8-2013.12/gcc/config/arm/arm.c:20347"nil 
 (!fields 0 )
 nil 0 nil )
 
-(!type struct 995 nil  gc_unused "anonymous:/android-kernel/ICS/crosstool-ng/.build/src/gcc-linaro-4.8-2013.11/gcc/config/arm/arm.c:2203"nil 
+(!type struct 995 nil  gc_unused "anonymous:/android-kernel/ICS/crosstool-ng/.build/src/gcc-linaro-4.8-2013.12/gcc/config/arm/arm.c:2203"nil 
 (!fields 0 )
 nil 0 nil )
 
-(!type struct 996 nil  gc_unused "anonymous:/android-kernel/ICS/crosstool-ng/.build/src/gcc-linaro-4.8-2013.11/gcc/config/arm/arm.c:1227"nil 
+(!type struct 996 nil  gc_unused "anonymous:/android-kernel/ICS/crosstool-ng/.build/src/gcc-linaro-4.8-2013.12/gcc/config/arm/arm.c:1227"nil 
 (!fields 0 )
 nil 0 nil )
 
@@ -21432,18 +21432,18 @@ nil 0 nil )
 nil 0 nil )
 
 (!type struct 1023 nil  gc_unused "numbered_tree_d"
-(!srcfileloc  "tree-dfa.c" 699)
+(!srcfileloc  "tree-dfa.c" 688)
 
 (!fields 2 
 (!pair  "t"
 (!type already_seen 5)
 
-(!srcfileloc  "tree-dfa.c" 697)
+(!srcfileloc  "tree-dfa.c" 686)
 nil )
 (!pair  "num"
 (!type already_seen 9)
 
-(!srcfileloc  "tree-dfa.c" 698)
+(!srcfileloc  "tree-dfa.c" 687)
 nil ))
 nil 511 nil )
 
@@ -21532,7 +21532,7 @@ nil 0 nil )
 (!fields 0 )
 nil 0 nil )
 
-(!type union 1036 nil  gc_unused "anonymous:/android-kernel/ICS/crosstool-ng/.build/src/gcc-linaro-4.8-2013.11/gcc/tree-eh.c:41"nil 
+(!type union 1036 nil  gc_unused "anonymous:/android-kernel/ICS/crosstool-ng/.build/src/gcc-linaro-4.8-2013.12/gcc/tree-eh.c:41"nil 
 (!fields 0 )
 nil 0 nil )
 
@@ -21544,7 +21544,7 @@ nil 0 nil )
 (!fields 0 )
 nil 0 nil )
 
-(!type struct 1039 nil  gc_unused "anonymous:/android-kernel/ICS/crosstool-ng/.build/src/gcc-linaro-4.8-2013.11/gcc/tree-flow.h:570"nil 
+(!type struct 1039 nil  gc_unused "anonymous:/android-kernel/ICS/crosstool-ng/.build/src/gcc-linaro-4.8-2013.12/gcc/tree-flow.h:570"nil 
 (!fields 0 )
 nil 0 nil )
 
@@ -21593,7 +21593,7 @@ nil 0 nil )
 (!fields 0 )
 nil 0 nil )
 
-(!type struct 1047 nil  gc_unused "anonymous:/android-kernel/ICS/crosstool-ng/.build/src/gcc-linaro-4.8-2013.11/gcc/tree-flow.h:103"nil 
+(!type struct 1047 nil  gc_unused "anonymous:/android-kernel/ICS/crosstool-ng/.build/src/gcc-linaro-4.8-2013.12/gcc/tree-flow.h:103"nil 
 (!fields 0 )
 nil 0 nil )
 
@@ -21700,11 +21700,11 @@ nil ))
 (!fields 0 )
 nil 0 nil )
 
-(!type struct 1055 nil  gc_unused "anonymous:/android-kernel/ICS/crosstool-ng/.build/src/gcc-linaro-4.8-2013.11/gcc/varasm.c:4712"nil 
+(!type struct 1055 nil  gc_unused "anonymous:/android-kernel/ICS/crosstool-ng/.build/src/gcc-linaro-4.8-2013.12/gcc/varasm.c:4712"nil 
 (!fields 0 )
 nil 0 nil )
 
-(!type struct 1056 nil  gc_unused "anonymous:/android-kernel/ICS/crosstool-ng/.build/src/gcc-linaro-4.8-2013.11/gcc/varasm.c:4464"nil 
+(!type struct 1056 nil  gc_unused "anonymous:/android-kernel/ICS/crosstool-ng/.build/src/gcc-linaro-4.8-2013.12/gcc/varasm.c:4464"nil 
 (!fields 0 )
 nil 0 nil )
 
@@ -21797,7 +21797,7 @@ nil 0 nil )
 (!fields 0 )
 nil 0 nil )
 
-(!type union 1070 nil  gc_unused "anonymous:/android-kernel/ICS/crosstool-ng/.build/src/gcc-linaro-4.8-2013.11/gcc/mcf.c:344"nil 
+(!type union 1070 nil  gc_unused "anonymous:/android-kernel/ICS/crosstool-ng/.build/src/gcc-linaro-4.8-2013.12/gcc/mcf.c:344"nil 
 (!fields 0 )
 nil 0 nil )
 
@@ -22620,7 +22620,7 @@ nil ))
 (!fields 0 )
 nil 0 nil )
 
-(!type struct 1162 nil  gc_unused "anonymous:/android-kernel/ICS/crosstool-ng/.build/src/gcc-linaro-4.8-2013.11/gcc/dwarf2cfi.c:192"nil 
+(!type struct 1162 nil  gc_unused "anonymous:/android-kernel/ICS/crosstool-ng/.build/src/gcc-linaro-4.8-2013.12/gcc/dwarf2cfi.c:192"nil 
 (!fields 0 )
 nil 0 nil )
 
@@ -22628,7 +22628,7 @@ nil 0 nil )
 (!type pointer 1164 nil  gc_unused
 (!type already_seen 1163)
 )
- gc_unused "anonymous:/android-kernel/ICS/crosstool-ng/.build/src/gcc-linaro-4.8-2013.11/gcc/dwarf2cfi.c:98"nil 
+ gc_unused "anonymous:/android-kernel/ICS/crosstool-ng/.build/src/gcc-linaro-4.8-2013.12/gcc/dwarf2cfi.c:98"nil 
 (!fields 0 )
 nil 0 nil )
 
@@ -23127,11 +23127,11 @@ nil 511 nil )
 
 (!type already_seen 932)
 
-(!type struct 1221 nil  gc_unused "anonymous:/android-kernel/ICS/crosstool-ng/.build/src/gcc-linaro-4.8-2013.11/gcc/cgraph.h:363"nil 
+(!type struct 1221 nil  gc_unused "anonymous:/android-kernel/ICS/crosstool-ng/.build/src/gcc-linaro-4.8-2013.12/gcc/cgraph.h:363"nil 
 (!fields 0 )
 nil 0 nil )
 
-(!type struct 1222 nil  gc_unused "anonymous:/android-kernel/ICS/crosstool-ng/.build/src/gcc-linaro-4.8-2013.11/gcc/cgraph.h:356"nil 
+(!type struct 1222 nil  gc_unused "anonymous:/android-kernel/ICS/crosstool-ng/.build/src/gcc-linaro-4.8-2013.12/gcc/cgraph.h:356"nil 
 (!fields 0 )
 nil 0 nil )
 
@@ -23217,7 +23217,7 @@ nil 511 nil )
 
 (!type already_seen 912)
 
-(!type struct 1229 nil  gc_unused "anonymous:/android-kernel/ICS/crosstool-ng/.build/src/gcc-linaro-4.8-2013.11/gcc/basic-block.h:574"nil 
+(!type struct 1229 nil  gc_unused "anonymous:/android-kernel/ICS/crosstool-ng/.build/src/gcc-linaro-4.8-2013.12/gcc/basic-block.h:574"nil 
 (!fields 0 )
 nil 0 nil )
 
@@ -23265,7 +23265,7 @@ nil 0 nil )
 
 (!type already_seen 870)
 
-(!type struct 1237 nil  gc_unused "anonymous:/android-kernel/ICS/crosstool-ng/.build/src/gcc-linaro-4.8-2013.11/gcc/cfgloop.h:544"nil 
+(!type struct 1237 nil  gc_unused "anonymous:/android-kernel/ICS/crosstool-ng/.build/src/gcc-linaro-4.8-2013.12/gcc/cfgloop.h:544"nil 
 (!fields 0 )
 nil 0 nil )
 
@@ -24184,7 +24184,7 @@ nil 511 nil )
 (!fields 0 )
 nil 0 nil )
 
-(!type struct 1287 nil  gc_unused "anonymous:/android-kernel/ICS/crosstool-ng/.build/src/gcc-linaro-4.8-2013.11/gcc/tree.h:5523"nil 
+(!type struct 1287 nil  gc_unused "anonymous:/android-kernel/ICS/crosstool-ng/.build/src/gcc-linaro-4.8-2013.12/gcc/tree.h:5523"nil 
 (!fields 0 )
 nil 0 nil )
 
@@ -24741,7 +24741,7 @@ nil 511 nil )
 
 (!type already_seen 259)
 
-(!type struct 1306 nil  gc_unused "anonymous:/android-kernel/ICS/crosstool-ng/.build/src/gcc-linaro-4.8-2013.11/gcc/rtl.h:116"nil 
+(!type struct 1306 nil  gc_unused "anonymous:/android-kernel/ICS/crosstool-ng/.build/src/gcc-linaro-4.8-2013.12/gcc/rtl.h:116"nil 
 (!fields 0 )
 nil 0 nil )
 
@@ -24799,7 +24799,7 @@ nil ))
 )
 511 nil )
 
-(!type struct 1312 nil  gc_unused "anonymous:/android-kernel/ICS/crosstool-ng/.build/src/gcc-linaro-4.8-2013.11/gcc/bitmap.h:316"nil 
+(!type struct 1312 nil  gc_unused "anonymous:/android-kernel/ICS/crosstool-ng/.build/src/gcc-linaro-4.8-2013.12/gcc/bitmap.h:316"nil 
 (!fields 0 )
 nil 0 nil )
 
@@ -24813,7 +24813,7 @@ nil 0 nil )
 
 (!type already_seen 1208)
 
-(!type struct 1313 nil  gc_unused "anonymous:/android-kernel/ICS/crosstool-ng/.build/src/gcc-linaro-4.8-2013.11/gcc/config/arm/arm.h:1542"nil 
+(!type struct 1313 nil  gc_unused "anonymous:/android-kernel/ICS/crosstool-ng/.build/src/gcc-linaro-4.8-2013.12/gcc/config/arm/arm.h:1542"nil 
 (!fields 0 )
 nil 0 nil )
 
@@ -24893,11 +24893,11 @@ nil 0 nil )
 (!fields 0 )
 nil 0 nil )
 
-(!type struct 1327 nil  gc_unused "anonymous:/android-kernel/ICS/crosstool-ng/.build/src/gcc-linaro-4.8-2013.11/gcc/../libcpp/include/cpplib.h:984"nil 
+(!type struct 1327 nil  gc_unused "anonymous:/android-kernel/ICS/crosstool-ng/.build/src/gcc-linaro-4.8-2013.12/gcc/../libcpp/include/cpplib.h:984"nil 
 (!fields 0 )
 nil 0 nil )
 
-(!type struct 1328 nil  gc_unused "anonymous:/android-kernel/ICS/crosstool-ng/.build/src/gcc-linaro-4.8-2013.11/gcc/../libcpp/include/cpplib.h:973"nil 
+(!type struct 1328 nil  gc_unused "anonymous:/android-kernel/ICS/crosstool-ng/.build/src/gcc-linaro-4.8-2013.12/gcc/../libcpp/include/cpplib.h:973"nil 
 (!fields 0 )
 nil 0 nil )
 
@@ -24951,7 +24951,7 @@ nil 0 nil )
 (!fields 0 )
 nil 0 nil )
 
-(!type struct 1337 nil  gc_unused "anonymous:/android-kernel/ICS/crosstool-ng/.build/src/gcc-linaro-4.8-2013.11/gcc/../libcpp/include/line-map.h:627"nil 
+(!type struct 1337 nil  gc_unused "anonymous:/android-kernel/ICS/crosstool-ng/.build/src/gcc-linaro-4.8-2013.12/gcc/../libcpp/include/line-map.h:627"nil 
 (!fields 0 )
 nil 0 nil )
 
@@ -25752,182 +25752,182 @@ nil )
 (!pair  "deferred_access_check"
 (!type already_seen 73)
 
-(!srcfileloc  "cp/cp-tree.h" 5585)
+(!srcfileloc  "cp/cp-tree.h" 5586)
 nil )
 (!pair  "walk_namespaces_fn"
 (!type already_seen 9)
 
-(!srcfileloc  "cp/cp-tree.h" 5185)
+(!srcfileloc  "cp/cp-tree.h" 5186)
 nil )
 (!pair  "cp_parameter_declarator"
 (!type already_seen 739)
 
-(!srcfileloc  "cp/cp-tree.h" 4804)
+(!srcfileloc  "cp/cp-tree.h" 4805)
 nil )
 (!pair  "cp_declarator"
 (!type already_seen 740)
 
-(!srcfileloc  "cp/cp-tree.h" 4802)
+(!srcfileloc  "cp/cp-tree.h" 4803)
 nil )
 (!pair  "cp_declarator_kind"
 (!type already_seen 9)
 
-(!srcfileloc  "cp/cp-tree.h" 4798)
+(!srcfileloc  "cp/cp-tree.h" 4799)
 nil )
 (!pair  "cp_decl_specifier_seq"
 (!type already_seen 741)
 
-(!srcfileloc  "cp/cp-tree.h" 4786)
+(!srcfileloc  "cp/cp-tree.h" 4787)
 nil )
 (!pair  "cp_decl_spec"
 (!type already_seen 9)
 
-(!srcfileloc  "cp/cp-tree.h" 4742)
+(!srcfileloc  "cp/cp-tree.h" 4743)
 nil )
 (!pair  "cp_storage_class"
 (!type already_seen 9)
 
-(!srcfileloc  "cp/cp-tree.h" 4711)
+(!srcfileloc  "cp/cp-tree.h" 4712)
 nil )
 (!pair  "cp_virt_specifiers"
 (!type already_seen 9)
 
-(!srcfileloc  "cp/cp-tree.h" 4681)
+(!srcfileloc  "cp/cp-tree.h" 4682)
 nil )
 (!pair  "cp_cv_quals"
 (!type already_seen 9)
 
-(!srcfileloc  "cp/cp-tree.h" 4665)
+(!srcfileloc  "cp/cp-tree.h" 4666)
 nil )
 (!pair  "operator_name_info_t"
 (!type already_seen 742)
 
-(!srcfileloc  "cp/cp-tree.h" 4653)
+(!srcfileloc  "cp/cp-tree.h" 4654)
 nil )
 (!pair  "unification_kind_t"
 (!type already_seen 9)
 
-(!srcfileloc  "cp/cp-tree.h" 4291)
+(!srcfileloc  "cp/cp-tree.h" 4292)
 nil )
 (!pair  "base_kind"
 (!type already_seen 9)
 
-(!srcfileloc  "cp/cp-tree.h" 4253)
+(!srcfileloc  "cp/cp-tree.h" 4254)
 nil )
 (!pair  "deferring_kind"
 (!type already_seen 9)
 
-(!srcfileloc  "cp/cp-tree.h" 4240)
+(!srcfileloc  "cp/cp-tree.h" 4241)
 nil )
 (!pair  "base_access"
 (!type already_seen 9)
 
-(!srcfileloc  "cp/cp-tree.h" 4233)
+(!srcfileloc  "cp/cp-tree.h" 4234)
 nil )
 (!pair  "tsubst_flags_t"
 (!type already_seen 9)
 
-(!srcfileloc  "cp/cp-tree.h" 4219)
+(!srcfileloc  "cp/cp-tree.h" 4220)
 nil )
 (!pair  "duration_kind"
 (!type already_seen 9)
 
-(!srcfileloc  "cp/cp-tree.h" 4190)
+(!srcfileloc  "cp/cp-tree.h" 4191)
 nil )
 (!pair  "linkage_kind"
 (!type already_seen 9)
 
-(!srcfileloc  "cp/cp-tree.h" 4183)
+(!srcfileloc  "cp/cp-tree.h" 4184)
 nil )
 (!pair  "special_function_kind"
 (!type already_seen 9)
 
-(!srcfileloc  "cp/cp-tree.h" 4160)
+(!srcfileloc  "cp/cp-tree.h" 4161)
 nil )
 (!pair  "access_kind"
 (!type already_seen 9)
 
-(!srcfileloc  "cp/cp-tree.h" 4139)
+(!srcfileloc  "cp/cp-tree.h" 4140)
 nil )
 (!pair  "tmpl_spec_kind"
 (!type already_seen 9)
 
-(!srcfileloc  "cp/cp-tree.h" 4128)
+(!srcfileloc  "cp/cp-tree.h" 4129)
 nil )
 (!pair  "cp_lvalue_kind"
 (!type already_seen 9)
 
-(!srcfileloc  "cp/cp-tree.h" 4110)
+(!srcfileloc  "cp/cp-tree.h" 4111)
 nil )
 (!pair  "aggr_init_expr_arg_iterator"
 (!type already_seen 743)
 
-(!srcfileloc  "cp/cp-tree.h" 3014)
+(!srcfileloc  "cp/cp-tree.h" 3015)
 nil )
 (!pair  "vec<tree_pair_s,va_gc>"
 (!type already_seen 518)
 
-(!srcfileloc  "cp/cp-tree.h" 1405)
+(!srcfileloc  "cp/cp-tree.h" 1406)
 nil )
 (!pair  "tree_pair_p"
 (!type already_seen 520)
 
-(!srcfileloc  "cp/cp-tree.h" 1309)
+(!srcfileloc  "cp/cp-tree.h" 1310)
 nil )
 (!pair  "tree_pair_s"
 (!type already_seen 519)
 
-(!srcfileloc  "cp/cp-tree.h" 1308)
+(!srcfileloc  "cp/cp-tree.h" 1309)
 nil )
 (!pair  "vec<cxx_saved_binding,va_gc>"
 (!type already_seen 744)
 
-(!srcfileloc  "cp/cp-tree.h" 989)
+(!srcfileloc  "cp/cp-tree.h" 990)
 nil )
 (!pair  "vec<qualified_typedef_usage_t,va_gc>"
 (!type already_seen 612)
 
-(!srcfileloc  "cp/cp-tree.h" 751)
+(!srcfileloc  "cp/cp-tree.h" 752)
 nil )
 (!pair  "qualified_typedef_usage_t"
 (!type already_seen 613)
 
-(!srcfileloc  "cp/cp-tree.h" 739)
+(!srcfileloc  "cp/cp-tree.h" 740)
 nil )
 (!pair  "cp_trait_kind"
 (!type already_seen 9)
 
-(!srcfileloc  "cp/cp-tree.h" 615)
+(!srcfileloc  "cp/cp-tree.h" 616)
 nil )
 (!pair  "impl_conv_void"
 (!type already_seen 9)
 
-(!srcfileloc  "cp/cp-tree.h" 468)
+(!srcfileloc  "cp/cp-tree.h" 469)
 nil )
 (!pair  "impl_conv_rhs"
 (!type already_seen 9)
 
-(!srcfileloc  "cp/cp-tree.h" 457)
+(!srcfileloc  "cp/cp-tree.h" 458)
 nil )
 (!pair  "expr_list_kind"
 (!type already_seen 9)
 
-(!srcfileloc  "cp/cp-tree.h" 447)
+(!srcfileloc  "cp/cp-tree.h" 448)
 nil )
 (!pair  "composite_pointer_operation"
 (!type already_seen 9)
 
-(!srcfileloc  "cp/cp-tree.h" 440)
+(!srcfileloc  "cp/cp-tree.h" 441)
 nil )
 (!pair  "cpp0x_warn_str"
 (!type already_seen 9)
 
-(!srcfileloc  "cp/cp-tree.h" 428)
+(!srcfileloc  "cp/cp-tree.h" 429)
 nil )
 (!pair  "cp_id_kind"
 (!type already_seen 9)
 
-(!srcfileloc  "cp/cp-tree.h" 391)
+(!srcfileloc  "cp/cp-tree.h" 392)
 nil )
 (!pair  "ptrmem_cst_t"
 (!type already_seen 601)
@@ -26127,22 +26127,22 @@ nil )
 (!pair  "vec<tree_gc_vec,va_gc>"
 (!type already_seen 777)
 
-(!srcfileloc  "c-family/c-common.c" 11242)
+(!srcfileloc  "c-family/c-common.c" 11246)
 nil )
 (!pair  "tree_gc_vec"
 (!type already_seen 45)
 
-(!srcfileloc  "c-family/c-common.c" 11241)
+(!srcfileloc  "c-family/c-common.c" 11245)
 nil )
 (!pair  "vec<const_char_p,va_gc>"
 (!type already_seen 780)
 
-(!srcfileloc  "c-family/c-common.c" 8794)
+(!srcfileloc  "c-family/c-common.c" 8798)
 nil )
 (!pair  "const_char_p"
 (!type already_seen 29)
 
-(!srcfileloc  "c-family/c-common.c" 8793)
+(!srcfileloc  "c-family/c-common.c" 8797)
 nil )
 (!pair  "disabled_builtin"
 (!type already_seen 782)
@@ -26472,27 +26472,27 @@ nil )
 (!pair  "arm_mangle_map_entry"
 (!type already_seen 992)
 
-(!srcfileloc  "config/arm/arm.c" 26741)
+(!srcfileloc  "config/arm/arm.c" 26756)
 nil )
 (!pair  "builtin_arg"
 (!type already_seen 9)
 
-(!srcfileloc  "config/arm/arm.c" 21963)
+(!srcfileloc  "config/arm/arm.c" 21977)
 nil )
 (!pair  "neon_builtin_datum"
 (!type already_seen 994)
 
-(!srcfileloc  "config/arm/arm.c" 20339)
+(!srcfileloc  "config/arm/arm.c" 20353)
 nil )
 (!pair  "neon_itype"
 (!type already_seen 9)
 
-(!srcfileloc  "config/arm/arm.c" 20331)
+(!srcfileloc  "config/arm/arm.c" 20345)
 nil )
 (!pair  "neon_builtin_type_mode"
 (!type already_seen 9)
 
-(!srcfileloc  "config/arm/arm.c" 20262)
+(!srcfileloc  "config/arm/arm.c" 20276)
 nil )
 (!pair  "arm_pragma_enum"
 (!type already_seen 9)
@@ -26567,7 +26567,7 @@ nil )
 (!pair  "numbered_tree"
 (!type already_seen 1023)
 
-(!srcfileloc  "tree-dfa.c" 700)
+(!srcfileloc  "tree-dfa.c" 689)
 nil )
 (!pair  "vec<mem_addr_template,va_gc>"
 (!type already_seen 1028)
@@ -29558,7 +29558,7 @@ nil )
 (!pair  "the_parser"
 (!type already_seen 691)
 
-(!srcfileloc  "cp/parser.c" 28129)
+(!srcfileloc  "cp/parser.c" 28132)
 nil )
 (!pair  "lambda_scope_stack"
 (!type already_seen 686)
@@ -29769,58 +29769,58 @@ nil )
 (!pair  "unemitted_tinfo_decls"
 (!type already_seen 45)
 
-(!srcfileloc  "cp/cp-tree.h" 5518)
+(!srcfileloc  "cp/cp-tree.h" 5519)
 nil )
 (!pair  "deferred_mark_used_calls"
 (!type already_seen 45)
 
-(!srcfileloc  "cp/cp-tree.h" 5206)
+(!srcfileloc  "cp/cp-tree.h" 5207)
 nil )
 (!pair  "assignment_operator_name_info"
 (!type array 1445 nil  gc_used "(int) MAX_TREE_CODES" 
 (!type already_seen 742)
 )
 
-(!srcfileloc  "cp/cp-tree.h" 4660)
+(!srcfileloc  "cp/cp-tree.h" 4661)
 nil )
 (!pair  "operator_name_info"
 (!type array 1446 nil  gc_used "(int) MAX_TREE_CODES" 
 (!type already_seen 742)
 )
 
-(!srcfileloc  "cp/cp-tree.h" 4657)
+(!srcfileloc  "cp/cp-tree.h" 4658)
 nil )
 (!pair  "tls_aggregates"
 (!type already_seen 5)
 
-(!srcfileloc  "cp/cp-tree.h" 4413)
+(!srcfileloc  "cp/cp-tree.h" 4414)
 nil )
 (!pair  "static_aggregates"
 (!type already_seen 5)
 
-(!srcfileloc  "cp/cp-tree.h" 4411)
+(!srcfileloc  "cp/cp-tree.h" 4412)
 nil )
 (!pair  "local_classes"
 (!type already_seen 45)
 
-(!srcfileloc  "cp/cp-tree.h" 4299)
+(!srcfileloc  "cp/cp-tree.h" 4300)
 nil )
 (!pair  "integer_two_node"
 (!type already_seen 5)
 
-(!srcfileloc  "cp/cp-tree.h" 4261)
+(!srcfileloc  "cp/cp-tree.h" 4262)
 nil )
 (!pair  "scope_chain"
 (!type already_seen 748)
 
-(!srcfileloc  "cp/cp-tree.h" 1070)
+(!srcfileloc  "cp/cp-tree.h" 1071)
 nil )
 (!pair  "cp_global_trees"
 (!type array 1447 nil  gc_used "CPTI_MAX" 
 (!type already_seen 5)
 )
 
-(!srcfileloc  "cp/cp-tree.h" 871)
+(!srcfileloc  "cp/cp-tree.h" 872)
 nil )
 (!pair  "lambda_cnt"
 (!type already_seen 9)
@@ -29978,7 +29978,7 @@ nil )
 (!pair  "tree_vector_cache"
 (!type already_seen 778)
 
-(!srcfileloc  "c-family/c-common.c" 11242)
+(!srcfileloc  "c-family/c-common.c" 11246)
 
 (!options 
 (!option deletable string  "")
@@ -29987,7 +29987,7 @@ nil )
 (!pair  "optimize_args"
 (!type already_seen 781)
 
-(!srcfileloc  "c-family/c-common.c" 8794)
+(!srcfileloc  "c-family/c-common.c" 8798)
 nil )
 (!pair  "compound_literal_number"
 (!type already_seen 9)
@@ -30397,17 +30397,17 @@ nil )
 (!type already_seen 5)
 )
 
-(!srcfileloc  "config/arm/arm.c" 20696)
+(!srcfileloc  "config/arm/arm.c" 20710)
 nil )
 (!pair  "tls_get_addr_libfunc"
 (!type already_seen 136)
 
-(!srcfileloc  "config/arm/arm.c" 6442)
+(!srcfileloc  "config/arm/arm.c" 6456)
 nil )
 (!pair  "pic_labelno"
 (!type already_seen 9)
 
-(!srcfileloc  "config/arm/arm.c" 5725)
+(!srcfileloc  "config/arm/arm.c" 5731)
 nil )
 (!pair  "va_list_type"
 (!type already_seen 5)
