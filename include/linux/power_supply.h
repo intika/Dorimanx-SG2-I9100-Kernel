@@ -247,10 +247,6 @@ struct power_supply {
 	spinlock_t changed_lock;
 	bool changed;
 	struct wake_lock work_wake_lock;
-#ifdef CONFIG_THERMAL
-	struct thermal_zone_device *tzd;
-	struct thermal_cooling_device *tcd;
-#endif
 
 #ifdef CONFIG_LEDS_TRIGGERS
 	struct led_trigger *charging_full_trig;
