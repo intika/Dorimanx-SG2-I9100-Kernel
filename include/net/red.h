@@ -106,6 +106,9 @@ struct red_parms {
 	u32		qth_max;	/* Max avg length threshold: A scaled */
 	u32		Scell_max;
 	u32		Rmask;		/* Cached random mask, see red_rmask */
+	u32		max_P;		/* probability, [0 .. 1.0] 32 scaled */
+	/* reciprocal_value(max_P / qth_delta) */
+	struct reciprocal_value	max_P_reciprocal;
 	u8		Scell_log;
 	u8		Wlog;		/* log(W)		*/
 	u8		Plog;		/* random number bits	*/
