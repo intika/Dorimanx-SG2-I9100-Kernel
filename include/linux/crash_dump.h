@@ -8,6 +8,8 @@
 
 #include <asm/pgtable.h> /* for pgprot_t */
 
+#include <asm/pgtable.h> /* for pgprot_t */
+
 #define ELFCORE_ADDR_MAX	(-1ULL)
 #define ELFCORE_ADDR_ERR	(-2ULL)
 
