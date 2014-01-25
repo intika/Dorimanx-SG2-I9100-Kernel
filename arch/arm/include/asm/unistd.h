@@ -402,13 +402,15 @@
 #define __NR_syncfs			(__NR_SYSCALL_BASE+373)
 #define __NR_sendmmsg			(__NR_SYSCALL_BASE+374)
 #define __NR_setns			(__NR_SYSCALL_BASE+375)
+#define __NR_sched_setattr		(__NR_SYSCALL_BASE+376)
+#define __NR_sched_getattr		(__NR_SYSCALL_BASE+377)
 
 /*
  * This may need to be greater than __NR_last_syscall+1 in order to
  * account for the padding in the syscall table
  */
 #ifdef __KERNEL__
-#define __NR_syscalls  (376)
+#define __NR_syscalls  (380)
 #endif /* __KERNEL__ */
 
 /*

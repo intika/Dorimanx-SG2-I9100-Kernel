@@ -385,6 +385,8 @@
 		CALL(sys_syncfs)
 		CALL(sys_sendmmsg)
 /* 375 */	CALL(sys_setns)
+/* 378 */	CALL(sys_sched_setattr)
+		CALL(sys_sched_getattr)
 #ifndef syscalls_counted
 .equ syscalls_padding, ((NR_syscalls + 3) & ~3) - NR_syscalls
 #define syscalls_counted
