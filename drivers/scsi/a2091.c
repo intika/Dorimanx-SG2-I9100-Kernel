@@ -200,7 +200,7 @@ static int __devinit a2091_probe(struct zorro_dev *z,
 	instance->irq = IRQ_AMIGA_PORTS;
 	instance->unique_id = z->slotaddr;
 
-	regs = (struct a2091_scsiregs *)ZTWO_VADDR(z->resource.start);
+	regs = ZTWO_VADDR(z->resource.start);
 	regs->DAWR = DAWR_A2091;
 
 	wdregs.SASR = &regs->SASR;
