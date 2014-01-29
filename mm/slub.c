@@ -1581,7 +1581,7 @@ static inline void *acquire_slab(struct kmem_cache *s,
 		new.freelist = freelist;
 	}
 
-	VM_BUG_ON_PAGE(new.frozen, &new);
+	VM_BUG_ON(new.frozen);
 	new.frozen = 1;
 
 	if (!__cmpxchg_double_slab(s, page,
@@ -1834,7 +1834,7 @@ static void deactivate_slab(struct kmem_cache *s, struct page *page,
 			set_freepointer(s, freelist, prior);
 			new.counters = counters;
 			new.inuse--;
-			VM_BUG_ON_PAGE(!new.frozen, &new);
+			VM_BUG_ON(!new.frozen);
 
 		} while (!__cmpxchg_double_slab(s, page,
 			prior, counters,
@@ -1862,7 +1862,7 @@ redo:
 
 	old.freelist = page->freelist;
 	old.counters = page->counters;
-	VM_BUG_ON_PAGE(!old.frozen, &old);
+	VM_BUG_ON(!old.frozen);
 
 	/* Determine target state of the slab */
 	new.counters = old.counters;
@@ -1974,7 +1974,7 @@ static void unfreeze_partials(struct kmem_cache *s,
 
 			old.freelist = page->freelist;
 			old.counters = page->counters;
-			VM_BUG_ON_PAGE(!old.frozen, &old);
+			VM_BUG_ON(!old.frozen);
 
 			new.counters = old.counters;
 			new.freelist = old.freelist;
@@ -2247,7 +2247,7 @@ static inline void *get_freelist(struct kmem_cache *s, struct page *page)
 		counters = page->counters;
 
 		new.counters = counters;
-		VM_BUG_ON_PAGE(!new.frozen, &new);
+		VM_BUG_ON(!new.frozen);
 
 		new.inuse = page->objects;
 		new.frozen = freelist != NULL;
@@ -2341,7 +2341,7 @@ load_freelist:
 	 * page is pointing to the page from which the objects are obtained.
 	 * That page must be frozen for per cpu allocations to work.
 	 */
-	VM_BUG_ON_PAGE(!c->page->frozen, c->page);
+	VM_BUG_ON(!c->page->frozen);
 	c->freelist = get_freepointer(s, freelist);
 	c->tid = next_tid(c->tid);
 	local_irq_restore(flags);
