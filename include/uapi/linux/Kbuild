@@ -264,6 +264,7 @@ header-y += rds.h
 header-y += reboot.h
 header-y += reiserfs_fs.h
 header-y += reiserfs_xattr.h
+header-y += xattr.h
 header-y += resource.h
 header-y += romfs_fs.h
 header-y += rose.h
