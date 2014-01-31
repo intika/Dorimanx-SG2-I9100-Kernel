@@ -115,4 +115,3 @@ header-y += virtio_ring.h
 header-y += wait.h
 header-y += wanrouter.h
 header-y += watchdog.h
-header-y += xattr.h
