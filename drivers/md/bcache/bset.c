@@ -1241,11 +1241,7 @@ void bch_btree_sort_partial(struct btree_keys *b, unsigned start,
 		unsigned i;
 
 		for (i = start; i <= b->nsets; i++)
-<<<<<<< HEAD
-			keys += b->sets[i-1].data->keys;
-=======
 			keys += b->set[i].data->keys;
->>>>>>> 53d8ab2... Merge branch 'for-3.14/drivers' of git://git.kernel.dk/linux-block
 
 		order = get_order(__set_bytes(b->set->data, keys));
 	}
