@@ -265,8 +265,8 @@ static void fw_free_buf(struct firmware_buf *buf)
 static char fw_path_para[256];
 static const char * const fw_path[] = {
 	fw_path_para,
-	"/system/vendor/firmware" UTS_RELEASE,
-	"/system/vendor/firmware",
+	"/system/vendor/firmware/" UTS_RELEASE,
+	"/system/vendor/firmware/",
 	"/lib/firmware/" UTS_RELEASE,
 	"/lib/firmware"
 };
