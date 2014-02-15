@@ -20,7 +20,6 @@
 #include <linux/swap.h>
 #include <linux/splice.h>
 #include <linux/aio.h>
-#include <linux/freezer.h>
 
 MODULE_ALIAS_MISCDEV(FUSE_MINOR);
 MODULE_ALIAS("devname:fuse");
@@ -465,10 +464,7 @@ __acquires(fc->lock)
 	 * Wait it out.
 	 */
 	spin_unlock(&fc->lock);
-
-	while (req->state != FUSE_REQ_FINISHED)
-		wait_event_freezable(req->waitq,
-				     req->state == FUSE_REQ_FINISHED);
+	wait_event(req->waitq, req->state == FUSE_REQ_FINISHED);
 	spin_lock(&fc->lock);
 
 	if (!req->aborted)
