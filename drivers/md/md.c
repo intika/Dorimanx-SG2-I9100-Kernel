@@ -782,8 +782,6 @@ int sync_page_io(struct md_rdev *rdev, sector_t sector, int size,
 	struct bio *bio = bio_alloc_mddev(GFP_NOIO, 1, rdev->mddev);
 	int ret;
 
-	rw |= REQ_SYNC;
-
 	bio->bi_bdev = (metadata_op && rdev->meta_bdev) ?
 		rdev->meta_bdev : rdev->bdev;
 	if (metadata_op)

@@ -401,7 +401,7 @@ long bch_bucket_alloc(struct cache *ca, unsigned reserve, bool wait)
 {
 	DEFINE_WAIT(w);
 	struct bucket *b;
-	long r = 0;
+	long r;
 
 	/* fastpath */
 	if (fifo_pop(&ca->free[RESERVE_NONE], r) ||
