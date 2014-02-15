@@ -952,7 +952,7 @@ do_alignment(unsigned long addr, unsigned int fsr, struct pt_regs *regs)
  */
 static int __init alignment_init(void)
 {
-#if defined(CONFIG_PROC_FS) && !defined(CONFIG_FAST_RESUME)
+#ifdef CONFIG_PROC_FS
 	struct proc_dir_entry *res;
 
 	res = proc_create("cpu/alignment", S_IWUSR | S_IRUGO, NULL,
@@ -987,8 +987,4 @@ static int __init alignment_init(void)
 
 	return 0;
 }
-#ifdef CONFIG_FAST_RESUME
-beforeresume_initcall(alignment_init);
-#else
 fs_initcall(alignment_init);
-#endif
