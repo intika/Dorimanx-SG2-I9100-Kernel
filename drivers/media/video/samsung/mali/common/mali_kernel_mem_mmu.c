@@ -3011,7 +3011,7 @@ static _mali_osk_errcode_t writereg(u32 where, u32 what, const char * comment, s
 	MALI_SUCCESS;
 }
 
-static _mali_osk_errcode_t dump_page(mali_io_address page, u32 phys_addr, struct dump_info * info, int dump_to_serial)
+static _mali_osk_errcode_t mali_dump_page(mali_io_address page, u32 phys_addr, struct dump_info * info, int dump_to_serial)
 {
 	if (dump_to_serial)
 	{
@@ -3062,7 +3062,7 @@ static _mali_osk_errcode_t dump_mmu_page_table(memory_session * session_data, st
 		int i;
 
 		MALI_CHECK_NO_ERROR(
-            dump_page(session_data->page_directory_mapped, session_data->page_directory, info, 0)
+            mali_dump_page(session_data->page_directory_mapped, session_data->page_directory, info, 0)
             );
 
 		for (i = 0; i < 1024; i++)
@@ -3070,7 +3070,7 @@ static _mali_osk_errcode_t dump_mmu_page_table(memory_session * session_data, st
 			if (NULL != session_data->page_entries_mapped[i])
 			{
 				MALI_CHECK_NO_ERROR(
-                    dump_page(session_data->page_entries_mapped[i], _mali_osk_mem_ioread32(session_data->page_directory_mapped, i * sizeof(u32)) & ~MALI_MMU_FLAGS_MASK, info, 0)
+                    mali_dump_page(session_data->page_entries_mapped[i], _mali_osk_mem_ioread32(session_data->page_directory_mapped, i * sizeof(u32)) & ~MALI_MMU_FLAGS_MASK, info, 0)
                     );
 			}
 		}
