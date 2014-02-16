@@ -123,9 +123,6 @@ static inline unsigned long page_cgroup_array_id(struct page_cgroup *pc)
 }
 
 #else /* CONFIG_MEMCG */
-=======
-#else /* CONFIG_CGROUP_MEM_RES_CTLR */
->>>>>>> 312734c0... memcg: remove PCG_MOVE_LOCK flag from page_cgroup
 struct page_cgroup;
 
 static inline void __meminit pgdat_page_cgroup_init(struct pglist_data *pgdat)
