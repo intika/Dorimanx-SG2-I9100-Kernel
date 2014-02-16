@@ -5528,7 +5528,7 @@ out_free2:
 }
 
 #ifdef MODULE
-module_init(uksm_init)
+subsys_initcall(uksm_init)
 #else
 late_initcall(uksm_init);
 #endif
