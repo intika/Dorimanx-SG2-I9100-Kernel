@@ -690,9 +690,15 @@ __SC_COMP(__NR_process_vm_writev, sys_process_vm_writev, \
           compat_sys_process_vm_writev)
 #define __NR_kcmp 272
 __SYSCALL(__NR_kcmp, sys_kcmp)
+#define __NR_finit_module 273
+__SYSCALL(__NR_finit_module, sys_finit_module)
+#define __NR_sched_setattr 274
+__SYSCALL(__NR_sched_setattr, sys_sched_setattr)
+#define __NR_sched_getattr 275
+__SYSCALL(__NR_sched_getattr, sys_sched_getattr)
 
 #undef __NR_syscalls
-#define __NR_syscalls 273
+#define __NR_syscalls 276
 
 /*
  * All syscalls below here should go away really,
