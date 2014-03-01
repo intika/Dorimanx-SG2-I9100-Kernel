@@ -177,6 +177,9 @@ done;
 for i in `find $INITRAMFS_TMP/lib/modules/ -name '*.ko'`; do
 	${CROSS_COMPILE}strip --strip-unneeded $i;
 done;
+for i in `find $INITRAMFS_TMP/lib/modules/ -name '*.ko'`; do
+        ${CROSS_COMPILE}strip --strip-debug $i;
+done;
 chmod 755 $INITRAMFS_TMP/lib/modules/*;
 
 # compress modules to reduce initramfs size
@@ -233,7 +236,7 @@ if [ -e $KERNELDIR/arch/arm/boot/zImage ]; then
 			read -t 3 -p "reboot to recovery, 3sec timeout (y/n)?";
 			if [ "$REPLY" == "y" ]; then
 				adb reboot recovery;
-			fi;		
+			fi;
 		fi;
 	fi;
 else
