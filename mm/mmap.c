@@ -1615,7 +1615,6 @@ munmap_back:
 	}
 
 	vma_link(mm, vma, prev, rb_link, rb_parent);
-	file = vma->vm_file;
 
 	/* Once vma denies write, undo our temporary denial count */
 	if (vm_flags & VM_DENYWRITE)
