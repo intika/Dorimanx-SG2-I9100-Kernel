@@ -169,7 +169,6 @@ static unsigned long lowmem_scan(struct shrinker *s, struct shrink_control *sc)
 			     sc->nr_to_scan, sc->gfp_mask);
 		return 0;
 	}
-
 	selected_oom_score_adj = min_score_adj;
 
 	rcu_read_lock();
@@ -209,16 +208,22 @@ static unsigned long lowmem_scan(struct shrinker *s, struct shrink_control *sc)
 		pcred = __task_cred(p);
 		uid = pcred->uid;
 
-		if ((!avoid_to_kill(uid) && !protected_apps(p->comm)) ||
-				tasksize * (long)(PAGE_SIZE / 1024) >= 80000) {
+		if (avoid_to_kill(uid) || protected_apps(p->comm)) {
+			if (tasksize * (long)(PAGE_SIZE / 1024) >= 80000) {
+				selected = p;
+				selected_tasksize = tasksize;
+				selected_oom_score_adj = oom_score_adj;
+			lowmem_print(2, "select '%s' (%d), adj %hd, size %ldkB, to kill\n",
+					p->comm, p->pid, oom_score_adj, tasksize * (long)(PAGE_SIZE / 1024));
+			} else
+				lowmem_print(2, "selected skipped %s' (%d), adj %hd, size %ldkB, not kill\n",
+					p->comm, p->pid, oom_score_adj, tasksize * (long)(PAGE_SIZE / 1024));
+		} else {
 			selected = p;
 			selected_tasksize = tasksize;
 			selected_oom_score_adj = oom_score_adj;
-			lowmem_print(2, "select '%s' (%d), adj %hd, size %ldkB, to kill\n",
-				 p->comm, p->pid, oom_score_adj, tasksize * (long)(PAGE_SIZE / 1024));
-		} else {
-			lowmem_print(3, "selected skipped '%s' (%d), adj %hd, size %ldkB, no to kill\n",
-				 p->comm, p->pid, oom_score_adj, tasksize * (long)(PAGE_SIZE / 1024));
+			lowmem_print(2, "select %s' (%d), adj %hd, size %ldkB, to kill\n",
+				p->comm, p->pid, oom_score_adj, tasksize * (long)(PAGE_SIZE / 1024));
 		}
 	}
 	if (selected) {
