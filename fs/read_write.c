@@ -264,9 +264,23 @@ loff_t vfs_llseek(struct file *file, loff_t offset, int whence)
 }
 EXPORT_SYMBOL(vfs_llseek);
 
+/*
+ * We only lock f_pos if we have threads or if the file might be
+ * shared with another process. In both cases we'll have an elevated
+ * file count (done either by fdget() or by fork()).
+ */
 static inline struct fd fdget_pos(int fd)
 {
-	return __to_fd(__fdget_pos(fd));
+	struct fd f = fdget(fd);
+	struct file *file = f.file;
+
+	if (file && (file->f_mode & FMODE_ATOMIC_POS)) {
+		if (file_count(file) > 1) {
+			f.flags |= FDPUT_POS_UNLOCK;
+			mutex_lock(&file->f_pos_lock);
+		}
+	}
+	return f;
 }
 
 static inline void fdput_pos(struct fd f)
@@ -307,7 +321,7 @@ SYSCALL_DEFINE5(llseek, unsigned int, fd, unsigned long, offset_high,
 		unsigned int, whence)
 {
 	int retval;
-	struct fd f = fdget_pos(fd);
+	struct fd f = fdget(fd);
 	loff_t offset;
 
 	if (!f.file)
@@ -327,7 +341,7 @@ SYSCALL_DEFINE5(llseek, unsigned int, fd, unsigned long, offset_high,
 			retval = 0;
 	}
 out_putf:
-	fdput_pos(f);
+	fdput(f);
 	return retval;
 }
 #endif
@@ -994,9 +1008,9 @@ COMPAT_SYSCALL_DEFINE3(readv, compat_ulong_t, fd,
 	return ret;
 }
 
-static long __compat_sys_preadv64(unsigned long fd,
-				  const struct compat_iovec __user *vec,
-				  unsigned long vlen, loff_t pos)
+COMPAT_SYSCALL_DEFINE4(preadv64, unsigned long, fd,
+		const struct compat_iovec __user *,vec,
+		unsigned long, vlen, loff_t, pos)
 {
 	struct fd f;
 	ssize_t ret;
@@ -1013,22 +1027,12 @@ static long __compat_sys_preadv64(unsigned long fd,
 	return ret;
 }
 
-#ifdef __ARCH_WANT_COMPAT_SYS_PREADV64
-COMPAT_SYSCALL_DEFINE4(preadv64, unsigned long, fd,
-		const struct compat_iovec __user *,vec,
-		unsigned long, vlen, loff_t, pos)
-{
-	return __compat_sys_preadv64(fd, vec, vlen, pos);
-}
-#endif
-
 COMPAT_SYSCALL_DEFINE5(preadv, compat_ulong_t, fd,
 		const struct compat_iovec __user *,vec,
 		compat_ulong_t, vlen, u32, pos_low, u32, pos_high)
 {
 	loff_t pos = ((loff_t)pos_high << 32) | pos_low;
-
-	return __compat_sys_preadv64(fd, vec, vlen, pos);
+	return compat_sys_preadv64(fd, vec, vlen, pos);
 }
 
 static size_t compat_writev(struct file *file,
@@ -1071,9 +1075,9 @@ COMPAT_SYSCALL_DEFINE3(writev, compat_ulong_t, fd,
 	return ret;
 }
 
-static long __compat_sys_pwritev64(unsigned long fd,
-				   const struct compat_iovec __user *vec,
-				   unsigned long vlen, loff_t pos)
+COMPAT_SYSCALL_DEFINE4(pwritev64, unsigned long, fd,
+		const struct compat_iovec __user *,vec,
+		unsigned long, vlen, loff_t, pos)
 {
 	struct fd f;
 	ssize_t ret;
@@ -1090,22 +1094,12 @@ static long __compat_sys_pwritev64(unsigned long fd,
 	return ret;
 }
 
-#ifdef __ARCH_WANT_COMPAT_SYS_PWRITEV64
-COMPAT_SYSCALL_DEFINE4(pwritev64, unsigned long, fd,
-		const struct compat_iovec __user *,vec,
-		unsigned long, vlen, loff_t, pos)
-{
-	return __compat_sys_pwritev64(fd, vec, vlen, pos);
-}
-#endif
-
 COMPAT_SYSCALL_DEFINE5(pwritev, compat_ulong_t, fd,
 		const struct compat_iovec __user *,vec,
 		compat_ulong_t, vlen, u32, pos_low, u32, pos_high)
 {
 	loff_t pos = ((loff_t)pos_high << 32) | pos_low;
-
-	return __compat_sys_pwritev64(fd, vec, vlen, pos);
+	return compat_sys_pwritev64(fd, vec, vlen, pos);
 }
 #endif
 
