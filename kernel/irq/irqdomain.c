@@ -5,6 +5,11 @@
 #include <linux/of.h>
 #include <linux/of_address.h>
 #include <linux/of_irq.h>
+<<<<<<< HEAD
+=======
+#include <linux/topology.h>
+#include <linux/seq_file.h>
+>>>>>>> 27ea0f7... Merge branch 'irq-urgent-for-linus' of git://git.kernel.org/pub/scm/linux/kernel/git/tip/tip
 #include <linux/slab.h>
 
 static LIST_HEAD(irq_domain_list);
