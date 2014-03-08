@@ -134,7 +134,10 @@ extern void efi_cleanup_page_tables(unsigned long pa_memmap, unsigned num_pages)
 extern void __init old_map_region(efi_memory_desc_t *md);
 extern void __init runtime_code_page_mkexec(void);
 extern void __init efi_runtime_mkexec(void);
+<<<<<<< HEAD
 extern void __init efi_dump_pagetable(void);
+=======
+>>>>>>> 95648c0... Merge branch 'x86-urgent-for-linus' of git://git.kernel.org/pub/scm/linux/kernel/git/tip/tip
 extern void __init efi_apply_memmap_quirks(void);
 
 struct efi_setup_data {
