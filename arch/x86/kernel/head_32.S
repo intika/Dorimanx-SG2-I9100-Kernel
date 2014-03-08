@@ -545,7 +545,11 @@ ENDPROC(early_idt_handlers)
 ENTRY(early_idt_handler)
 	cld
 
+<<<<<<< HEAD
 	cmpl $2,(%esp)		# X86_TRAP_NMI
+=======
+	cmpl $X86_TRAP_NMI,(%esp)
+>>>>>>> 95648c0... Merge branch 'x86-urgent-for-linus' of git://git.kernel.org/pub/scm/linux/kernel/git/tip/tip
 	je is_nmi		# Ignore NMI
 
 	cmpl $2,%ss:early_recursion_flag
