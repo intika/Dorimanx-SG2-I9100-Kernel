@@ -1328,7 +1328,11 @@ void __init efi_apply_memmap_quirks(void)
 	 * firmware/kernel architectures since there is no support for runtime
 	 * services.
 	 */
+<<<<<<< HEAD
 	if (!efi_runtime_supported()) {
+=======
+	if (!efi_is_native()) {
+>>>>>>> 95648c0... Merge branch 'x86-urgent-for-linus' of git://git.kernel.org/pub/scm/linux/kernel/git/tip/tip
 		pr_info("efi: Setup done, disabling due to 32/64-bit mismatch\n");
 		efi_unmap_memmap();
 	}
@@ -1337,5 +1341,9 @@ void __init efi_apply_memmap_quirks(void)
 	 * UV doesn't support the new EFI pagetable mapping yet.
 	 */
 	if (is_uv_system())
+<<<<<<< HEAD
 		set_bit(EFI_OLD_MEMMAP, &efi.flags);
+=======
+		set_bit(EFI_OLD_MEMMAP, &x86_efi_facility);
+>>>>>>> 95648c0... Merge branch 'x86-urgent-for-linus' of git://git.kernel.org/pub/scm/linux/kernel/git/tip/tip
 }
