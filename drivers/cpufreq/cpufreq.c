@@ -1053,7 +1053,6 @@ static int __cpufreq_add_dev(struct device *dev, struct subsys_interface *sif,
 		policy->user_policy.min = policy->min;
 		policy->user_policy.min_suspend = policy->min_suspend;
 		policy->user_policy.max = policy->max;
-		policy->user_policy.max_suspend = policy->max_suspend;
 	}
 
 	blocking_notifier_call_chain(&cpufreq_policy_notifier_list,
@@ -1993,7 +1992,7 @@ int cpufreq_update_policy(unsigned int cpu)
 	 * BIOS might change freq behind our back
 	 * -> ask driver for current freq and notify governors about a change
 	 */
-	if (cpufreq_driver->get) {
+	if (cpufreq_driver->get && !cpufreq_driver->setpolicy) {
 		policy.cur = cpufreq_driver->get(cpu);
 		if (!data->cur) {
 			pr_debug("Driver did not initialize current freq");
