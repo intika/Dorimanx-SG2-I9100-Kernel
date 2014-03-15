@@ -516,8 +516,9 @@ static void m98095_eq_band(struct snd_soc_codec *codec, unsigned int dai,
 	unsigned int eq_reg;
 	unsigned int i;
 
-	BUG_ON(band > 4);
-	BUG_ON(dai > 1);
+	if (WARN_ON(band > 4) ||
+	    WARN_ON(dai > 1))
+		return;
 
 	/* Load the base register address */
 	eq_reg = dai ? M98095_142_DAI2_EQ_BASE : M98095_110_DAI1_EQ_BASE;
@@ -541,8 +542,9 @@ static void m98095_biquad_band(struct snd_soc_codec *codec, unsigned int dai,
 	unsigned int bq_reg;
 	unsigned int i;
 
-	BUG_ON(band > 1);
-	BUG_ON(dai > 1);
+	if (WARN_ON(band > 1) ||
+	    WARN_ON(dai > 1))
+		return;
 
 	/* Load the base register address */
 	bq_reg = dai ? M98095_17E_DAI2_BQ_BASE : M98095_174_DAI1_BQ_BASE;
@@ -890,7 +892,8 @@ static int max98095_line_pga(struct snd_soc_dapm_widget *w,
 	struct max98095_priv *max98095 = snd_soc_codec_get_drvdata(codec);
 	u8 *state;
 
-	BUG_ON(!((channel == 1) || (channel == 2)));
+	if (WARN_ON(!(channel == 1 || channel == 2)))
+		return -EINVAL;
 
 	state = &max98095->lin_state;
 
@@ -1210,12 +1213,12 @@ static int max98095_dai1_hw_params(struct snd_pcm_substream *substream,
 
 	rate = params_rate(params);
 
-	switch (params_format(params)) {
-	case SNDRV_PCM_FORMAT_S16_LE:
+	switch (params_width(params)) {
+	case 16:
 		snd_soc_update_bits(codec, M98095_02A_DAI1_FORMAT,
 			M98095_DAI_WS, 0);
 		break;
-	case SNDRV_PCM_FORMAT_S24_LE:
+	case 24:
 		snd_soc_update_bits(codec, M98095_02A_DAI1_FORMAT,
 			M98095_DAI_WS, M98095_DAI_WS);
 		break;
@@ -1740,7 +1743,8 @@ static int max98095_put_eq_enum(struct snd_kcontrol *kcontrol,
 	int fs, best, best_val, i;
 	int regmask, regsave;
 
-	BUG_ON(channel > 1);
+	if (WARN_ON(channel > 1))
+		return -EINVAL;
 
 	if (!pdata || !max98095->eq_textcnt)
 		return 0;

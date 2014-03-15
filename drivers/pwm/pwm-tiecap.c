@@ -279,11 +279,11 @@ static int ecap_pwm_remove(struct platform_device *pdev)
 	pwmss_submodule_state_change(pdev->dev.parent, PWMSS_ECAPCLK_STOP_REQ);
 	pm_runtime_put_sync(&pdev->dev);
 
-	pm_runtime_put_sync(&pdev->dev);
 	pm_runtime_disable(&pdev->dev);
 	return pwmchip_remove(&pc->chip);
 }
 
+#ifdef CONFIG_PM_SLEEP
 static void ecap_pwm_save_context(struct ecap_pwm_chip *pc)
 {
 	pm_runtime_get_sync(pc->chip.dev);
@@ -300,7 +300,6 @@ static void ecap_pwm_restore_context(struct ecap_pwm_chip *pc)
 	writew(pc->ctx.ecctl2, pc->mmio_base + ECCTL2);
 }
 
-#ifdef CONFIG_PM_SLEEP
 static int ecap_pwm_suspend(struct device *dev)
 {
 	struct ecap_pwm_chip *pc = dev_get_drvdata(dev);

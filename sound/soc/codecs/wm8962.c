@@ -74,7 +74,7 @@ struct wm8962_priv {
 	struct regulator_bulk_data supplies[WM8962_NUM_SUPPLIES];
 	struct notifier_block disable_nb[WM8962_NUM_SUPPLIES];
 
-#if defined(CONFIG_INPUT) || defined(CONFIG_INPUT_MODULE)
+#if IS_ENABLED(CONFIG_INPUT)
 	struct input_dev *beep;
 	struct work_struct beep_work;
 	int beep_rate;
@@ -1853,7 +1853,7 @@ static int cp_event(struct snd_soc_dapm_widget *w,
 		break;
 
 	default:
-		BUG();
+		WARN(1, "Invalid event %d\n", event);
 		return -EINVAL;
 	}
 
@@ -1945,7 +1945,7 @@ static int hp_event(struct snd_soc_dapm_widget *w,
 		break;
 
 	default:
-		BUG();
+		WARN(1, "Invalid event %d\n", event);
 		return -EINVAL;
 	
 	}
@@ -1974,7 +1974,7 @@ static int out_pga_event(struct snd_soc_dapm_widget *w,
 		reg = WM8962_SPKOUTL_VOLUME;
 		break;
 	default:
-		BUG();
+		WARN(1, "Invalid shift %d\n", w->shift);
 		return -EINVAL;
 	}
 
@@ -1982,7 +1982,7 @@ static int out_pga_event(struct snd_soc_dapm_widget *w,
 	case SND_SOC_DAPM_POST_PMU:
 		return snd_soc_write(codec, reg, snd_soc_read(codec, reg));
 	default:
-		BUG();
+		WARN(1, "Invalid event %d\n", event);
 		return -EINVAL;
 	}
 }
@@ -2005,7 +2005,7 @@ static int dsp2_event(struct snd_soc_dapm_widget *w,
 		break;
 
 	default:
-		BUG();
+		WARN(1, "Invalid event %d\n", event);
 		return -EINVAL;
 	}
 
@@ -3121,7 +3121,7 @@ int wm8962_mic_detect(struct snd_soc_codec *codec, struct snd_soc_jack *jack)
 }
 EXPORT_SYMBOL_GPL(wm8962_mic_detect);
 
-#if defined(CONFIG_INPUT) || defined(CONFIG_INPUT_MODULE)
+#if IS_ENABLED(CONFIG_INPUT)
 static int beep_rates[] = {
 	500, 1000, 2000, 4000,
 };
