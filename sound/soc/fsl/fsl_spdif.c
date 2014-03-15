@@ -1107,11 +1107,6 @@ static int fsl_spdif_probe(struct platform_device *pdev)
 
 	/* Get the addresses and IRQ */
 	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
-	if (!res) {
-		dev_err(&pdev->dev, "could not determine device resources\n");
-		return -ENXIO;
-	}
-
 	regs = devm_ioremap_resource(&pdev->dev, res);
 	if (IS_ERR(regs))
 		return PTR_ERR(regs);
@@ -1186,13 +1181,6 @@ static int fsl_spdif_probe(struct platform_device *pdev)
 	return ret;
 }
 
-static int fsl_spdif_remove(struct platform_device *pdev)
-{
-	imx_pcm_dma_exit(pdev);
-
-	return 0;
-}
-
 static const struct of_device_id fsl_spdif_dt_ids[] = {
 	{ .compatible = "fsl,imx35-spdif", },
 	{}
@@ -1206,7 +1194,6 @@ static struct platform_driver fsl_spdif_driver = {
 		.of_match_table = fsl_spdif_dt_ids,
 	},
 	.probe = fsl_spdif_probe,
-	.remove = fsl_spdif_remove,
 };
 
 module_platform_driver(fsl_spdif_driver);
