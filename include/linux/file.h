@@ -40,6 +40,9 @@ static inline void fdput(struct fd fd)
 }
 
 extern struct file *fget(unsigned int fd);
+#ifdef CONFIG_ANDROID
+extern struct file *fget_light(unsigned int fd, int *fput_needed);
+#endif
 extern struct file *fget_raw(unsigned int fd);
 extern unsigned long __fdget(unsigned int fd);
 extern unsigned long __fdget_raw(unsigned int fd);

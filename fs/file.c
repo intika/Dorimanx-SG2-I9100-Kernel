@@ -706,6 +706,32 @@ unsigned long __fdget(unsigned int fd)
 }
 EXPORT_SYMBOL(__fdget);
 
+#ifdef CONFIG_ANDROID
+struct file *___fget_light(unsigned int fd, fmode_t mask, int *fput_needed)
+{
+	struct files_struct *files = current->files;
+	struct file *file;
+
+	*fput_needed = 0;
+	if (atomic_read(&files->count) == 1) {
+		file = __fcheck_files(files, fd);
+		if (file && (file->f_mode & mask))
+			file = NULL;
+	} else {
+		file = __fget(fd, mask);
+		if (file)
+			*fput_needed = 1;
+	}
+
+	return file;
+}
+struct file *fget_light(unsigned int fd, int *fput_needed)
+{
+	return ___fget_light(fd, FMODE_PATH, fput_needed);
+}
+EXPORT_SYMBOL(fget_light);
+#endif
+
 unsigned long __fdget_raw(unsigned int fd)
 {
 	return __fget_light(fd, 0);
