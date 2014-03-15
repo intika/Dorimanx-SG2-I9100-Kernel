@@ -115,10 +115,13 @@ static ssize_t (*uverbs_cmd_table[])(struct ib_uverbs_file *file,
 	[IB_USER_VERBS_CMD_CLOSE_XRCD]		= ib_uverbs_close_xrcd,
 	[IB_USER_VERBS_CMD_CREATE_XSRQ]		= ib_uverbs_create_xsrq,
 	[IB_USER_VERBS_CMD_OPEN_QP]		= ib_uverbs_open_qp,
-#ifdef CONFIG_INFINIBAND_EXPERIMENTAL_UVERBS_FLOW_STEERING
-	[IB_USER_VERBS_CMD_CREATE_FLOW]		= ib_uverbs_create_flow,
-	[IB_USER_VERBS_CMD_DESTROY_FLOW]	= ib_uverbs_destroy_flow
-#endif /* CONFIG_INFINIBAND_EXPERIMENTAL_UVERBS_FLOW_STEERING */
+};
+
+static int (*uverbs_ex_cmd_table[])(struct ib_uverbs_file *file,
+				    struct ib_udata *ucore,
+				    struct ib_udata *uhw) = {
+	[IB_USER_VERBS_EX_CMD_CREATE_FLOW]	= ib_uverbs_ex_create_flow,
+	[IB_USER_VERBS_EX_CMD_DESTROY_FLOW]	= ib_uverbs_ex_destroy_flow
 };
 
 static void ib_uverbs_add_one(struct ib_device *device);
@@ -589,6 +592,7 @@ static ssize_t ib_uverbs_write(struct file *filp, const char __user *buf,
 {
 	struct ib_uverbs_file *file = filp->private_data;
 	struct ib_uverbs_cmd_hdr hdr;
+	__u32 flags;
 
 	if (count < sizeof hdr)
 		return -EINVAL;
@@ -596,35 +600,29 @@ static ssize_t ib_uverbs_write(struct file *filp, const char __user *buf,
 	if (copy_from_user(&hdr, buf, sizeof hdr))
 		return -EFAULT;
 
-	if (hdr.command >= ARRAY_SIZE(uverbs_cmd_table) ||
-	    !uverbs_cmd_table[hdr.command])
-		return -EINVAL;
+	flags = (hdr.command &
+		 IB_USER_VERBS_CMD_FLAGS_MASK) >> IB_USER_VERBS_CMD_FLAGS_SHIFT;
 
-	if (!file->ucontext &&
-	    hdr.command != IB_USER_VERBS_CMD_GET_CONTEXT)
-		return -EINVAL;
+	if (!flags) {
+		__u32 command;
 
-	if (!(file->device->ib_dev->uverbs_cmd_mask & (1ull << hdr.command)))
-		return -ENOSYS;
-
-#ifdef CONFIG_INFINIBAND_EXPERIMENTAL_UVERBS_FLOW_STEERING
-	if (hdr.command >= IB_USER_VERBS_CMD_THRESHOLD) {
-		struct ib_uverbs_cmd_hdr_ex hdr_ex;
-
-		if (copy_from_user(&hdr_ex, buf, sizeof(hdr_ex)))
-			return -EFAULT;
-
-		if (((hdr_ex.in_words + hdr_ex.provider_in_words) * 4) != count)
+		if (hdr.command & ~(__u32)(IB_USER_VERBS_CMD_FLAGS_MASK |
+					   IB_USER_VERBS_CMD_COMMAND_MASK))
 			return -EINVAL;
 
-		return uverbs_cmd_table[hdr.command](file,
-						     buf + sizeof(hdr_ex),
-						     (hdr_ex.in_words +
-						      hdr_ex.provider_in_words) * 4,
-						     (hdr_ex.out_words +
-						      hdr_ex.provider_out_words) * 4);
-	} else {
-#endif /* CONFIG_INFINIBAND_EXPERIMENTAL_UVERBS_FLOW_STEERING */
+		command = hdr.command & IB_USER_VERBS_CMD_COMMAND_MASK;
+
+		if (command >= ARRAY_SIZE(uverbs_cmd_table) ||
+		    !uverbs_cmd_table[command])
+			return -EINVAL;
+
+		if (!file->ucontext &&
+		    command != IB_USER_VERBS_CMD_GET_CONTEXT)
+			return -EINVAL;
+
+		if (!(file->device->ib_dev->uverbs_cmd_mask & (1ull << command)))
+			return -ENOSYS;
+
 		if (hdr.in_words * 4 != count)
 			return -EINVAL;
 
@@ -704,7 +702,8 @@ static ssize_t ib_uverbs_write(struct file *filp, const char __user *buf,
 
 		return written_count;
 	}
-#endif /* CONFIG_INFINIBAND_EXPERIMENTAL_UVERBS_FLOW_STEERING */
+
+	return -ENOSYS;
 }
 
 static int ib_uverbs_mmap(struct file *filp, struct vm_area_struct *vma)

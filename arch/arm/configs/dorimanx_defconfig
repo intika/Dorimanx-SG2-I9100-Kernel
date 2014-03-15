@@ -1,6 +1,6 @@
 #
 # Automatically generated file; DO NOT EDIT.
-# Linux/arm 3.14.0-rc4 Kernel Configuration
+# Linux/arm 3.14.0-rc6 Kernel Configuration
 #
 CONFIG_ARM=y
 CONFIG_GENERIC_GPIO=y
@@ -1252,6 +1252,7 @@ CONFIG_SW_SYNC_USER=y
 #
 # Bus devices
 #
+# CONFIG_ARM_CCI is not set
 # CONFIG_CONNECTOR is not set
 # CONFIG_PARPORT is not set
 CONFIG_ARCH_MIGHT_HAVE_PC_PARPORT=y
@@ -1809,7 +1810,6 @@ CONFIG_SPI_GPIO=y
 #
 # Enable PHYLIB and NETWORK_PHY_TIMESTAMPING to see the additional clocks.
 #
-# CONFIG_PTP_1588_CLOCK_PCH is not set
 CONFIG_ARCH_REQUIRE_GPIOLIB=y
 CONFIG_GPIO_DEVRES=y
 CONFIG_GPIOLIB=y

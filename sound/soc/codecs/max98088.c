@@ -568,8 +568,9 @@ static void m98088_eq_band(struct snd_soc_codec *codec, unsigned int dai,
        unsigned int eq_reg;
        unsigned int i;
 
-       BUG_ON(band > 4);
-       BUG_ON(dai > 1);
+	if (WARN_ON(band > 4) ||
+	    WARN_ON(dai > 1))
+		return;
 
        /* Load the base register address */
        eq_reg = dai ? M98088_REG_84_DAI2_EQ_BASE : M98088_REG_52_DAI1_EQ_BASE;
@@ -909,7 +910,8 @@ static int max98088_line_pga(struct snd_soc_dapm_widget *w,
        struct max98088_priv *max98088 = snd_soc_codec_get_drvdata(codec);
        u8 *state;
 
-       BUG_ON(!((channel == 1) || (channel == 2)));
+	if (WARN_ON(!(channel == 1 || channel == 2)))
+		return -EINVAL;
 
        switch (line) {
        case LINE_INA:
@@ -1231,12 +1233,12 @@ static int max98088_dai1_hw_params(struct snd_pcm_substream *substream,
 
        rate = params_rate(params);
 
-       switch (params_format(params)) {
-       case SNDRV_PCM_FORMAT_S16_LE:
+       switch (params_width(params)) {
+       case 16:
                snd_soc_update_bits(codec, M98088_REG_14_DAI1_FORMAT,
                        M98088_DAI_WS, 0);
                break;
-       case SNDRV_PCM_FORMAT_S24_LE:
+       case 24:
                snd_soc_update_bits(codec, M98088_REG_14_DAI1_FORMAT,
                        M98088_DAI_WS, M98088_DAI_WS);
                break;

@@ -1,10 +1,3 @@
-config MTD_NAND_IDS
-	tristate "Include chip ids for known NAND devices."
-	depends on MTD
-	help
-	  Useful for NAND drivers that do not use the NAND subsystem but
-	  still like to take advantage of the known chip information.
-
 config MTD_NAND_ECC
 	tristate
 
@@ -50,6 +43,7 @@ config MTD_SM_COMMON
 
 config MTD_NAND_DENALI
         tristate "Support Denali NAND controller"
+        depends on HAS_DMA
         help
 	  Enable support for the Denali NAND controller.  This should be
 	  combined with either the PCI or platform drivers to provide device
@@ -82,7 +76,7 @@ config MTD_NAND_DENALI_SCRATCH_REG_ADDR
 
 config MTD_NAND_GPIO
 	tristate "GPIO NAND Flash driver"
-	depends on GPIOLIB && ARM
+	depends on GPIOLIB
 	help
 	  This enables a GPIO based NAND flash driver.
 
@@ -101,7 +95,7 @@ config MTD_NAND_OMAP2
 	  platforms.
 
 config MTD_NAND_OMAP_BCH
-	depends on MTD_NAND && MTD_NAND_OMAP2 && ARCH_OMAP3
+	depends on MTD_NAND_OMAP2
 	tristate "Support hardware based BCH error correction"
 	default n
 	select BCH
@@ -111,6 +105,9 @@ config MTD_NAND_OMAP_BCH
 	  the cpu from doing ECC error searching and correction. However some
 	  legacy OMAP families like OMAP2xxx, OMAP3xxx do not have ELM engine
 	  so they should not enable this config symbol.
+
+config MTD_NAND_IDS
+	tristate
 
 config MTD_NAND_RICOH
 	tristate "Ricoh xD card reader"
@@ -329,11 +326,11 @@ config MTD_NAND_ATMEL
 	  on Atmel AT91 and AVR32 processors.
 
 config MTD_NAND_PXA3xx
-	tristate "Support for NAND flash devices on PXA3xx"
-	depends on PXA3xx || ARCH_MMP
+	tristate "NAND support on PXA3xx and Armada 370/XP"
+	depends on PXA3xx || ARCH_MMP || PLAT_ORION
 	help
 	  This enables the driver for the NAND flash device found on
-	  PXA3xx processors
+	  PXA3xx processors (NFCv1) and also on Armada 370/XP (NFCv2).
 
 config MTD_NAND_SLC_LPC32XX
 	tristate "NXP LPC32xx SLC Controller"
@@ -408,13 +405,6 @@ config MTD_NAND_PLATFORM
 	  devices. You will need to provide platform-specific functions
 	  via platform_data.
 
-config MTD_ALAUDA
-	tristate "MTD driver for Olympus MAUSB-10 and Fujifilm DPC-R1"
-	depends on USB
-	help
-	  These two (and possibly other) Alauda-based cardreaders for
-	  SmartMedia and xD allow raw flash access.
-
 config MTD_NAND_ORION
 	tristate "NAND Flash support for Marvell Orion SoC"
 	depends on PLAT_ORION
@@ -468,17 +458,17 @@ config MTD_NAND_MXC
 
 config MTD_NAND_SH_FLCTL
 	tristate "Support for NAND on Renesas SuperH FLCTL"
-	depends on SUPERH || ARCH_SHMOBILE
+	depends on SUPERH || ARCH_SHMOBILE || COMPILE_TEST
 	help
 	  Several Renesas SuperH CPU has FLCTL. This option enables support
 	  for NAND Flash using FLCTL.
 
 config MTD_NAND_DAVINCI
-        tristate "Support NAND on DaVinci SoC"
-        depends on ARCH_DAVINCI
+        tristate "Support NAND on DaVinci/Keystone SoC"
+        depends on ARCH_DAVINCI || (ARCH_KEYSTONE && TI_AEMIF)
         help
 	  Enable the driver for NAND flash chips on Texas Instruments
-	  DaVinci processors.
+	  DaVinci/Keystone processors.
 
 config MTD_NAND_TXX9NDFMC
 	tristate "NAND Flash support for TXx9 SoC"
