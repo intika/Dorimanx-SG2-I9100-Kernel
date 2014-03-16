@@ -359,7 +359,7 @@ CHECKFLAGS     := -D__linux__ -Dlinux -D__STDC__ -Dunix -D__unix__ \
 
 LOW_ARM_FLAGS	= -pipe -march=armv7-a -mcpu=cortex-a9 \
 		  -mtune=cortex-a9 -marm -mfpu=neon \
-		  -mfloat-abi=softfp -fno-pic -munaligned-access
+		  -mfloat-abi=softfp -fno-pic
 
 MODULES		= -fmodulo-sched -fmodulo-sched-allow-regmoves
 
@@ -602,10 +602,10 @@ ifdef CONFIG_CC_OPTIMIZE_FOR_SIZE
 KBUILD_CFLAGS	+= -Os $(call cc-disable-warning,maybe-uninitialized,)
 endif
 ifdef CONFIG_CC_OPTIMIZE_DEFAULT
-KBUILD_CFLAGS	+= -O2
+KBUILD_CFLAGS	+= -O2 -fno-inline-functions
 endif
 ifdef CONFIG_CC_OPTIMIZE_ALOT
-KBUILD_CFLAGS	+= -O3 $(call cc-disable-warning,maybe-uninitialized,)
+KBUILD_CFLAGS	+= -O3 $(call cc-disable-warning,maybe-uninitialized,) -fno-inline-functions
 endif
 
 include $(srctree)/arch/$(SRCARCH)/Makefile
