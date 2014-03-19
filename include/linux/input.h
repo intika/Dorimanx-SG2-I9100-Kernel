@@ -468,7 +468,9 @@ struct input_keymap_entry {
 #define KEY_WIMAX		246
 #define KEY_RFKILL		247	/* Key that controls all radios */
 
-#define KEY_POUND		248
+#define KEY_MICMUTE		248	/* Mute / unmute the microphone */
+
+//#define KEY_POUND		248
 #define KEY_STAR		249
 #define KEY_NETWORK		250
 
@@ -552,6 +554,11 @@ struct input_keymap_entry {
 #define BTN_WHEEL		0x150
 #define BTN_GEAR_DOWN		0x150
 #define BTN_GEAR_UP		0x151
+
+#define BTN_DPAD_UP		0x220
+#define BTN_DPAD_DOWN		0x221
+#define BTN_DPAD_LEFT		0x222
+#define BTN_DPAD_RIGHT		0x223
 
 #define KEY_OK			0x160
 #define KEY_SELECT		0x161
@@ -834,6 +841,8 @@ struct input_keymap_entry {
 #define ABS_MT_COMPONENT	0x3c	/* touch component */
 #define ABS_MT_PALM		0x3d	/* palm touch */
 #define ABS_MT_SUMSIZE		0x3d	/* touch sumsize */
+#define ABS_MT_TOOL_X		0x3c	/* Center X tool position */
+#define ABS_MT_TOOL_Y		0x3d	/* Center Y tool position */
 
 #ifdef __KERNEL__
 /* Implementation details, userspace should not care about these */

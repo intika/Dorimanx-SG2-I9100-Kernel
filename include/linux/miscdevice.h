@@ -42,6 +42,7 @@
 #define AUTOFS_MINOR		235
 #define MAPPER_CTRL_MINOR	236
 #define LOOP_CTRL_MINOR		237
+#define UHID_MINOR		239
 #define MISC_DYNAMIC_MINOR	255
 
 struct device;
