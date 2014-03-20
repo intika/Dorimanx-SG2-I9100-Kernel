@@ -456,7 +456,7 @@ struct sk_buff *ndisc_build_skb(struct net_device *dev,
 		len += ndisc_opt_addr_space(dev);
 
 	skb = alloc_skb((MAX_HEADER + sizeof(struct ipv6hdr) +
-			 len + hlen + tlen, GFP_ATOMIC);
+			 len + hlen + tlen), GFP_ATOMIC);
 	if (!skb) {
 		ND_PRINTK0(KERN_ERR
 			   "ICMPv6 ND: %s() failed to allocate an skb.\n",

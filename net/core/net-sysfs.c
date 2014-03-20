@@ -1124,6 +1124,7 @@ static void netdev_queue_release(struct kobject *kobj)
 	memset(kobj, 0, sizeof(*kobj));
 	dev_put(queue->dev);
 }
+#endif /* CONFIG_XPS */
 
 static const void *netdev_queue_namespace(struct kobject *kobj)
 {
@@ -1136,7 +1137,6 @@ static const void *netdev_queue_namespace(struct kobject *kobj)
 
 	return ns;
 }
-#endif /* CONFIG_XPS */
 
 static struct kobj_type netdev_queue_ktype = {
 	.sysfs_ops = &netdev_queue_sysfs_ops,
