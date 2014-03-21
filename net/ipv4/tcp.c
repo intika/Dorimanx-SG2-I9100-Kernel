@@ -3304,7 +3304,6 @@ void __init tcp_init(void)
 	sysctl_max_syn_backlog = max(128, cnt / 256);
 
 	/* Set per-socket limits to no more than 1/128 the pressure threshold */
-	limit = ((unsigned long)sysctl_tcp_mem[1]) << (PAGE_SHIFT - 7);
 	limit = ((unsigned long)init_net.ipv4.sysctl_tcp_mem[1])
 		<< (PAGE_SHIFT - 7);
 	max_wshare = min(4UL*1024*1024, limit);
