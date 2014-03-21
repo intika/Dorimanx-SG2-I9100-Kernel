@@ -595,7 +595,6 @@ static void icmpv6_notify(struct sk_buff *skb, u8 type, u8 code, __be32 info)
 	const struct inet6_protocol *ipprot;
 	int inner_offset;
 	int hash;
-	__be16 frag_off;
 	u8 nexthdr;
 	__be16 frag_off;
 
