@@ -41,8 +41,19 @@ static const struct dentry_operations anon_inodefs_dentry_operations = {
 static struct dentry *anon_inodefs_mount(struct file_system_type *fs_type,
 				int flags, const char *dev_name, void *data)
 {
-	return mount_pseudo(fs_type, "anon_inode:", NULL,
+	struct dentry *root;
+	root = mount_pseudo(fs_type, "anon_inode:", NULL,
 			&anon_inodefs_dentry_operations, ANON_INODE_FS_MAGIC);
+	if (!IS_ERR(root)) {
+		struct super_block *s = root->d_sb;
+		anon_inode_inode = alloc_anon_inode(s);
+		if (IS_ERR(anon_inode_inode)) {
+			dput(root);
+			deactivate_locked_super(s);
+			root = ERR_CAST(anon_inode_inode);
+		}
+	}
+	return root;
 }
 
 static struct file_system_type anon_inode_fs_type = {
@@ -164,15 +175,19 @@ EXPORT_SYMBOL_GPL(anon_inode_getfd);
 
 static int __init anon_inode_init(void)
 {
+	int error;
+
 	anon_inode_mnt = kern_mount(&anon_inode_fs_type);
-	if (IS_ERR(anon_inode_mnt))
-		panic("anon_inode_init() kernel mount failed (%ld)\n", PTR_ERR(anon_inode_mnt));
-
-	anon_inode_inode = alloc_anon_inode(anon_inode_mnt->mnt_sb);
-	if (IS_ERR(anon_inode_inode))
-		panic("anon_inode_init() inode allocation failed (%ld)\n", PTR_ERR(anon_inode_inode));
-
+	if (IS_ERR(anon_inode_mnt)) {
+		error = PTR_ERR(anon_inode_mnt);
+		goto err_unregister_filesystem;
+	}
 	return 0;
+
+err_unregister_filesystem:
+	unregister_filesystem(&anon_inode_fs_type);
+err_exit:
+	panic(KERN_ERR "anon_inode_init() failed (%d)\n", error);
 }
 
 fs_initcall(anon_inode_init);
