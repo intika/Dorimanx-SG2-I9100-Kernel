@@ -24,11 +24,17 @@
  *
  * Please send any bug reports or fixes you make to the
  * email address(es):
- *    lksctp developers <linux-sctp@vger.kernel.org>
+ *    lksctp developers <lksctp-developers@lists.sourceforge.net>
+ *
+ * Or submit a bug report through the following website:
+ *    http://www.sf.net/projects/lksctp
  *
  * Written or modified by:
  *    Jon Grimm             <jgrimm@us.ibm.com>
  *    Sridhar Samudrala     <sri@us.ibm.com>
+ *
+ * Any bugs reported given to us we will try to fix... any fixes shared will
+ * be incorporated into the next SCTP release.
  */
 
 #define pr_fmt(fmt) KBUILD_MODNAME ": " fmt
@@ -60,7 +66,7 @@ static void sctp_datamsg_init(struct sctp_datamsg *msg)
 }
 
 /* Allocate and initialize datamsg. */
-static struct sctp_datamsg *sctp_datamsg_new(gfp_t gfp)
+SCTP_STATIC struct sctp_datamsg *sctp_datamsg_new(gfp_t gfp)
 {
 	struct sctp_datamsg *msg;
 	msg = kmalloc(sizeof(struct sctp_datamsg), gfp);
@@ -177,7 +183,7 @@ struct sctp_datamsg *sctp_datamsg_from_user(struct sctp_association *asoc,
 
 	msg = sctp_datamsg_new(GFP_KERNEL);
 	if (!msg)
-		return ERR_PTR(-ENOMEM);
+		return NULL;
 
 	/* Note: Calculate this outside of the loop, so that all fragments
 	 * have the same expiration.
@@ -187,21 +193,20 @@ struct sctp_datamsg *sctp_datamsg_from_user(struct sctp_association *asoc,
 		msg->expires_at = jiffies +
 				    msecs_to_jiffies(sinfo->sinfo_timetolive);
 		msg->can_abandon = 1;
-
-		pr_debug("%s: msg:%p expires_at:%ld jiffies:%ld\n", __func__,
-			 msg, msg->expires_at, jiffies);
+		SCTP_DEBUG_PRINTK("%s: msg:%p expires_at: %ld jiffies:%ld\n",
+				  __func__, msg, msg->expires_at, jiffies);
 	}
 
 	/* This is the biggest possible DATA chunk that can fit into
 	 * the packet
 	 */
-	max_data = (asoc->pathmtu -
+	max_data = asoc->pathmtu -
 		sctp_sk(asoc->base.sk)->pf->af->net_header_len -
-		sizeof(struct sctphdr) - sizeof(struct sctp_data_chunk)) & ~3;
+		sizeof(struct sctphdr) - sizeof(struct sctp_data_chunk);
 
 	max = asoc->frag_point;
 	/* If the the peer requested that we authenticate DATA chunks
-	 * we need to account for bundling of the AUTH chunks along with
+	 * we need to accound for bundling of the AUTH chunks along with
 	 * DATA.
 	 */
 	if (sctp_auth_send_cid(SCTP_CID_DATA, asoc)) {
@@ -252,7 +257,7 @@ struct sctp_datamsg *sctp_datamsg_from_user(struct sctp_association *asoc,
 	offset = 0;
 
 	if ((whole > 1) || (whole && over))
-		SCTP_INC_STATS_USER(sock_net(asoc->base.sk), SCTP_MIB_FRAGUSRMSGS);
+		SCTP_INC_STATS_USER(SCTP_MIB_FRAGUSRMSGS);
 
 	/* Create chunks for all the full sized DATA chunks. */
 	for (i=0, len=first_len; i < whole; i++) {
@@ -275,14 +280,11 @@ struct sctp_datamsg *sctp_datamsg_from_user(struct sctp_association *asoc,
 
 		chunk = sctp_make_datafrag_empty(asoc, sinfo, len, frag, 0);
 
-		if (!chunk) {
-			err = -ENOMEM;
+		if (!chunk)
 			goto errout;
-		}
-
 		err = sctp_user_addto_chunk(chunk, offset, len, msgh->msg_iov);
 		if (err < 0)
-			goto errout_chunk_free;
+			goto errout;
 
 		offset += len;
 
@@ -313,10 +315,8 @@ struct sctp_datamsg *sctp_datamsg_from_user(struct sctp_association *asoc,
 
 		chunk = sctp_make_datafrag_empty(asoc, sinfo, over, frag, 0);
 
-		if (!chunk) {
-			err = -ENOMEM;
+		if (!chunk)
 			goto errout;
-		}
 
 		err = sctp_user_addto_chunk(chunk, offset, over,msgh->msg_iov);
 
@@ -324,16 +324,13 @@ struct sctp_datamsg *sctp_datamsg_from_user(struct sctp_association *asoc,
 		__skb_pull(chunk->skb, (__u8 *)chunk->chunk_hdr
 			   - (__u8 *)chunk->skb->data);
 		if (err < 0)
-			goto errout_chunk_free;
+			goto errout;
 
 		sctp_datamsg_assign(msg, chunk);
 		list_add_tail(&chunk->frag_list, &msg->chunks);
 	}
 
 	return msg;
-
-errout_chunk_free:
-	sctp_chunk_free(chunk);
 
 errout:
 	list_for_each_safe(pos, temp, &msg->chunks) {
@@ -342,7 +339,7 @@ errout:
 		sctp_chunk_free(chunk);
 	}
 	sctp_datamsg_put(msg);
-	return ERR_PTR(err);
+	return NULL;
 }
 
 /* Check whether this message has expired. */

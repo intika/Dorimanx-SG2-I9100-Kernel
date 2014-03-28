@@ -37,6 +37,7 @@
 #include <linux/param.h> /* for HZ */
 #include <linux/uaccess.h>
 #include <asm/byteorder.h> /* for htons etc. */
+#include <asm/system.h> /* save/restore_flags */
 #include <linux/atomic.h>
 
 #include "common.h"
@@ -329,8 +330,6 @@ static netdev_tx_t clip_start_xmit(struct sk_buff *skb,
 	struct atmarp_entry *entry;
 	struct neighbour *n;
 	struct atm_vcc *vcc;
-	struct rtable *rt;
-	__be32 *daddr;
 	int old;
 	unsigned long flags;
 
@@ -341,12 +340,7 @@ static netdev_tx_t clip_start_xmit(struct sk_buff *skb,
 		dev->stats.tx_dropped++;
 		return NETDEV_TX_OK;
 	}
-	rt = (struct rtable *) dst;
-	if (rt->rt_gateway)
-		daddr = &rt->rt_gateway;
-	else
-		daddr = &ip_hdr(skb)->daddr;
-	n = dst_neigh_lookup(dst, daddr);
+	n = dst_get_neighbour_noref(dst);
 	if (!n) {
 		pr_err("NO NEIGHBOUR !\n");
 		dev_kfree_skb(skb);
@@ -366,7 +360,7 @@ static netdev_tx_t clip_start_xmit(struct sk_buff *skb,
 			dev_kfree_skb(skb);
 			dev->stats.tx_dropped++;
 		}
-		goto out_release_neigh;
+		return NETDEV_TX_OK;
 	}
 	pr_debug("neigh %p, vccs %p\n", entry, entry->vccs);
 	ATM_SKB(skb)->vcc = vcc = entry->vccs->vcc;
@@ -385,14 +379,14 @@ static netdev_tx_t clip_start_xmit(struct sk_buff *skb,
 	old = xchg(&entry->vccs->xoff, 1);	/* assume XOFF ... */
 	if (old) {
 		pr_warning("XOFF->XOFF transition\n");
-		goto out_release_neigh;
+		return NETDEV_TX_OK;
 	}
 	dev->stats.tx_packets++;
 	dev->stats.tx_bytes += skb->len;
 	vcc->send(vcc, skb);
 	if (atm_may_send(vcc, 0)) {
 		entry->vccs->xoff = 0;
-		goto out_release_neigh;
+		return NETDEV_TX_OK;
 	}
 	spin_lock_irqsave(&clip_priv->xoff_lock, flags);
 	netif_stop_queue(dev);	/* XOFF -> throttle immediately */
@@ -404,8 +398,6 @@ static netdev_tx_t clip_start_xmit(struct sk_buff *skb,
 	   of the brief netif_stop_queue. If this isn't true or if it
 	   changes, use netif_wake_queue instead. */
 	spin_unlock_irqrestore(&clip_priv->xoff_lock, flags);
-out_release_neigh:
-	neigh_release(n);
 	return NETDEV_TX_OK;
 }
 
@@ -539,9 +531,9 @@ static int clip_create(int number)
 }
 
 static int clip_device_event(struct notifier_block *this, unsigned long event,
-			     void *ptr)
+			     void *arg)
 {
-	struct net_device *dev = netdev_notifier_info_to_dev(ptr);
+	struct net_device *dev = arg;
 
 	if (!net_eq(dev_net(dev), &init_net))
 		return NOTIFY_DONE;
@@ -575,7 +567,6 @@ static int clip_inet_event(struct notifier_block *this, unsigned long event,
 			   void *ifa)
 {
 	struct in_device *in_dev;
-	struct netdev_notifier_info info;
 
 	in_dev = ((struct in_ifaddr *)ifa)->ifa_dev;
 	/*
@@ -584,8 +575,7 @@ static int clip_inet_event(struct notifier_block *this, unsigned long event,
 	 */
 	if (event != NETDEV_UP)
 		return NOTIFY_DONE;
-	netdev_notifier_info_init(&info, in_dev->dev);
-	return clip_device_event(this, NETDEV_CHANGE, &info);
+	return clip_device_event(this, NETDEV_CHANGE, in_dev->dev);
 }
 
 static struct notifier_block clip_dev_notifier = {

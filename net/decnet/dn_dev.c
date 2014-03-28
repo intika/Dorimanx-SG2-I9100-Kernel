@@ -42,6 +42,7 @@
 #include <linux/notifier.h>
 #include <linux/slab.h>
 #include <asm/uaccess.h>
+#include <asm/system.h>
 #include <net/net_namespace.h>
 #include <net/neighbour.h>
 #include <net/dst.h>
@@ -158,11 +159,11 @@ static int max_t3[] = { 8191 }; /* Must fit in 16 bits when multiplied by BCT3MU
 static int min_priority[1];
 static int max_priority[] = { 127 }; /* From DECnet spec */
 
-static int dn_forwarding_proc(struct ctl_table *, int,
+static int dn_forwarding_proc(ctl_table *, int,
 			void __user *, size_t *, loff_t *);
 static struct dn_dev_sysctl_table {
 	struct ctl_table_header *sysctl_header;
-	struct ctl_table dn_dev_vars[5];
+	ctl_table dn_dev_vars[5];
 } dn_dev_sysctl = {
 	NULL,
 	{
@@ -209,7 +210,15 @@ static void dn_dev_sysctl_register(struct net_device *dev, struct dn_dev_parms *
 	struct dn_dev_sysctl_table *t;
 	int i;
 
-	char path[sizeof("net/decnet/conf/") + IFNAMSIZ];
+#define DN_CTL_PATH_DEV	3
+
+	struct ctl_path dn_ctl_path[] = {
+		{ .procname = "net",  },
+		{ .procname = "decnet",  },
+		{ .procname = "conf",  },
+		{ /* to be set */ },
+		{ },
+	};
 
 	t = kmemdup(&dn_dev_sysctl, sizeof(*t), GFP_KERNEL);
 	if (t == NULL)
@@ -220,12 +229,15 @@ static void dn_dev_sysctl_register(struct net_device *dev, struct dn_dev_parms *
 		t->dn_dev_vars[i].data = ((char *)parms) + offset;
 	}
 
-	snprintf(path, sizeof(path), "net/decnet/conf/%s",
-		dev? dev->name : parms->name);
+	if (dev) {
+		dn_ctl_path[DN_CTL_PATH_DEV].procname = dev->name;
+	} else {
+		dn_ctl_path[DN_CTL_PATH_DEV].procname = parms->name;
+	}
 
 	t->dn_dev_vars[0].extra1 = (void *)dev;
 
-	t->sysctl_header = register_net_sysctl(&init_net, path, t->dn_dev_vars);
+	t->sysctl_header = register_sysctl_paths(dn_ctl_path, t->dn_dev_vars);
 	if (t->sysctl_header == NULL)
 		kfree(t);
 	else
@@ -237,12 +249,12 @@ static void dn_dev_sysctl_unregister(struct dn_dev_parms *parms)
 	if (parms->sysctl) {
 		struct dn_dev_sysctl_table *t = parms->sysctl;
 		parms->sysctl = NULL;
-		unregister_net_sysctl_table(t->sysctl_header);
+		unregister_sysctl_table(t->sysctl_header);
 		kfree(t);
 	}
 }
 
-static int dn_forwarding_proc(struct ctl_table *table, int write,
+static int dn_forwarding_proc(ctl_table *table, int write,
 				void __user *buffer,
 				size_t *lenp, loff_t *ppos)
 {
@@ -563,7 +575,7 @@ static const struct nla_policy dn_ifa_policy[IFA_MAX+1] = {
 				    .len = IFNAMSIZ - 1 },
 };
 
-static int dn_nl_deladdr(struct sk_buff *skb, struct nlmsghdr *nlh)
+static int dn_nl_deladdr(struct sk_buff *skb, struct nlmsghdr *nlh, void *arg)
 {
 	struct net *net = sock_net(skb->sk);
 	struct nlattr *tb[IFA_MAX+1];
@@ -572,9 +584,6 @@ static int dn_nl_deladdr(struct sk_buff *skb, struct nlmsghdr *nlh)
 	struct dn_ifaddr *ifa;
 	struct dn_ifaddr __rcu **ifap;
 	int err = -EINVAL;
-
-	if (!capable(CAP_NET_ADMIN))
-		return -EPERM;
 
 	if (!net_eq(net, &init_net))
 		goto errout;
@@ -607,7 +616,7 @@ errout:
 	return err;
 }
 
-static int dn_nl_newaddr(struct sk_buff *skb, struct nlmsghdr *nlh)
+static int dn_nl_newaddr(struct sk_buff *skb, struct nlmsghdr *nlh, void *arg)
 {
 	struct net *net = sock_net(skb->sk);
 	struct nlattr *tb[IFA_MAX+1];
@@ -616,9 +625,6 @@ static int dn_nl_newaddr(struct sk_buff *skb, struct nlmsghdr *nlh)
 	struct ifaddrmsg *ifm;
 	struct dn_ifaddr *ifa;
 	int err;
-
-	if (!capable(CAP_NET_ADMIN))
-		return -EPERM;
 
 	if (!net_eq(net, &init_net))
 		return -EINVAL;
@@ -673,12 +679,12 @@ static inline size_t dn_ifaddr_nlmsg_size(void)
 }
 
 static int dn_nl_fill_ifaddr(struct sk_buff *skb, struct dn_ifaddr *ifa,
-			     u32 portid, u32 seq, int event, unsigned int flags)
+			     u32 pid, u32 seq, int event, unsigned int flags)
 {
 	struct ifaddrmsg *ifm;
 	struct nlmsghdr *nlh;
 
-	nlh = nlmsg_put(skb, portid, seq, event, sizeof(*ifm), flags);
+	nlh = nlmsg_put(skb, pid, seq, event, sizeof(*ifm), flags);
 	if (nlh == NULL)
 		return -EMSGSIZE;
 
@@ -689,13 +695,13 @@ static int dn_nl_fill_ifaddr(struct sk_buff *skb, struct dn_ifaddr *ifa,
 	ifm->ifa_scope = ifa->ifa_scope;
 	ifm->ifa_index = ifa->ifa_dev->dev->ifindex;
 
-	if ((ifa->ifa_address &&
-	     nla_put_le16(skb, IFA_ADDRESS, ifa->ifa_address)) ||
-	    (ifa->ifa_local &&
-	     nla_put_le16(skb, IFA_LOCAL, ifa->ifa_local)) ||
-	    (ifa->ifa_label[0] &&
-	     nla_put_string(skb, IFA_LABEL, ifa->ifa_label)))
-		goto nla_put_failure;
+	if (ifa->ifa_address)
+		NLA_PUT_LE16(skb, IFA_ADDRESS, ifa->ifa_address);
+	if (ifa->ifa_local)
+		NLA_PUT_LE16(skb, IFA_LOCAL, ifa->ifa_local);
+	if (ifa->ifa_label[0])
+		NLA_PUT_STRING(skb, IFA_LABEL, ifa->ifa_label);
+
 	return nlmsg_end(skb, nlh);
 
 nla_put_failure:
@@ -759,7 +765,7 @@ static int dn_nl_dump_ifaddr(struct sk_buff *skb, struct netlink_callback *cb)
 			if (dn_idx < skip_naddr)
 				continue;
 
-			if (dn_nl_fill_ifaddr(skb, ifa, NETLINK_CB(cb->skb).portid,
+			if (dn_nl_fill_ifaddr(skb, ifa, NETLINK_CB(cb->skb).pid,
 					      cb->nlh->nlmsg_seq, RTM_NEWADDR,
 					      NLM_F_MULTI) < 0)
 				goto done;
@@ -1412,7 +1418,7 @@ void __init dn_dev_init(void)
 	rtnl_register(PF_DECnet, RTM_DELADDR, dn_nl_deladdr, NULL, NULL);
 	rtnl_register(PF_DECnet, RTM_GETADDR, NULL, dn_nl_dump_ifaddr, NULL);
 
-	proc_create("decnet_dev", S_IRUGO, init_net.proc_net, &dn_dev_seq_fops);
+	proc_net_fops_create(&init_net, "decnet_dev", S_IRUGO, &dn_dev_seq_fops);
 
 #ifdef CONFIG_SYSCTL
 	{
@@ -1433,7 +1439,7 @@ void __exit dn_dev_cleanup(void)
 	}
 #endif /* CONFIG_SYSCTL */
 
-	remove_proc_entry("decnet_dev", init_net.proc_net);
+	proc_net_remove(&init_net, "decnet_dev");
 
 	dn_dev_devices_off();
 }

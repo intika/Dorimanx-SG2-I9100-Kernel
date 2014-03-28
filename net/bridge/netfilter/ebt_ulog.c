@@ -35,13 +35,12 @@
 #include <linux/skbuff.h>
 #include <linux/kernel.h>
 #include <linux/timer.h>
-#include <net/netlink.h>
+#include <linux/netlink.h>
 #include <linux/netdevice.h>
 #include <linux/netfilter/x_tables.h>
 #include <linux/netfilter_bridge/ebtables.h>
 #include <linux/netfilter_bridge/ebt_ulog.h>
 #include <net/netfilter/nf_log.h>
-#include <net/netns/generic.h>
 #include <net/sock.h>
 #include "../br_private.h"
 
@@ -63,24 +62,16 @@ typedef struct {
 	spinlock_t lock;		/* the per-queue lock */
 } ebt_ulog_buff_t;
 
-static int ebt_ulog_net_id __read_mostly;
-struct ebt_ulog_net {
-	unsigned int nlgroup[EBT_ULOG_MAXNLGROUPS];
-	ebt_ulog_buff_t ulog_buffers[EBT_ULOG_MAXNLGROUPS];
-	struct sock *ebtulognl;
-};
-
-static struct ebt_ulog_net *ebt_ulog_pernet(struct net *net)
-{
-	return net_generic(net, ebt_ulog_net_id);
-}
+static ebt_ulog_buff_t ulog_buffers[EBT_ULOG_MAXNLGROUPS];
+static struct sock *ebtulognl;
 
 /* send one ulog_buff_t to userspace */
-static void ulog_send(struct ebt_ulog_net *ebt, unsigned int nlgroup)
+static void ulog_send(unsigned int nlgroup)
 {
-	ebt_ulog_buff_t *ub = &ebt->ulog_buffers[nlgroup];
+	ebt_ulog_buff_t *ub = &ulog_buffers[nlgroup];
 
-	del_timer(&ub->timer);
+	if (timer_pending(&ub->timer))
+		del_timer(&ub->timer);
 
 	if (!ub->skb)
 		return;
@@ -90,7 +81,7 @@ static void ulog_send(struct ebt_ulog_net *ebt, unsigned int nlgroup)
 		ub->lastnlh->nlmsg_type = NLMSG_DONE;
 
 	NETLINK_CB(ub->skb).dst_group = nlgroup + 1;
-	netlink_broadcast(ebt->ebtulognl, ub->skb, 0, nlgroup + 1, GFP_ATOMIC);
+	netlink_broadcast(ebtulognl, ub->skb, 0, nlgroup + 1, GFP_ATOMIC);
 
 	ub->qlen = 0;
 	ub->skb = NULL;
@@ -99,15 +90,10 @@ static void ulog_send(struct ebt_ulog_net *ebt, unsigned int nlgroup)
 /* timer function to flush queue in flushtimeout time */
 static void ulog_timer(unsigned long data)
 {
-	struct ebt_ulog_net *ebt = container_of((void *)data,
-						struct ebt_ulog_net,
-						nlgroup[*(unsigned int *)data]);
-
-	ebt_ulog_buff_t *ub = &ebt->ulog_buffers[*(unsigned int *)data];
-	spin_lock_bh(&ub->lock);
-	if (ub->skb)
-		ulog_send(ebt, *(unsigned int *)data);
-	spin_unlock_bh(&ub->lock);
+	spin_lock_bh(&ulog_buffers[data].lock);
+	if (ulog_buffers[data].skb)
+		ulog_send(data);
+	spin_unlock_bh(&ulog_buffers[data].lock);
 }
 
 static struct sk_buff *ulog_alloc_skb(unsigned int size)
@@ -131,19 +117,15 @@ static struct sk_buff *ulog_alloc_skb(unsigned int size)
 	return skb;
 }
 
-static void ebt_ulog_packet(struct net *net, unsigned int hooknr,
-			    const struct sk_buff *skb,
-			    const struct net_device *in,
-			    const struct net_device *out,
-			    const struct ebt_ulog_info *uloginfo,
-			    const char *prefix)
+static void ebt_ulog_packet(unsigned int hooknr, const struct sk_buff *skb,
+   const struct net_device *in, const struct net_device *out,
+   const struct ebt_ulog_info *uloginfo, const char *prefix)
 {
 	ebt_ulog_packet_msg_t *pm;
 	size_t size, copy_len;
 	struct nlmsghdr *nlh;
-	struct ebt_ulog_net *ebt = ebt_ulog_pernet(net);
 	unsigned int group = uloginfo->nlgroup;
-	ebt_ulog_buff_t *ub = &ebt->ulog_buffers[group];
+	ebt_ulog_buff_t *ub = &ulog_buffers[group];
 	spinlock_t *lock = &ub->lock;
 	ktime_t kt;
 
@@ -153,7 +135,7 @@ static void ebt_ulog_packet(struct net *net, unsigned int hooknr,
 	else
 		copy_len = uloginfo->cprange;
 
-	size = nlmsg_total_size(sizeof(*pm) + copy_len);
+	size = NLMSG_SPACE(sizeof(*pm) + copy_len);
 	if (size > nlbufsiz) {
 		pr_debug("Size %Zd needed, but nlbufsiz=%d\n", size, nlbufsiz);
 		return;
@@ -163,25 +145,19 @@ static void ebt_ulog_packet(struct net *net, unsigned int hooknr,
 
 	if (!ub->skb) {
 		if (!(ub->skb = ulog_alloc_skb(size)))
-			goto unlock;
+			goto alloc_failure;
 	} else if (size > skb_tailroom(ub->skb)) {
-		ulog_send(ebt, group);
+		ulog_send(group);
 
 		if (!(ub->skb = ulog_alloc_skb(size)))
-			goto unlock;
+			goto alloc_failure;
 	}
 
-	nlh = nlmsg_put(ub->skb, 0, ub->qlen, 0,
-			size - NLMSG_ALIGN(sizeof(*nlh)), 0);
-	if (!nlh) {
-		kfree_skb(ub->skb);
-		ub->skb = NULL;
-		goto unlock;
-	}
+	nlh = NLMSG_PUT(ub->skb, 0, ub->qlen, 0,
+			size - NLMSG_ALIGN(sizeof(*nlh)));
 	ub->qlen++;
 
-	pm = nlmsg_data(nlh);
-	memset(pm, 0, sizeof(*pm));
+	pm = NLMSG_DATA(nlh);
 
 	/* Fill in the ulog data */
 	pm->version = EBT_ULOG_VERSION;
@@ -194,6 +170,8 @@ static void ebt_ulog_packet(struct net *net, unsigned int hooknr,
 	pm->hook = hooknr;
 	if (uloginfo->prefix != NULL)
 		strcpy(pm->prefix, uloginfo->prefix);
+	else
+		*(pm->prefix) = '\0';
 
 	if (in) {
 		strcpy(pm->physindev, in->name);
@@ -203,14 +181,16 @@ static void ebt_ulog_packet(struct net *net, unsigned int hooknr,
 			strcpy(pm->indev, br_port_get_rcu(in)->br->dev->name);
 		else
 			strcpy(pm->indev, in->name);
-	}
+	} else
+		pm->indev[0] = pm->physindev[0] = '\0';
 
 	if (out) {
 		/* If out exists, then out is a bridge port */
 		strcpy(pm->physoutdev, out->name);
 		/* rcu_read_lock()ed by nf_hook_slow */
 		strcpy(pm->outdev, br_port_get_rcu(out)->br->dev->name);
-	}
+	} else
+		pm->outdev[0] = pm->physoutdev[0] = '\0';
 
 	if (skb_copy_bits(skb, -ETH_HLEN, pm->data, copy_len) < 0)
 		BUG();
@@ -221,7 +201,7 @@ static void ebt_ulog_packet(struct net *net, unsigned int hooknr,
 	ub->lastnlh = nlh;
 
 	if (ub->qlen >= uloginfo->qthreshold)
-		ulog_send(ebt, group);
+		ulog_send(group);
 	else if (!timer_pending(&ub->timer)) {
 		ub->timer.expires = jiffies + flushtimeout * HZ / 100;
 		add_timer(&ub->timer);
@@ -229,10 +209,18 @@ static void ebt_ulog_packet(struct net *net, unsigned int hooknr,
 
 unlock:
 	spin_unlock_bh(lock);
+
+	return;
+
+nlmsg_failure:
+	pr_debug("error during NLMSG_PUT. This should "
+		 "not happen, please report to author.\n");
+alloc_failure:
+	goto unlock;
 }
 
 /* this function is registered with the netfilter core */
-static void ebt_log_packet(struct net *net, u_int8_t pf, unsigned int hooknum,
+static void ebt_log_packet(u_int8_t pf, unsigned int hooknum,
    const struct sk_buff *skb, const struct net_device *in,
    const struct net_device *out, const struct nf_loginfo *li,
    const char *prefix)
@@ -251,15 +239,13 @@ static void ebt_log_packet(struct net *net, u_int8_t pf, unsigned int hooknum,
 		strlcpy(loginfo.prefix, prefix, sizeof(loginfo.prefix));
 	}
 
-	ebt_ulog_packet(net, hooknum, skb, in, out, &loginfo, prefix);
+	ebt_ulog_packet(hooknum, skb, in, out, &loginfo, prefix);
 }
 
 static unsigned int
 ebt_ulog_tg(struct sk_buff *skb, const struct xt_action_param *par)
 {
-	struct net *net = dev_net(par->in ? par->in : par->out);
-
-	ebt_ulog_packet(net, par->hooknum, skb, par->in, par->out,
+	ebt_ulog_packet(par->hooknum, skb, par->in, par->out,
 	                par->targinfo, NULL);
 	return EBT_CONTINUE;
 }
@@ -267,12 +253,6 @@ ebt_ulog_tg(struct sk_buff *skb, const struct xt_action_param *par)
 static int ebt_ulog_tg_check(const struct xt_tgchk_param *par)
 {
 	struct ebt_ulog_info *uloginfo = par->targinfo;
-
-	if (!par->net->xt.ebt_ulog_warn_deprecated) {
-		pr_info("ebt_ulog is deprecated and it will be removed soon, "
-			"use ebt_nflog instead\n");
-		par->net->xt.ebt_ulog_warn_deprecated = true;
-	}
 
 	if (uloginfo->nlgroup > 31)
 		return -EINVAL;
@@ -301,89 +281,56 @@ static struct nf_logger ebt_ulog_logger __read_mostly = {
 	.me		= THIS_MODULE,
 };
 
-static int __net_init ebt_ulog_net_init(struct net *net)
-{
-	int i;
-	struct ebt_ulog_net *ebt = ebt_ulog_pernet(net);
-
-	struct netlink_kernel_cfg cfg = {
-		.groups	= EBT_ULOG_MAXNLGROUPS,
-	};
-
-	/* initialize ulog_buffers */
-	for (i = 0; i < EBT_ULOG_MAXNLGROUPS; i++) {
-		ebt->nlgroup[i] = i;
-		setup_timer(&ebt->ulog_buffers[i].timer, ulog_timer,
-			    (unsigned long)&ebt->nlgroup[i]);
-		spin_lock_init(&ebt->ulog_buffers[i].lock);
-	}
-
-	ebt->ebtulognl = netlink_kernel_create(net, NETLINK_NFLOG, &cfg);
-	if (!ebt->ebtulognl)
-		return -ENOMEM;
-
-	nf_log_set(net, NFPROTO_BRIDGE, &ebt_ulog_logger);
-	return 0;
-}
-
-static void __net_exit ebt_ulog_net_fini(struct net *net)
-{
-	int i;
-	struct ebt_ulog_net *ebt = ebt_ulog_pernet(net);
-
-	nf_log_unset(net, &ebt_ulog_logger);
-	for (i = 0; i < EBT_ULOG_MAXNLGROUPS; i++) {
-		ebt_ulog_buff_t *ub = &ebt->ulog_buffers[i];
-		del_timer(&ub->timer);
-
-		if (ub->skb) {
-			kfree_skb(ub->skb);
-			ub->skb = NULL;
-		}
-	}
-	netlink_kernel_release(ebt->ebtulognl);
-}
-
-static struct pernet_operations ebt_ulog_net_ops = {
-	.init = ebt_ulog_net_init,
-	.exit = ebt_ulog_net_fini,
-	.id   = &ebt_ulog_net_id,
-	.size = sizeof(struct ebt_ulog_net),
-};
-
 static int __init ebt_ulog_init(void)
 {
 	int ret;
+	int i;
 
 	if (nlbufsiz >= 128*1024) {
-		pr_warn("Netlink buffer has to be <= 128kB,"
-			"please try a smaller nlbufsiz parameter.\n");
+		pr_warning("Netlink buffer has to be <= 128kB,"
+			   " please try a smaller nlbufsiz parameter.\n");
 		return -EINVAL;
 	}
 
-	ret = register_pernet_subsys(&ebt_ulog_net_ops);
-	if (ret)
-		goto out_pernet;
+	/* initialize ulog_buffers */
+	for (i = 0; i < EBT_ULOG_MAXNLGROUPS; i++) {
+		setup_timer(&ulog_buffers[i].timer, ulog_timer, i);
+		spin_lock_init(&ulog_buffers[i].lock);
+	}
 
-	ret = xt_register_target(&ebt_ulog_tg_reg);
-	if (ret)
-		goto out_target;
+	ebtulognl = netlink_kernel_create(&init_net, NETLINK_NFLOG,
+					  EBT_ULOG_MAXNLGROUPS, NULL, NULL,
+					  THIS_MODULE);
+	if (!ebtulognl)
+		ret = -ENOMEM;
+	else if ((ret = xt_register_target(&ebt_ulog_tg_reg)) != 0)
+		netlink_kernel_release(ebtulognl);
 
-	nf_log_register(NFPROTO_BRIDGE, &ebt_ulog_logger);
+	if (ret == 0)
+		nf_log_register(NFPROTO_BRIDGE, &ebt_ulog_logger);
 
-	return 0;
-
-out_target:
-	unregister_pernet_subsys(&ebt_ulog_net_ops);
-out_pernet:
 	return ret;
 }
 
 static void __exit ebt_ulog_fini(void)
 {
+	ebt_ulog_buff_t *ub;
+	int i;
+
 	nf_log_unregister(&ebt_ulog_logger);
 	xt_unregister_target(&ebt_ulog_tg_reg);
-	unregister_pernet_subsys(&ebt_ulog_net_ops);
+	for (i = 0; i < EBT_ULOG_MAXNLGROUPS; i++) {
+		ub = &ulog_buffers[i];
+		if (timer_pending(&ub->timer))
+			del_timer(&ub->timer);
+		spin_lock_bh(&ub->lock);
+		if (ub->skb) {
+			kfree_skb(ub->skb);
+			ub->skb = NULL;
+		}
+		spin_unlock_bh(&ub->lock);
+	}
+	netlink_kernel_release(ebtulognl);
 }
 
 module_init(ebt_ulog_init);

@@ -24,7 +24,7 @@
    SOFTWARE IS DISCLAIMED.
 */
 
-#include <linux/export.h>
+#include <linux/module.h>
 
 #include <linux/types.h>
 #include <linux/capability.h>
@@ -42,6 +42,7 @@
 #include <linux/uaccess.h>
 #include <net/sock.h>
 
+#include <asm/system.h>
 
 #include "bnep.h"
 

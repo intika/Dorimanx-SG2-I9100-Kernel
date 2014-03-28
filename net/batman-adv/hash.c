@@ -1,4 +1,5 @@
-/* Copyright (C) 2006-2013 B.A.T.M.A.N. contributors:
+/*
+ * Copyright (C) 2006-2011 B.A.T.M.A.N. contributors:
  *
  * Simon Wunderlich, Marek Lindner
  *
@@ -15,24 +16,25 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
  * 02110-1301, USA
+ *
  */
 
 #include "main.h"
 #include "hash.h"
 
 /* clears the hash */
-static void batadv_hash_init(struct batadv_hashtable *hash)
+static void hash_init(struct hashtable_t *hash)
 {
 	uint32_t i;
 
-	for (i = 0; i < hash->size; i++) {
+	for (i = 0 ; i < hash->size; i++) {
 		INIT_HLIST_HEAD(&hash->table[i]);
 		spin_lock_init(&hash->list_locks[i]);
 	}
 }
 
 /* free only the hashtable and the hash itself. */
-void batadv_hash_destroy(struct batadv_hashtable *hash)
+void hash_destroy(struct hashtable_t *hash)
 {
 	kfree(hash->list_locks);
 	kfree(hash->table);
@@ -40,9 +42,9 @@ void batadv_hash_destroy(struct batadv_hashtable *hash)
 }
 
 /* allocates and clears the hash */
-struct batadv_hashtable *batadv_hash_new(uint32_t size)
+struct hashtable_t *hash_new(uint32_t size)
 {
-	struct batadv_hashtable *hash;
+	struct hashtable_t *hash;
 
 	hash = kmalloc(sizeof(*hash), GFP_ATOMIC);
 	if (!hash)
@@ -58,7 +60,7 @@ struct batadv_hashtable *batadv_hash_new(uint32_t size)
 		goto free_table;
 
 	hash->size = size;
-	batadv_hash_init(hash);
+	hash_init(hash);
 	return hash;
 
 free_table:
@@ -66,13 +68,4 @@ free_table:
 free_hash:
 	kfree(hash);
 	return NULL;
-}
-
-void batadv_hash_set_lock_class(struct batadv_hashtable *hash,
-				struct lock_class_key *key)
-{
-	uint32_t i;
-
-	for (i = 0; i < hash->size; i++)
-		lockdep_set_class(&hash->list_locks[i], key);
 }

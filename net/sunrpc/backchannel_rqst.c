@@ -25,7 +25,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <linux/slab.h>
 #include <linux/sunrpc/xprt.h>
 #include <linux/export.h>
-#include <linux/sunrpc/bc_xprt.h>
 
 #ifdef RPC_DEBUG
 #define RPCDBG_FACILITY	RPCDBG_TRANS
@@ -59,11 +58,12 @@ static void xprt_free_allocation(struct rpc_rqst *req)
 	struct xdr_buf *xbufp;
 
 	dprintk("RPC:        free allocations for req= %p\n", req);
-	WARN_ON_ONCE(test_bit(RPC_BC_PA_IN_USE, &req->rq_bc_pa_state));
+	BUG_ON(test_bit(RPC_BC_PA_IN_USE, &req->rq_bc_pa_state));
 	xbufp = &req->rq_private_buf;
 	free_page((unsigned long)xbufp->head[0].iov_base);
 	xbufp = &req->rq_snd_buf;
 	free_page((unsigned long)xbufp->head[0].iov_base);
+	list_del(&req->rq_bc_pa_list);
 	kfree(req);
 }
 
@@ -167,24 +167,21 @@ out_free:
 	/*
 	 * Memory allocation failed, free the temporary list
 	 */
-	list_for_each_entry_safe(req, tmp, &tmp_list, rq_bc_pa_list) {
-		list_del(&req->rq_bc_pa_list);
+	list_for_each_entry_safe(req, tmp, &tmp_list, rq_bc_pa_list)
 		xprt_free_allocation(req);
-	}
 
 	dprintk("RPC:       setup backchannel transport failed\n");
-	return -ENOMEM;
+	return -1;
 }
 EXPORT_SYMBOL_GPL(xprt_setup_backchannel);
 
-/**
- * xprt_destroy_backchannel - Destroys the backchannel preallocated structures.
- * @xprt:	the transport holding the preallocated strucures
- * @max_reqs	the maximum number of preallocated structures to destroy
- *
+/*
+ * Destroys the backchannel preallocated structures.
  * Since these structures may have been allocated by multiple calls
  * to xprt_setup_backchannel, we only destroy up to the maximum number
  * of reqs specified by the caller.
+ * @xprt:	the transport holding the preallocated strucures
+ * @max_reqs	the maximum number of preallocated structures to destroy
  */
 void xprt_destroy_backchannel(struct rpc_xprt *xprt, unsigned int max_reqs)
 {
@@ -192,21 +189,17 @@ void xprt_destroy_backchannel(struct rpc_xprt *xprt, unsigned int max_reqs)
 
 	dprintk("RPC:        destroy backchannel transport\n");
 
-	if (max_reqs == 0)
-		goto out;
-
+	BUG_ON(max_reqs == 0);
 	spin_lock_bh(&xprt->bc_pa_lock);
 	xprt_dec_alloc_count(xprt, max_reqs);
 	list_for_each_entry_safe(req, tmp, &xprt->bc_pa_list, rq_bc_pa_list) {
 		dprintk("RPC:        req=%p\n", req);
-		list_del(&req->rq_bc_pa_list);
 		xprt_free_allocation(req);
 		if (--max_reqs == 0)
 			break;
 	}
 	spin_unlock_bh(&xprt->bc_pa_lock);
 
-out:
 	dprintk("RPC:        backchannel list empty= %s\n",
 		list_empty(&xprt->bc_pa_list) ? "true" : "false");
 }
@@ -260,7 +253,7 @@ void xprt_free_bc_request(struct rpc_rqst *req)
 	dprintk("RPC:       free backchannel req=%p\n", req);
 
 	smp_mb__before_clear_bit();
-	WARN_ON_ONCE(!test_bit(RPC_BC_PA_IN_USE, &req->rq_bc_pa_state));
+	BUG_ON(!test_bit(RPC_BC_PA_IN_USE, &req->rq_bc_pa_state));
 	clear_bit(RPC_BC_PA_IN_USE, &req->rq_bc_pa_state);
 	smp_mb__after_clear_bit();
 

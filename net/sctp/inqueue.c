@@ -30,11 +30,17 @@
  *
  * Please send any bug reports or fixes you make to the
  * email address(es):
- *    lksctp developers <linux-sctp@vger.kernel.org>
+ *    lksctp developers <lksctp-developers@lists.sourceforge.net>
+ *
+ * Or submit a bug report through the following website:
+ *    http://www.sf.net/projects/lksctp
  *
  * Written or modified by:
  *    La Monte H.P. Yarroll <piggy@acm.org>
  *    Karl Knutson <karl@athena.chicago.il.us>
+ *
+ * Any bugs reported given to us we will try to fix... any fixes shared will
+ * be incorporated into the next SCTP release.
  */
 
 #define pr_fmt(fmt) KBUILD_MODNAME ": " fmt
@@ -52,6 +58,8 @@ void sctp_inq_init(struct sctp_inq *queue)
 
 	/* Create a task for delivering data.  */
 	INIT_WORK(&queue->immediate, NULL);
+
+	queue->malloced = 0;
 }
 
 /* Release the memory associated with an SCTP inqueue.  */
@@ -72,6 +80,11 @@ void sctp_inq_free(struct sctp_inq *queue)
 		sctp_chunk_free(queue->in_progress);
 		queue->in_progress = NULL;
 	}
+
+	if (queue->malloced) {
+		/* Dump the master memory segment.  */
+		kfree(queue);
+	}
 }
 
 /* Put a new packet in an SCTP inqueue.
@@ -91,8 +104,6 @@ void sctp_inq_push(struct sctp_inq *q, struct sctp_chunk *chunk)
 	 * on the BH related data structures.
 	 */
 	list_add_tail(&chunk->list, &q->in_chunk_list);
-	if (chunk->asoc)
-		chunk->asoc->stats.ipackets++;
 	q->immediate.func(&q->immediate);
 }
 
@@ -213,10 +224,10 @@ struct sctp_chunk *sctp_inq_pop(struct sctp_inq *queue)
 		chunk->end_of_packet = 1;
 	}
 
-	pr_debug("+++sctp_inq_pop+++ chunk:%p[%s], length:%d, skb->len:%d\n",
-		 chunk, sctp_cname(SCTP_ST_CHUNK(chunk->chunk_hdr->type)),
-		 ntohs(chunk->chunk_hdr->length), chunk->skb->len);
-
+	SCTP_DEBUG_PRINTK("+++sctp_inq_pop+++ chunk %p[%s],"
+			  " length %d, skb->len %d\n",chunk,
+			  sctp_cname(SCTP_ST_CHUNK(chunk->chunk_hdr->type)),
+			  ntohs(chunk->chunk_hdr->length), chunk->skb->len);
 	return chunk;
 }
 
@@ -232,3 +243,4 @@ void sctp_inq_set_th_handler(struct sctp_inq *q, work_func_t callback)
 {
 	INIT_WORK(&q->immediate, callback);
 }
+

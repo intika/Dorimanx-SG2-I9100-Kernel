@@ -32,6 +32,7 @@
 #include <linux/spinlock.h>
 #include <net/sock.h>
 #include <asm/uaccess.h>
+#include <asm/system.h>
 #include <linux/fcntl.h>
 #include <linux/mm.h>
 #include <linux/interrupt.h>
@@ -474,7 +475,7 @@ struct sk_buff *ax25_rt_build_path(struct sk_buff *skb, ax25_address *src,
 		if (skb->sk != NULL)
 			skb_set_owner_w(skbn, skb->sk);
 
-		consume_skb(skb);
+		kfree_skb(skb);
 
 		skb = skbn;
 	}

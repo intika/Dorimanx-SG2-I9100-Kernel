@@ -161,9 +161,16 @@ static inline void dccp_do_pmtu_discovery(struct sock *sk,
 	if (sk->sk_state == DCCP_LISTEN)
 		return;
 
-	dst = inet_csk_update_pmtu(sk, mtu);
-	if (!dst)
+	/* We don't check in the destentry if pmtu discovery is forbidden
+	 * on this route. We just assume that no packet_to_big packets
+	 * are send back when pmtu discovery is not active.
+	 * There is a small race when the user changes this flag in the
+	 * route, but I think that's acceptable.
+	 */
+	if ((dst = __sk_dst_check(sk, 0)) == NULL)
 		return;
+
+	dst->ops->update_pmtu(dst, mtu);
 
 	/* Something is about to be wrong... Remember soft error
 	 * for the case, if this connection will not able to recover.
@@ -174,7 +181,6 @@ static inline void dccp_do_pmtu_discovery(struct sock *sk,
 	mtu = dst_mtu(dst);
 
 	if (inet->pmtudisc != IP_PMTUDISC_DONT &&
-	    ip_sk_accept_pmtu(sk) &&
 	    inet_csk(sk)->icsk_pmtu_cookie > mtu) {
 		dccp_sync_mss(sk, mtu);
 
@@ -187,14 +193,6 @@ static inline void dccp_do_pmtu_discovery(struct sock *sk,
 		 */
 		dccp_send_sync(sk, dp->dccps_gsr, DCCP_PKT_SYNC);
 	} /* else let the usual retransmit timer handle it */
-}
-
-static void dccp_do_redirect(struct sk_buff *skb, struct sock *sk)
-{
-	struct dst_entry *dst = __sk_dst_check(sk, 0);
-
-	if (dst)
-		dst->ops->redirect(dst, sk, skb);
 }
 
 /*
@@ -261,9 +259,6 @@ static void dccp_v4_err(struct sk_buff *skb, u32 info)
 	}
 
 	switch (type) {
-	case ICMP_REDIRECT:
-		dccp_do_redirect(skb, sk);
-		goto out;
 	case ICMP_SOURCE_QUENCH:
 		/* Just silently ignore these. */
 		goto out;
@@ -305,8 +300,7 @@ static void dccp_v4_err(struct sk_buff *skb, u32 info)
 		 */
 		WARN_ON(req->sk);
 
-		if (!between48(seq, dccp_rsk(req)->dreq_iss,
-				    dccp_rsk(req)->dreq_gss)) {
+		if (seq != dccp_rsk(req)->dreq_iss) {
 			NET_INC_STATS_BH(net, LINUX_MIB_OUTOFWINDOWICMPS);
 			goto out;
 		}
@@ -410,9 +404,9 @@ struct sock *dccp_v4_request_recv_sock(struct sock *sk, struct sk_buff *skb,
 
 	newinet		   = inet_sk(newsk);
 	ireq		   = inet_rsk(req);
-	newinet->inet_daddr	= ireq->ir_rmt_addr;
-	newinet->inet_rcv_saddr = ireq->ir_loc_addr;
-	newinet->inet_saddr	= ireq->ir_loc_addr;
+	newinet->inet_daddr	= ireq->rmt_addr;
+	newinet->inet_rcv_saddr = ireq->loc_addr;
+	newinet->inet_saddr	= ireq->loc_addr;
 	newinet->inet_opt	= ireq->opt;
 	ireq->opt	   = NULL;
 	newinet->mc_index  = inet_iif(skb);
@@ -440,8 +434,8 @@ exit:
 	NET_INC_STATS_BH(sock_net(sk), LINUX_MIB_LISTENDROPS);
 	return NULL;
 put_and_exit:
-	inet_csk_prepare_forced_close(newsk);
-	dccp_done(newsk);
+	bh_unlock_sock(newsk);
+	sock_put(newsk);
 	goto exit;
 }
 
@@ -482,7 +476,7 @@ static struct dst_entry* dccp_v4_route_skb(struct net *net, struct sock *sk,
 	struct rtable *rt;
 	const struct iphdr *iph = ip_hdr(skb);
 	struct flowi4 fl4 = {
-		.flowi4_oif = inet_iif(skb),
+		.flowi4_oif = skb_rtable(skb)->rt_iif,
 		.daddr = iph->saddr,
 		.saddr = iph->daddr,
 		.flowi4_tos = RT_CONN_FLAGS(sk),
@@ -501,7 +495,8 @@ static struct dst_entry* dccp_v4_route_skb(struct net *net, struct sock *sk,
 	return &rt->dst;
 }
 
-static int dccp_v4_send_response(struct sock *sk, struct request_sock *req)
+static int dccp_v4_send_response(struct sock *sk, struct request_sock *req,
+				 struct request_values *rv_unused)
 {
 	int err = -1;
 	struct sk_buff *skb;
@@ -517,10 +512,10 @@ static int dccp_v4_send_response(struct sock *sk, struct request_sock *req)
 		const struct inet_request_sock *ireq = inet_rsk(req);
 		struct dccp_hdr *dh = dccp_hdr(skb);
 
-		dh->dccph_checksum = dccp_v4_csum_finish(skb, ireq->ir_loc_addr,
-							      ireq->ir_rmt_addr);
-		err = ip_build_and_send_pkt(skb, sk, ireq->ir_loc_addr,
-					    ireq->ir_rmt_addr,
+		dh->dccph_checksum = dccp_v4_csum_finish(skb, ireq->loc_addr,
+							      ireq->rmt_addr);
+		err = ip_build_and_send_pkt(skb, sk, ireq->loc_addr,
+					    ireq->rmt_addr,
 					    ireq->opt);
 		err = net_xmit_eval(err);
 	}
@@ -578,11 +573,6 @@ static void dccp_v4_reqsk_destructor(struct request_sock *req)
 	kfree(inet_rsk(req)->opt);
 }
 
-void dccp_syn_ack_timeout(struct sock *sk, struct request_sock *req)
-{
-}
-EXPORT_SYMBOL(dccp_syn_ack_timeout);
-
 static struct request_sock_ops dccp_request_sock_ops __read_mostly = {
 	.family		= PF_INET,
 	.obj_size	= sizeof(struct dccp_request_sock),
@@ -590,7 +580,6 @@ static struct request_sock_ops dccp_request_sock_ops __read_mostly = {
 	.send_ack	= dccp_reqsk_send_ack,
 	.destructor	= dccp_v4_reqsk_destructor,
 	.send_reset	= dccp_v4_ctl_send_reset,
-	.syn_ack_timeout = dccp_syn_ack_timeout,
 };
 
 int dccp_v4_conn_request(struct sock *sk, struct sk_buff *skb)
@@ -642,23 +631,22 @@ int dccp_v4_conn_request(struct sock *sk, struct sk_buff *skb)
 		goto drop_and_free;
 
 	ireq = inet_rsk(req);
-	ireq->ir_loc_addr = ip_hdr(skb)->daddr;
-	ireq->ir_rmt_addr = ip_hdr(skb)->saddr;
+	ireq->loc_addr = ip_hdr(skb)->daddr;
+	ireq->rmt_addr = ip_hdr(skb)->saddr;
 
 	/*
 	 * Step 3: Process LISTEN state
 	 *
 	 * Set S.ISR, S.GSR, S.SWL, S.SWH from packet or Init Cookie
 	 *
-	 * Setting S.SWL/S.SWH to is deferred to dccp_create_openreq_child().
+	 * In fact we defer setting S.GSR, S.SWL, S.SWH to
+	 * dccp_create_openreq_child.
 	 */
 	dreq->dreq_isr	   = dcb->dccpd_seq;
-	dreq->dreq_gsr	   = dreq->dreq_isr;
 	dreq->dreq_iss	   = dccp_v4_init_sequence(skb);
-	dreq->dreq_gss     = dreq->dreq_iss;
 	dreq->dreq_service = service;
 
-	if (dccp_v4_send_response(sk, req))
+	if (dccp_v4_send_response(sk, req, NULL))
 		goto drop_and_free;
 
 	inet_csk_reqsk_queue_hash_add(sk, req, DCCP_TIMEOUT_INIT);

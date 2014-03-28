@@ -28,13 +28,19 @@
  *
  * Please send any bug reports or fixes you make to the
  * email address(es):
- *    lksctp developers <linux-sctp@vger.kernel.org>
+ *    lksctp developers <lksctp-developers@lists.sourceforge.net>
+ *
+ * Or submit a bug report through the following website:
+ *    http://www.sf.net/projects/lksctp
  *
  * Written or modified by:
  *    Jon Grimm             <jgrimm@us.ibm.com>
  *    La Monte H.P. Yarroll <piggy@acm.org>
  *    Ardelle Fan	    <ardelle.fan@intel.com>
  *    Sridhar Samudrala     <sri@us.ibm.com>
+ *
+ * Any bugs reported given to us we will try to fix... any fixes shared will
+ * be incorporated into the next SCTP release.
  */
 
 #include <linux/slab.h>
@@ -51,9 +57,9 @@ static void sctp_ulpevent_release_frag_data(struct sctp_ulpevent *event);
 
 
 /* Initialize an ULP event from an given skb.  */
-static void sctp_ulpevent_init(struct sctp_ulpevent *event,
-			       int msg_flags,
-			       unsigned int len)
+SCTP_STATIC void sctp_ulpevent_init(struct sctp_ulpevent *event,
+				    int msg_flags,
+				    unsigned int len)
 {
 	memset(event, 0, sizeof(struct sctp_ulpevent));
 	event->msg_flags = msg_flags;
@@ -61,8 +67,8 @@ static void sctp_ulpevent_init(struct sctp_ulpevent *event,
 }
 
 /* Create a new sctp_ulpevent.  */
-static struct sctp_ulpevent *sctp_ulpevent_new(int size, int msg_flags,
-					       gfp_t gfp)
+SCTP_STATIC struct sctp_ulpevent *sctp_ulpevent_new(int size, int msg_flags,
+						    gfp_t gfp)
 {
 	struct sctp_ulpevent *event;
 	struct sk_buff *skb;
@@ -696,8 +702,7 @@ struct sctp_ulpevent *sctp_ulpevent_make_rcvmsg(struct sctp_association *asoc,
 	if (rx_count >= asoc->base.sk->sk_rcvbuf) {
 
 		if ((asoc->base.sk->sk_userlocks & SOCK_RCVBUF_LOCK) ||
-		    (!sk_rmem_schedule(asoc->base.sk, chunk->skb,
-				       chunk->skb->truesize)))
+		    (!sk_rmem_schedule(asoc->base.sk, chunk->skb->truesize)))
 			goto fail;
 	}
 
@@ -710,8 +715,7 @@ struct sctp_ulpevent *sctp_ulpevent_make_rcvmsg(struct sctp_association *asoc,
 	 * can mark it as received so the tsn_map is updated correctly.
 	 */
 	if (sctp_tsnmap_mark(&asoc->peer.tsn_map,
-			     ntohl(chunk->subh.data_hdr->tsn),
-			     chunk->transport))
+			     ntohl(chunk->subh.data_hdr->tsn)))
 		goto fail_mark;
 
 	/* First calculate the padding, so we don't inadvertently

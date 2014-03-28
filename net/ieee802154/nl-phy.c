@@ -35,7 +35,7 @@
 
 #include "ieee802154.h"
 
-static int ieee802154_nl_fill_phy(struct sk_buff *msg, u32 portid,
+static int ieee802154_nl_fill_phy(struct sk_buff *msg, u32 pid,
 	u32 seq, int flags, struct wpan_phy *phy)
 {
 	void *hdr;
@@ -53,18 +53,18 @@ static int ieee802154_nl_fill_phy(struct sk_buff *msg, u32 portid,
 		goto out;
 
 	mutex_lock(&phy->pib_lock);
-	if (nla_put_string(msg, IEEE802154_ATTR_PHY_NAME, wpan_phy_name(phy)) ||
-	    nla_put_u8(msg, IEEE802154_ATTR_PAGE, phy->current_page) ||
-	    nla_put_u8(msg, IEEE802154_ATTR_CHANNEL, phy->current_channel))
-		goto nla_put_failure;
+	NLA_PUT_STRING(msg, IEEE802154_ATTR_PHY_NAME, wpan_phy_name(phy));
+
+	NLA_PUT_U8(msg, IEEE802154_ATTR_PAGE, phy->current_page);
+	NLA_PUT_U8(msg, IEEE802154_ATTR_CHANNEL, phy->current_channel);
 	for (i = 0; i < 32; i++) {
 		if (phy->channels_supported[i])
 			buf[pages++] = phy->channels_supported[i] | (i << 27);
 	}
-	if (pages &&
-	    nla_put(msg, IEEE802154_ATTR_CHANNEL_PAGE_LIST,
-		    pages * sizeof(uint32_t), buf))
-		goto nla_put_failure;
+	if (pages)
+		NLA_PUT(msg, IEEE802154_ATTR_CHANNEL_PAGE_LIST,
+				pages * sizeof(uint32_t), buf);
+
 	mutex_unlock(&phy->pib_lock);
 	kfree(buf);
 	return genlmsg_end(msg, hdr);
@@ -77,7 +77,8 @@ out:
 	return -EMSGSIZE;
 }
 
-int ieee802154_list_phy(struct sk_buff *skb, struct genl_info *info)
+static int ieee802154_list_phy(struct sk_buff *skb,
+	struct genl_info *info)
 {
 	/* Request for interface name, index, type, IEEE address,
 	   PAN Id, short address */
@@ -100,11 +101,11 @@ int ieee802154_list_phy(struct sk_buff *skb, struct genl_info *info)
 	if (!phy)
 		return -ENODEV;
 
-	msg = nlmsg_new(NLMSG_DEFAULT_SIZE, GFP_KERNEL);
+	msg = nlmsg_new(NLMSG_GOODSIZE, GFP_KERNEL);
 	if (!msg)
 		goto out_dev;
 
-	rc = ieee802154_nl_fill_phy(msg, info->snd_portid, info->snd_seq,
+	rc = ieee802154_nl_fill_phy(msg, info->snd_pid, info->snd_seq,
 			0, phy);
 	if (rc < 0)
 		goto out_free;
@@ -137,7 +138,7 @@ static int ieee802154_dump_phy_iter(struct wpan_phy *phy, void *_data)
 		return 0;
 
 	rc = ieee802154_nl_fill_phy(data->skb,
-			NETLINK_CB(data->cb->skb).portid,
+			NETLINK_CB(data->cb->skb).pid,
 			data->cb->nlh->nlmsg_seq,
 			NLM_F_MULTI,
 			phy);
@@ -150,7 +151,8 @@ static int ieee802154_dump_phy_iter(struct wpan_phy *phy, void *_data)
 	return 0;
 }
 
-int ieee802154_dump_phy(struct sk_buff *skb, struct netlink_callback *cb)
+static int ieee802154_dump_phy(struct sk_buff *skb,
+	struct netlink_callback *cb)
 {
 	struct dump_phy_data data = {
 		.cb = cb,
@@ -168,7 +170,8 @@ int ieee802154_dump_phy(struct sk_buff *skb, struct netlink_callback *cb)
 	return skb->len;
 }
 
-int ieee802154_add_iface(struct sk_buff *skb, struct genl_info *info)
+static int ieee802154_add_iface(struct sk_buff *skb,
+		struct genl_info *info)
 {
 	struct sk_buff *msg;
 	struct wpan_phy *phy;
@@ -176,7 +179,6 @@ int ieee802154_add_iface(struct sk_buff *skb, struct genl_info *info)
 	const char *devname;
 	int rc = -ENOBUFS;
 	struct net_device *dev;
-	int type = __IEEE802154_DEV_INVALID;
 
 	pr_debug("%s\n", __func__);
 
@@ -219,15 +221,7 @@ int ieee802154_add_iface(struct sk_buff *skb, struct genl_info *info)
 		goto nla_put_failure;
 	}
 
-	if (info->attrs[IEEE802154_ATTR_DEV_TYPE]) {
-		type = nla_get_u8(info->attrs[IEEE802154_ATTR_DEV_TYPE]);
-		if (type >= __IEEE802154_DEV_MAX) {
-			rc = -EINVAL;
-			goto nla_put_failure;
-		}
-	}
-
-	dev = phy->add_iface(phy, devname, type);
+	dev = phy->add_iface(phy, devname);
 	if (IS_ERR(dev)) {
 		rc = PTR_ERR(dev);
 		goto nla_put_failure;
@@ -251,9 +245,9 @@ int ieee802154_add_iface(struct sk_buff *skb, struct genl_info *info)
 			goto dev_unregister;
 	}
 
-	if (nla_put_string(msg, IEEE802154_ATTR_PHY_NAME, wpan_phy_name(phy)) ||
-	    nla_put_string(msg, IEEE802154_ATTR_DEV_NAME, dev->name))
-		goto nla_put_failure;
+	NLA_PUT_STRING(msg, IEEE802154_ATTR_PHY_NAME, wpan_phy_name(phy));
+	NLA_PUT_STRING(msg, IEEE802154_ATTR_DEV_NAME, dev->name);
+
 	dev_put(dev);
 
 	wpan_phy_put(phy);
@@ -272,7 +266,8 @@ out_dev:
 	return rc;
 }
 
-int ieee802154_del_iface(struct sk_buff *skb, struct genl_info *info)
+static int ieee802154_del_iface(struct sk_buff *skb,
+		struct genl_info *info)
 {
 	struct sk_buff *msg;
 	struct wpan_phy *phy;
@@ -338,9 +333,10 @@ int ieee802154_del_iface(struct sk_buff *skb, struct genl_info *info)
 
 	rtnl_unlock();
 
-	if (nla_put_string(msg, IEEE802154_ATTR_PHY_NAME, wpan_phy_name(phy)) ||
-	    nla_put_string(msg, IEEE802154_ATTR_DEV_NAME, name))
-		goto nla_put_failure;
+
+	NLA_PUT_STRING(msg, IEEE802154_ATTR_PHY_NAME, wpan_phy_name(phy));
+	NLA_PUT_STRING(msg, IEEE802154_ATTR_DEV_NAME, name);
+
 	wpan_phy_put(phy);
 
 	return ieee802154_nl_reply(msg, info);
@@ -353,4 +349,29 @@ out_dev:
 		dev_put(dev);
 
 	return rc;
+}
+
+static struct genl_ops ieee802154_phy_ops[] = {
+	IEEE802154_DUMP(IEEE802154_LIST_PHY, ieee802154_list_phy,
+							ieee802154_dump_phy),
+	IEEE802154_OP(IEEE802154_ADD_IFACE, ieee802154_add_iface),
+	IEEE802154_OP(IEEE802154_DEL_IFACE, ieee802154_del_iface),
+};
+
+/*
+ * No need to unregister as family unregistration will do it.
+ */
+int nl802154_phy_register(void)
+{
+	int i;
+	int rc;
+
+	for (i = 0; i < ARRAY_SIZE(ieee802154_phy_ops); i++) {
+		rc = genl_register_ops(&nl802154_family,
+				&ieee802154_phy_ops[i]);
+		if (rc)
+			return rc;
+	}
+
+	return 0;
 }

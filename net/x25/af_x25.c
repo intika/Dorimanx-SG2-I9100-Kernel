@@ -208,10 +208,11 @@ static void x25_remove_socket(struct sock *sk)
 static void x25_kill_by_device(struct net_device *dev)
 {
 	struct sock *s;
+	struct hlist_node *node;
 
 	write_lock_bh(&x25_list_lock);
 
-	sk_for_each(s, &x25_list)
+	sk_for_each(s, node, &x25_list)
 		if (x25_sk(s)->neighbour && x25_sk(s)->neighbour->dev == dev)
 			x25_disconnect(s, ENETUNREACH, 0, 0);
 
@@ -224,7 +225,7 @@ static void x25_kill_by_device(struct net_device *dev)
 static int x25_device_event(struct notifier_block *this, unsigned long event,
 			    void *ptr)
 {
-	struct net_device *dev = netdev_notifier_info_to_dev(ptr);
+	struct net_device *dev = ptr;
 	struct x25_neigh *nb;
 
 	if (!net_eq(dev_net(dev), &init_net))
@@ -279,11 +280,12 @@ static struct sock *x25_find_listener(struct x25_address *addr,
 {
 	struct sock *s;
 	struct sock *next_best;
+	struct hlist_node *node;
 
 	read_lock_bh(&x25_list_lock);
 	next_best = NULL;
 
-	sk_for_each(s, &x25_list)
+	sk_for_each(s, node, &x25_list)
 		if ((!strcmp(addr->x25_addr,
 			x25_sk(s)->source_addr.x25_addr) ||
 				!strcmp(addr->x25_addr,
@@ -321,8 +323,9 @@ found:
 static struct sock *__x25_find_socket(unsigned int lci, struct x25_neigh *nb)
 {
 	struct sock *s;
+	struct hlist_node *node;
 
-	sk_for_each(s, &x25_list)
+	sk_for_each(s, node, &x25_list)
 		if (x25_sk(s)->lci == lci && x25_sk(s)->neighbour == nb) {
 			sock_hold(s);
 			goto found;
@@ -1583,11 +1586,11 @@ out_cud_release:
 	case SIOCX25CALLACCPTAPPRV: {
 		rc = -EINVAL;
 		lock_sock(sk);
-		if (sk->sk_state == TCP_CLOSE) {
-			clear_bit(X25_ACCPT_APPRV_FLAG, &x25->flags);
-			rc = 0;
-		}
+		if (sk->sk_state != TCP_CLOSE)
+			break;
+		clear_bit(X25_ACCPT_APPRV_FLAG, &x25->flags);
 		release_sock(sk);
+		rc = 0;
 		break;
 	}
 
@@ -1595,15 +1598,14 @@ out_cud_release:
 		rc = -EINVAL;
 		lock_sock(sk);
 		if (sk->sk_state != TCP_ESTABLISHED)
-			goto out_sendcallaccpt_release;
+			break;
 		/* must call accptapprv above */
 		if (test_bit(X25_ACCPT_APPRV_FLAG, &x25->flags))
-			goto out_sendcallaccpt_release;
+			break;
 		x25_write_internal(sk, X25_CALL_ACCEPTED);
 		x25->state = X25_STATE_3;
-		rc = 0;
-out_sendcallaccpt_release:
 		release_sock(sk);
+		rc = 0;
 		break;
 	}
 
@@ -1780,10 +1782,11 @@ static struct notifier_block x25_dev_notifier = {
 void x25_kill_by_neigh(struct x25_neigh *nb)
 {
 	struct sock *s;
+	struct hlist_node *node;
 
 	write_lock_bh(&x25_list_lock);
 
-	sk_for_each(s, &x25_list)
+	sk_for_each(s, node, &x25_list)
 		if (x25_sk(s)->neighbour == nb)
 			x25_disconnect(s, ENETUNREACH, 0, 0);
 
