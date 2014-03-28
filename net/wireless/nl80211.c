@@ -3352,7 +3352,7 @@ static int nl80211_get_mesh_config(struct sk_buff *skb,
 	    nla_put_u8(msg, NL80211_MESHCONF_AUTO_OPEN_PLINKS,
 		       cur_params.auto_open_plinks) ||
 	    nla_put_u32(msg, NL80211_MESHCONF_SYNC_OFFSET_MAX_NEIGHBOR,
-		       cur_params.dot11MeshNbrOffsetMaxNeighbor);
+		       cur_params.dot11MeshNbrOffsetMaxNeighbor) ||
 	    nla_put_u8(msg, NL80211_MESHCONF_HWMP_MAX_PREQ_RETRIES,
 		       cur_params.dot11MeshHWMPmaxPREQretries) ||
 	    nla_put_u32(msg, NL80211_MESHCONF_PATH_REFRESH_TIME,
