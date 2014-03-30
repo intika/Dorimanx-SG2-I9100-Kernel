@@ -1832,8 +1832,8 @@ F:	net/bluetooth/
 F:	include/net/bluetooth/
 
 BONDING DRIVER
-M:	Jay Vosburgh <fubar@us.ibm.com>
-M:	Veaceslav Falico <vfalico@redhat.com>
+M:	Jay Vosburgh <j.vosburgh@gmail.com>
+M:	Veaceslav Falico <vfalico@gmail.com>
 M:	Andy Gospodarek <andy@greyhouse.net>
 L:	netdev@vger.kernel.org
 W:	http://sourceforge.net/projects/bonding/
@@ -4545,6 +4545,7 @@ M:	Greg Rose <gregory.v.rose@intel.com>
 M:	Alex Duyck <alexander.h.duyck@intel.com>
 M:	John Ronciak <john.ronciak@intel.com>
 M:	Mitch Williams <mitch.a.williams@intel.com>
+M:	Linux NICS <linux.nics@intel.com>
 L:	e1000-devel@lists.sourceforge.net
 W:	http://www.intel.com/support/feedback.htm
 W:	http://e1000.sourceforge.net/
@@ -6005,6 +6006,7 @@ F:	include/uapi/linux/net.h
 F:	include/uapi/linux/netdevice.h
 F:	tools/net/
 F:	tools/testing/selftests/net/
+F:	lib/random32.c
 
 NETWORKING [IPv4/IPv6]
 M:	"David S. Miller" <davem@davemloft.net>
