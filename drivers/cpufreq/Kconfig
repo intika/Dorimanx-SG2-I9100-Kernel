@@ -250,7 +250,7 @@ config CPU_FREQ_GOV_ZZMANX
 	tristate "'zzmoove' cpufreq governor"
 	depends on CPU_FREQ
 	---help---
-    'zzmoove' - based on cpufreq_conservative, using predefined
+	  'zzmoove' - based on cpufreq_conservative, using predefined
 	  frequency lookup tables and optimized scaling triggers instead of
 	  % frequency steps to get smooth up/downscaling dependant on CPU load.
 
