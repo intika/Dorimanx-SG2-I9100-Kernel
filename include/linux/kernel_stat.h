@@ -8,7 +8,7 @@
 #include <linux/interrupt.h>
 #include <linux/sched.h>
 #include <asm/irq.h>
-#include <asm/cputime.h>
+#include <linux/cputime.h>
 
 /*
  * 'kernel_stat.h' contains the definitions needed for doing
