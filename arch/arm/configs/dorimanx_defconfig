@@ -1,6 +1,6 @@
 #
 # Automatically generated file; DO NOT EDIT.
-# Linux/arm 3.14.0-rc7 Kernel Configuration
+# Linux/arm 3.14.0 Kernel Configuration
 #
 CONFIG_ARM=y
 CONFIG_GENERIC_GPIO=y
@@ -3206,6 +3206,7 @@ CONFIG_SCHED_DEBUG=y
 # CONFIG_DEBUG_MUTEXES is not set
 # CONFIG_DEBUG_ATOMIC_SLEEP is not set
 # CONFIG_DEBUG_LOCKING_API_SELFTESTS is not set
+# CONFIG_LOCK_TORTURE_TEST is not set
 # CONFIG_DEBUG_STACK_USAGE is not set
 # CONFIG_DEBUG_KOBJECT is not set
 # CONFIG_DEBUG_HIGHMEM is not set
@@ -3228,6 +3229,7 @@ CONFIG_SCHED_DEBUG=y
 #
 # CONFIG_PROVE_RCU_DELAY is not set
 # CONFIG_SPARSE_RCU_POINTER is not set
+# CONFIG_TORTURE_TEST is not set
 # CONFIG_RCU_TORTURE_TEST is not set
 CONFIG_RCU_CPU_STALL_TIMEOUT=60
 CONFIG_RCU_CPU_STALL_VERBOSE=y
