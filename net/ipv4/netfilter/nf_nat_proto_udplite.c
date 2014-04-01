@@ -13,6 +13,7 @@
 #include <linux/udp.h>
 
 #include <linux/netfilter.h>
+#include <linux/module.h>
 #include <net/netfilter/nf_nat.h>
 #include <net/netfilter/nf_nat_protocol.h>
 
@@ -71,12 +72,10 @@ udplite_manip_pkt(struct sk_buff *skb,
 
 static const struct nf_nat_protocol nf_nat_protocol_udplite = {
 	.protonum		= IPPROTO_UDPLITE,
-	.me			= THIS_MODULE,
 	.manip_pkt		= udplite_manip_pkt,
 	.in_range		= nf_nat_proto_in_range,
 	.unique_tuple		= udplite_unique_tuple,
 #if defined(CONFIG_NF_CT_NETLINK) || defined(CONFIG_NF_CT_NETLINK_MODULE)
-	.range_to_nlattr	= nf_nat_proto_range_to_nlattr,
 	.nlattr_to_range	= nf_nat_proto_nlattr_to_range,
 #endif
 };

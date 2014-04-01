@@ -205,9 +205,6 @@ static inline int inet_is_reserved_local_port(int port)
 
 extern int sysctl_ip_nonlocal_bind;
 
-extern struct ctl_path net_core_path[];
-extern struct ctl_path net_ipv4_ctl_path[];
-
 /* From inetpeer.c */
 extern int inet_peer_threshold;
 extern int inet_peer_minttl;
@@ -375,7 +372,7 @@ static inline int sk_mc_loop(struct sock *sk)
 	return 1;
 }
 
-extern int	ip_call_ra_chain(struct sk_buff *skb);
+extern bool ip_call_ra_chain(struct sk_buff *skb);
 
 /*
  *	Functions provided by ip_fragment.c
@@ -437,7 +434,7 @@ extern int ip_options_rcv_srr(struct sk_buff *skb);
  *	Functions provided by ip_sockglue.c
  */
 
-extern int	ip_queue_rcv_skb(struct sock *sk, struct sk_buff *skb);
+extern void	ipv4_pktinfo_prepare(struct sk_buff *skb);
 extern void	ip_cmsg_recv(struct msghdr *msg, struct sk_buff *skb);
 extern int	ip_cmsg_send(struct net *net,
 			     struct msghdr *msg, struct ipcm_cookie *ipc);

@@ -101,6 +101,33 @@ enum {
 	BT_CLOSED
 };
 
+/* If unused will be removed by compiler */
+static inline const char *state_to_string(int state)
+{
+	switch (state) {
+	case BT_CONNECTED:
+		return "BT_CONNECTED";
+	case BT_OPEN:
+		return "BT_OPEN";
+	case BT_BOUND:
+		return "BT_BOUND";
+	case BT_LISTEN:
+		return "BT_LISTEN";
+	case BT_CONNECT:
+		return "BT_CONNECT";
+	case BT_CONNECT2:
+		return "BT_CONNECT2";
+	case BT_CONFIG:
+		return "BT_CONFIG";
+	case BT_DISCONN:
+		return "BT_DISCONN";
+	case BT_CLOSED:
+		return "BT_CLOSED";
+	}
+
+	return "invalid state";
+}
+
 /* BD Address */
 typedef struct {
 	__u8 b[6];
@@ -133,7 +160,12 @@ struct bt_sock {
 	bdaddr_t    dst;
 	struct list_head accept_q;
 	struct sock *parent;
-	u32 defer_setup;
+	unsigned long flags;
+};
+
+enum {
+	BT_SK_DEFER_SETUP,
+	BT_SK_SUSPEND,
 };
 
 struct bt_sock_list {
@@ -186,12 +218,10 @@ static inline struct sk_buff *bt_skb_send_alloc(struct sock *sk,
 {
 	struct sk_buff *skb;
 
-	release_sock(sk);
 	if ((skb = sock_alloc_send_skb(sk, len + BT_SKB_RESERVE, nb, err))) {
 		skb_reserve(skb, BT_SKB_RESERVE);
 		bt_cb(skb)->incoming  = 0;
 	}
-	lock_sock(sk);
 
 	if (!skb && *err)
 		return NULL;

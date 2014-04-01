@@ -1,6 +1,6 @@
 /*
  * Copyright (C) ST-Ericsson AB 2010
- * Author:	Sjur Brendeland
+ * Author:	Sjur Brendeland/sjur.brandeland@stericsson.com
  * License terms: GNU General Public License (GPL) version 2
  */
 
@@ -20,12 +20,12 @@
 
 #ifdef CAIF_NO_LOOP
 static int handle_loop(struct cfctrl *ctrl,
-		       int cmd, struct cfpkt *pkt){
+			      int cmd, struct cfpkt *pkt){
 	return -1;
 }
 #else
 static int handle_loop(struct cfctrl *ctrl,
-		       int cmd, struct cfpkt *pkt);
+		int cmd, struct cfpkt *pkt);
 #endif
 static int cfctrl_recv(struct cflayer *layr, struct cfpkt *pkt);
 static void cfctrl_ctrlcmd(struct cflayer *layr, enum caif_ctrlcmd ctrl,
@@ -72,7 +72,7 @@ void cfctrl_remove(struct cflayer *layer)
 }
 
 static bool param_eq(const struct cfctrl_link_param *p1,
-		     const struct cfctrl_link_param *p2)
+			const struct cfctrl_link_param *p2)
 {
 	bool eq =
 	    p1->linktype == p2->linktype &&
@@ -175,17 +175,15 @@ static void init_info(struct caif_payload_info *info, struct cfctrl *cfctrl)
 
 void cfctrl_enum_req(struct cflayer *layer, u8 physlinkid)
 {
-	struct cfpkt *pkt;
 	struct cfctrl *cfctrl = container_obj(layer);
+	struct cfpkt *pkt = cfpkt_create(CFPKT_CTRL_PKT_LEN);
 	struct cflayer *dn = cfctrl->serv.layer.dn;
-
+	if (!pkt)
+		return;
 	if (!dn) {
 		pr_debug("not able to send enum request\n");
 		return;
 	}
-	pkt = cfpkt_create(CFPKT_CTRL_PKT_LEN);
-	if (!pkt)
-		return;
 	caif_assert(offsetof(struct cfctrl, serv.layer) == 0);
 	init_info(cfpkt_info(pkt), cfctrl);
 	cfpkt_info(pkt)->dev_info->id = physlinkid;
@@ -197,8 +195,8 @@ void cfctrl_enum_req(struct cflayer *layer, u8 physlinkid)
 }
 
 int cfctrl_linkup_request(struct cflayer *layer,
-			  struct cfctrl_link_param *param,
-			  struct cflayer *user_layer)
+			   struct cfctrl_link_param *param,
+			   struct cflayer *user_layer)
 {
 	struct cfctrl *cfctrl = container_obj(layer);
 	u32 tmp32;
@@ -293,29 +291,29 @@ int cfctrl_linkup_request(struct cflayer *layer,
 
 		count = cfctrl_cancel_req(&cfctrl->serv.layer,
 						user_layer);
-		if (count != 1) {
+		if (count != 1)
 			pr_err("Could not remove request (%d)", count);
 			return -ENODEV;
-		}
 	}
 	return 0;
 }
 
 int cfctrl_linkdown_req(struct cflayer *layer, u8 channelid,
-			struct cflayer *client)
+				struct cflayer *client)
 {
 	int ret;
-	struct cfpkt *pkt;
 	struct cfctrl *cfctrl = container_obj(layer);
+	struct cfpkt *pkt = cfpkt_create(CFPKT_CTRL_PKT_LEN);
 	struct cflayer *dn = cfctrl->serv.layer.dn;
+
+	if (!pkt)
+		return -ENOMEM;
 
 	if (!dn) {
 		pr_debug("not able to send link-down request\n");
 		return -ENODEV;
 	}
-	pkt = cfpkt_create(CFPKT_CTRL_PKT_LEN);
-	if (!pkt)
-		return -ENOMEM;
+
 	cfpkt_addbdy(pkt, CFCTRL_CMD_LINK_DESTROY);
 	cfpkt_addbdy(pkt, channelid);
 	init_info(cfpkt_info(pkt), cfctrl);
@@ -516,7 +514,8 @@ static int cfctrl_recv(struct cflayer *layer, struct cfpkt *pkt)
 							  client_layer : NULL);
 			}
 
-			kfree(req);
+			if (req != NULL)
+				kfree(req);
 
 			spin_unlock_bh(&cfctrl->info_list_lock);
 		}
@@ -556,7 +555,7 @@ error:
 }
 
 static void cfctrl_ctrlcmd(struct cflayer *layr, enum caif_ctrlcmd ctrl,
-			   int phyid)
+			int phyid)
 {
 	struct cfctrl *this = container_obj(layr);
 	switch (ctrl) {

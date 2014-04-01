@@ -10,6 +10,7 @@
 #include <linux/init.h>
 #include <linux/ip.h>
 #include <linux/sctp.h>
+#include <linux/module.h>
 #include <net/sctp/checksum.h>
 
 #include <net/netfilter/nf_nat_protocol.h>
@@ -69,12 +70,10 @@ sctp_manip_pkt(struct sk_buff *skb,
 
 static const struct nf_nat_protocol nf_nat_protocol_sctp = {
 	.protonum		= IPPROTO_SCTP,
-	.me			= THIS_MODULE,
 	.manip_pkt		= sctp_manip_pkt,
 	.in_range		= nf_nat_proto_in_range,
 	.unique_tuple		= sctp_unique_tuple,
 #if defined(CONFIG_NF_CT_NETLINK) || defined(CONFIG_NF_CT_NETLINK_MODULE)
-	.range_to_nlattr	= nf_nat_proto_range_to_nlattr,
 	.nlattr_to_range	= nf_nat_proto_nlattr_to_range,
 #endif
 };

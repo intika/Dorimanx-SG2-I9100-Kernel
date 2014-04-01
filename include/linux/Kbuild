@@ -39,6 +39,7 @@ header-y += if_ether.h
 header-y += if_link.h
 header-y += if_pppol2tp.h
 header-y += if_pppox.h
+header-y += if_team.h
 header-y += if_tunnel.h
 header-y += if_vlan.h
 header-y += in.h

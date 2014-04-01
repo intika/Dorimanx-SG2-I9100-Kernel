@@ -224,10 +224,12 @@ source "net/x25/Kconfig"
 source "net/lapb/Kconfig"
 source "net/phonet/Kconfig"
 source "net/ieee802154/Kconfig"
+source "net/mac802154/Kconfig"
 source "net/sched/Kconfig"
 source "net/dcb/Kconfig"
 source "net/dns_resolver/Kconfig"
 source "net/batman-adv/Kconfig"
+source "net/openvswitch/Kconfig"
 
 config RPS
 	boolean "RPS"
@@ -243,6 +245,19 @@ config RFS_ACCEL
 config XPS
 	boolean "XPS"
 	depends on SMP && RPS
+	default y
+
+config NETPRIO_CGROUP
+	tristate "Network priority cgroup"
+	depends on CGROUPS
+	---help---
+	  Cgroup subsystem for use in assigning processes to network priorities on
+	  a per-interface basis
+
+config BQL
+	boolean
+	depends on SYSFS
+	select DQL
 	default y
 
 config HAVE_BPF_JIT
