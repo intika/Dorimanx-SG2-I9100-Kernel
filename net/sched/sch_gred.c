@@ -34,7 +34,7 @@ struct gred_sched;
 
 struct gred_sched_data {
 	u32		limit;		/* HARD maximal queue length	*/
-	u32      	DP;		/* the drop pramaters */
+	u32		DP;		/* the drop parameters */
 	u32		bytesin;	/* bytes seen on virtualQ so far*/
 	u32		packetsin;	/* packets seen on virtualQ so far*/
 	u32		backlog;	/* bytes on the virtualQ */
@@ -252,10 +252,8 @@ static struct sk_buff *gred_dequeue(struct Qdisc *sch)
 		u16 dp = tc_index_to_dp(skb);
 
 		if (dp >= t->DPs || (q = t->tab[dp]) == NULL) {
-			if (net_ratelimit())
-				pr_warning("GRED: Unable to relocate VQ 0x%x "
-					   "after dequeue, screwing up "
-					   "backlog.\n", tc_index_to_dp(skb));
+			net_warn_ratelimited("GRED: Unable to relocate VQ 0x%x after dequeue, screwing up backlog\n",
+					     tc_index_to_dp(skb));
 		} else {
 			q->backlog -= qdisc_pkt_len(skb);
 
@@ -284,10 +282,8 @@ static unsigned int gred_drop(struct Qdisc *sch)
 		u16 dp = tc_index_to_dp(skb);
 
 		if (dp >= t->DPs || (q = t->tab[dp]) == NULL) {
-			if (net_ratelimit())
-				pr_warning("GRED: Unable to relocate VQ 0x%x "
-					   "while dropping, screwing up "
-					   "backlog.\n", tc_index_to_dp(skb));
+			net_warn_ratelimited("GRED: Unable to relocate VQ 0x%x while dropping, screwing up backlog\n",
+					     tc_index_to_dp(skb));
 		} else {
 			q->backlog -= len;
 			q->stats.other++;
@@ -379,18 +375,20 @@ static inline int gred_change_table_def(struct Qdisc *sch, struct nlattr *dps)
 }
 
 static inline int gred_change_vq(struct Qdisc *sch, int dp,
-				 struct tc_gred_qopt *ctl, int prio, u8 *stab)
+				 struct tc_gred_qopt *ctl, int prio,
+				 u8 *stab, u32 max_P,
+				 struct gred_sched_data **prealloc)
 {
 	struct gred_sched *table = qdisc_priv(sch);
-	struct gred_sched_data *q;
+	struct gred_sched_data *q = table->tab[dp];
 
-	if (table->tab[dp] == NULL) {
-		table->tab[dp] = kzalloc(sizeof(*q), GFP_ATOMIC);
-		if (table->tab[dp] == NULL)
+	if (!q) {
+		table->tab[dp] = q = *prealloc;
+		*prealloc = NULL;
+		if (!q)
 			return -ENOMEM;
 	}
 
-	q = table->tab[dp];
 	q->DP = dp;
 	q->prio = prio;
 	q->limit = ctl->limit;
@@ -400,7 +398,7 @@ static inline int gred_change_vq(struct Qdisc *sch, int dp,
 
 	red_set_parms(&q->parms,
 		      ctl->qth_min, ctl->qth_max, ctl->Wlog, ctl->Plog,
-		      ctl->Scell_log, stab);
+		      ctl->Scell_log, stab, max_P);
 
 	return 0;
 }
@@ -409,6 +407,7 @@ static const struct nla_policy gred_policy[TCA_GRED_MAX + 1] = {
 	[TCA_GRED_PARMS]	= { .len = sizeof(struct tc_gred_qopt) },
 	[TCA_GRED_STAB]		= { .len = 256 },
 	[TCA_GRED_DPS]		= { .len = sizeof(struct tc_gred_sopt) },
+	[TCA_GRED_MAX_P]	= { .type = NLA_U32 },
 };
 
 static int gred_change(struct Qdisc *sch, struct nlattr *opt)
@@ -418,6 +417,8 @@ static int gred_change(struct Qdisc *sch, struct nlattr *opt)
 	struct nlattr *tb[TCA_GRED_MAX + 1];
 	int err, prio = GRED_DEF_PRIO;
 	u8 *stab;
+	u32 max_P;
+	struct gred_sched_data *prealloc;
 
 	if (opt == NULL)
 		return -EINVAL;
@@ -432,6 +433,8 @@ static int gred_change(struct Qdisc *sch, struct nlattr *opt)
 	if (tb[TCA_GRED_PARMS] == NULL ||
 	    tb[TCA_GRED_STAB] == NULL)
 		return -EINVAL;
+
+	max_P = tb[TCA_GRED_MAX_P] ? nla_get_u32(tb[TCA_GRED_MAX_P]) : 0;
 
 	err = -EINVAL;
 	ctl = nla_data(tb[TCA_GRED_PARMS]);
@@ -455,9 +458,10 @@ static int gred_change(struct Qdisc *sch, struct nlattr *opt)
 			prio = ctl->prio;
 	}
 
+	prealloc = kzalloc(sizeof(*prealloc), GFP_KERNEL);
 	sch_tree_lock(sch);
 
-	err = gred_change_vq(sch, ctl->DP, ctl, prio, stab);
+	err = gred_change_vq(sch, ctl->DP, ctl, prio, stab, max_P, &prealloc);
 	if (err < 0)
 		goto errout_locked;
 
@@ -471,6 +475,7 @@ static int gred_change(struct Qdisc *sch, struct nlattr *opt)
 
 errout_locked:
 	sch_tree_unlock(sch);
+	kfree(prealloc);
 errout:
 	return err;
 }
@@ -498,6 +503,7 @@ static int gred_dump(struct Qdisc *sch, struct sk_buff *skb)
 	struct gred_sched *table = qdisc_priv(sch);
 	struct nlattr *parms, *opts = NULL;
 	int i;
+	u32 max_p[MAX_DPs];
 	struct tc_gred_sopt sopt = {
 		.DPs	= table->DPs,
 		.def_DP	= table->def,
@@ -508,7 +514,17 @@ static int gred_dump(struct Qdisc *sch, struct sk_buff *skb)
 	opts = nla_nest_start(skb, TCA_OPTIONS);
 	if (opts == NULL)
 		goto nla_put_failure;
-	NLA_PUT(skb, TCA_GRED_DPS, sizeof(sopt), &sopt);
+	if (nla_put(skb, TCA_GRED_DPS, sizeof(sopt), &sopt))
+		goto nla_put_failure;
+
+	for (i = 0; i < MAX_DPs; i++) {
+		struct gred_sched_data *q = table->tab[i];
+
+		max_p[i] = q ? q->parms.max_P : 0;
+	}
+	if (nla_put(skb, TCA_GRED_MAX_P, sizeof(max_p), max_p))
+		goto nla_put_failure;
+
 	parms = nla_nest_start(skb, TCA_GRED_PARMS);
 	if (parms == NULL)
 		goto nla_put_failure;

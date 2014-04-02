@@ -137,15 +137,16 @@ static unsigned int ip6_hashfn(struct inet_frag_queue *q)
 	return inet6_hash_frag(fq->id, &fq->saddr, &fq->daddr, ip6_frags.rnd);
 }
 
-int ip6_frag_match(struct inet_frag_queue *q, void *a)
+bool ip6_frag_match(struct inet_frag_queue *q, void *a)
 {
 	struct frag_queue *fq;
 	struct ip6_create_arg *arg = a;
 
 	fq = container_of(q, struct frag_queue, q);
-	return (fq->id == arg->id && fq->user == arg->user &&
-			ipv6_addr_equal(&fq->saddr, arg->src) &&
-			ipv6_addr_equal(&fq->daddr, arg->dst));
+	return	fq->id == arg->id &&
+		fq->user == arg->user &&
+		ipv6_addr_equal(&fq->saddr, arg->src) &&
+		ipv6_addr_equal(&fq->daddr, arg->dst);
 }
 EXPORT_SYMBOL(ip6_frag_match);
 
@@ -340,12 +341,11 @@ static int ip6_frag_queue(struct frag_queue *fq, struct sk_buff *skb,
 	}
 
 found:
-	/* RFC5722, Section 4:
-	 *                                  When reassembling an IPv6 datagram, if
+	/* RFC5722, Section 4, amended by Errata ID : 3089
+	 *                          When reassembling an IPv6 datagram, if
 	 *   one or more its constituent fragments is determined to be an
 	 *   overlapping fragment, the entire datagram (and any constituent
-	 *   fragments, including those not yet received) MUST be silently
-	 *   discarded.
+	 *   fragments) MUST be silently discarded.
 	 */
 
 	/* Check for overlap with preceding fragment. */
@@ -447,7 +447,7 @@ static int ip6_frag_reasm(struct frag_queue *fq, struct sk_buff *prev,
 		skb_morph(head, fq->q.fragments);
 		head->next = fq->q.fragments->next;
 
-		kfree_skb(fq->q.fragments);
+		consume_skb(fq->q.fragments);
 		fq->q.fragments = head;
 	}
 
@@ -533,12 +533,10 @@ static int ip6_frag_reasm(struct frag_queue *fq, struct sk_buff *prev,
 	return 1;
 
 out_oversize:
-	if (net_ratelimit())
-		printk(KERN_DEBUG "ip6_frag_reasm: payload len = %d\n", payload_len);
+	net_dbg_ratelimited("ip6_frag_reasm: payload len = %d\n", payload_len);
 	goto out_fail;
 out_oom:
-	if (net_ratelimit())
-		printk(KERN_DEBUG "ip6_frag_reasm: no memory for reassembly\n");
+	net_dbg_ratelimited("ip6_frag_reasm: no memory for reassembly\n");
 out_fail:
 	rcu_read_lock();
 	IP6_INC_STATS_BH(net, __in6_dev_get(dev), IPSTATS_MIB_REASMFAILS);
@@ -665,7 +663,7 @@ static int __net_init ip6_frags_ns_sysctl_register(struct net *net)
 		table[2].data = &net->ipv6.frags.timeout;
 	}
 
-	hdr = register_net_sysctl_table(net, net_ipv6_ctl_path, table);
+	hdr = register_net_sysctl(net, "net/ipv6", table);
 	if (hdr == NULL)
 		goto err_reg;
 

@@ -29,6 +29,8 @@
  *	Kazunori MIYAZAWA @USAGI:       change output process to use ip6_append_data
  */
 
+#define pr_fmt(fmt) "IPv6: " fmt
+
 #include <linux/module.h>
 #include <linux/errno.h>
 #include <linux/types.h>
@@ -467,6 +469,8 @@ void icmpv6_send(struct sk_buff *skb, u8 type, u8 code, __u32 info)
 
 	if (!fl6.flowi6_oif && ipv6_addr_is_multicast(&fl6.daddr))
 		fl6.flowi6_oif = np->mcast_oif;
+	else if (!fl6.flowi6_oif)
+		fl6.flowi6_oif = np->ucast_oif;
 
 	dst = icmpv6_route_lookup(net, skb, sk, &fl6);
 	if (IS_ERR(dst))
@@ -496,7 +500,7 @@ void icmpv6_send(struct sk_buff *skb, u8 type, u8 code, __u32 info)
 	err = ip6_append_data(sk, icmpv6_getfrag, &msg,
 			      len + sizeof(struct icmp6hdr),
 			      sizeof(struct icmp6hdr), hlimit,
-			      np->tclass, NULL, &fl6, (struct rt6_info*)dst,
+			      np->tclass, NULL, &fl6, (struct rt6_info *)dst,
 			      MSG_DONTWAIT, np->dontfrag);
 	if (err) {
 		ICMP6_INC_STATS_BH(net, idev, ICMP6_MIB_OUTERRORS);
@@ -552,6 +556,8 @@ static void icmpv6_echo_reply(struct sk_buff *skb)
 
 	if (!fl6.flowi6_oif && ipv6_addr_is_multicast(&fl6.daddr))
 		fl6.flowi6_oif = np->mcast_oif;
+	else if (!fl6.flowi6_oif)
+		fl6.flowi6_oif = np->ucast_oif;
 
 	err = ip6_dst_lookup(sk, &dst, &fl6);
 	if (err)
@@ -575,7 +581,7 @@ static void icmpv6_echo_reply(struct sk_buff *skb)
 
 	err = ip6_append_data(sk, icmpv6_getfrag, &msg, skb->len + sizeof(struct icmp6hdr),
 				sizeof(struct icmp6hdr), hlimit, np->tclass, NULL, &fl6,
-				(struct rt6_info*)dst, MSG_DONTWAIT,
+				(struct rt6_info *)dst, MSG_DONTWAIT,
 				np->dontfrag);
 
 	if (err) {
@@ -595,8 +601,8 @@ static void icmpv6_notify(struct sk_buff *skb, u8 type, u8 code, __be32 info)
 	const struct inet6_protocol *ipprot;
 	int inner_offset;
 	int hash;
-	__be16 frag_off;
 	u8 nexthdr;
+	__be16 frag_off;
 
 	if (!pskb_may_pull(skb, sizeof(struct ipv6hdr)))
 		return;
@@ -816,9 +822,7 @@ static int __net_init icmpv6_sk_init(struct net *net)
 		err = inet_ctl_sock_create(&sk, PF_INET6,
 					   SOCK_RAW, IPPROTO_ICMPV6, net);
 		if (err < 0) {
-			printk(KERN_ERR
-			       "Failed to initialize the ICMP6 control socket "
-			       "(err %d).\n",
+			pr_err("Failed to initialize the ICMP6 control socket (err %d)\n",
 			       err);
 			goto fail;
 		}
@@ -877,7 +881,7 @@ int __init icmpv6_init(void)
 	return 0;
 
 fail:
-	printk(KERN_ERR "Failed to register ICMP6 protocol\n");
+	pr_err("Failed to register ICMP6 protocol\n");
 	unregister_pernet_subsys(&icmpv6_sk_ops);
 	return err;
 }
@@ -954,7 +958,6 @@ int icmpv6_err_convert(u8 type, u8 code, int *err)
 
 	return fatal;
 }
-
 EXPORT_SYMBOL(icmpv6_err_convert);
 
 #ifdef CONFIG_SYSCTL

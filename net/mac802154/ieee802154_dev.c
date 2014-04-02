@@ -140,10 +140,6 @@ mac802154_add_iface(struct wpan_phy *phy, const char *name, int type)
 		dev = alloc_netdev(sizeof(struct mac802154_sub_if_data),
 				   name, mac802154_monitor_setup);
 		break;
-	case IEEE802154_DEV_WPAN:
-		dev = alloc_netdev(sizeof(struct mac802154_sub_if_data),
-				   name, mac802154_wpan_setup);
-		break;
 	default:
 		dev = NULL;
 		err = -EINVAL;
@@ -174,7 +170,8 @@ ieee802154_alloc_device(size_t priv_data_len, struct ieee802154_ops *ops)
 
 	if (!ops || !ops->xmit || !ops->ed || !ops->start ||
 	    !ops->stop || !ops->set_channel) {
-		pr_err("undefined IEEE802.15.4 device operations\n");
+		printk(KERN_ERR
+		       "undefined IEEE802.15.4 device operations\n");
 		return NULL;
 	}
 
@@ -200,7 +197,8 @@ ieee802154_alloc_device(size_t priv_data_len, struct ieee802154_ops *ops)
 
 	phy = wpan_phy_alloc(priv_size);
 	if (!phy) {
-		pr_err("failure to allocate master IEEE802.15.4 device\n");
+		printk(KERN_ERR
+		       "failure to allocate master IEEE802.15.4 device\n");
 		return NULL;
 	}
 
@@ -222,9 +220,9 @@ void ieee802154_free_device(struct ieee802154_dev *hw)
 
 	BUG_ON(!list_empty(&priv->slaves));
 
-	mutex_destroy(&priv->slaves_mtx);
-
 	wpan_phy_free(priv->phy);
+
+	mutex_destroy(&priv->slaves_mtx);
 }
 EXPORT_SYMBOL(ieee802154_free_device);
 

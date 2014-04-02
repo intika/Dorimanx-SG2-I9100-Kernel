@@ -44,6 +44,7 @@
 #include <linux/rculist.h>
 #include <linux/dmaengine.h>
 #include <linux/workqueue.h>
+#include <linux/dynamic_queue_limits.h>
 
 #include <linux/ethtool.h>
 #include <net/net_namespace.h>
@@ -51,8 +52,10 @@
 #ifdef CONFIG_DCB
 #include <net/dcbnl.h>
 #endif
+#include <net/netprio_cgroup.h>
 
 #include <linux/netdev_features.h>
+#include <linux/neighbour.h>
 
 struct vlan_group;
 struct netpoll_info;
@@ -524,11 +527,23 @@ static inline void napi_synchronize(const struct napi_struct *n)
 #endif
 
 enum netdev_queue_state_t {
-	__QUEUE_STATE_XOFF,
+	__QUEUE_STATE_DRV_XOFF,
+	__QUEUE_STATE_STACK_XOFF,
 	__QUEUE_STATE_FROZEN,
-#define QUEUE_STATE_XOFF_OR_FROZEN ((1 << __QUEUE_STATE_XOFF)		| \
-				    (1 << __QUEUE_STATE_FROZEN))
+#define QUEUE_STATE_ANY_XOFF ((1 << __QUEUE_STATE_DRV_XOFF)		| \
+			      (1 << __QUEUE_STATE_STACK_XOFF))
+#define QUEUE_STATE_ANY_XOFF_OR_FROZEN (QUEUE_STATE_ANY_XOFF		| \
+					(1 << __QUEUE_STATE_FROZEN))
 };
+/*
+ * __QUEUE_STATE_DRV_XOFF is used by drivers to stop the transmit queue.  The
+ * netif_tx_* functions below are used to manipulate this flag.  The
+ * __QUEUE_STATE_STACK_XOFF flag is used by the stack to stop the transmit
+ * queue independently.  The netif_xmit_*stopped functions below are called
+ * to check if the queue has been stopped by the driver or stack (either
+ * of the XOFF bits are set in the state).  Drivers should not need to call
+ * netif_xmit*stopped functions, they should only be using netif_tx_*.
+ */
 
 struct netdev_queue {
 /*
@@ -536,9 +551,8 @@ struct netdev_queue {
  */
 	struct net_device	*dev;
 	struct Qdisc		*qdisc;
-	unsigned long		state;
 	struct Qdisc		*qdisc_sleeping;
-#ifdef CONFIG_RPS
+#ifdef CONFIG_SYSFS
 	struct kobject		kobj;
 #endif
 #if defined(CONFIG_XPS) && defined(CONFIG_NUMA)
@@ -553,6 +567,18 @@ struct netdev_queue {
 	 * please use this field instead of dev->trans_start
 	 */
 	unsigned long		trans_start;
+
+	/*
+	 * Number of TX timeouts for this queue
+	 * (/sys/class/net/DEV/Q/trans_timeout)
+	 */
+	unsigned long		trans_timeout;
+
+	unsigned long		state;
+
+#ifdef CONFIG_BQL
+	struct dql		dql;
+#endif
 } ____cacheline_aligned_in_smp;
 
 static inline int netdev_queue_numa_node_read(const struct netdev_queue *q)
@@ -581,7 +607,7 @@ struct rps_map {
 	struct rcu_head rcu;
 	u16 cpus[0];
 };
-#define RPS_MAP_SIZE(_num) (sizeof(struct rps_map) + (_num * sizeof(u16)))
+#define RPS_MAP_SIZE(_num) (sizeof(struct rps_map) + ((_num) * sizeof(u16)))
 
 /*
  * The rps_dev_flow structure contains the mapping of a flow to a CPU, the
@@ -605,7 +631,7 @@ struct rps_dev_flow_table {
 	struct rps_dev_flow flows[0];
 };
 #define RPS_DEV_FLOW_TABLE_SIZE(_num) (sizeof(struct rps_dev_flow_table) + \
-    (_num * sizeof(struct rps_dev_flow)))
+    ((_num) * sizeof(struct rps_dev_flow)))
 
 /*
  * The rps_sock_flow_table contains mappings of flows to the last CPU
@@ -616,7 +642,7 @@ struct rps_sock_flow_table {
 	u16 ents[0];
 };
 #define	RPS_SOCK_FLOW_TABLE_SIZE(_num) (sizeof(struct rps_sock_flow_table) + \
-    (_num * sizeof(u16)))
+    ((_num) * sizeof(u16)))
 
 #define RPS_NO_CPU 0xffff
 
@@ -668,7 +694,7 @@ struct xps_map {
 	struct rcu_head rcu;
 	u16 queues[0];
 };
-#define XPS_MAP_SIZE(_num) (sizeof(struct xps_map) + (_num * sizeof(u16)))
+#define XPS_MAP_SIZE(_num) (sizeof(struct xps_map) + ((_num) * sizeof(u16)))
 #define XPS_MIN_MAP_ALLOC ((L1_CACHE_BYTES - sizeof(struct xps_map))	\
     / sizeof(u16))
 
@@ -870,6 +896,16 @@ struct netdev_tc_txq {
  *	feature set might be less than what was returned by ndo_fix_features()).
  *	Must return >0 or -errno if it changed dev->features itself.
  *
+ * int (*ndo_fdb_add)(struct ndmsg *ndm, struct net_device *dev,
+ *		      unsigned char *addr, u16 flags)
+ *	Adds an FDB entry to dev for addr.
+ * int (*ndo_fdb_del)(struct ndmsg *ndm, struct net_device *dev,
+ *		      unsigned char *addr)
+ *	Deletes the FDB entry from dev coresponding to addr.
+ * int (*ndo_fdb_dump)(struct sk_buff *skb, struct netlink_callback *cb,
+ *		       struct net_device *dev, int idx)
+ *	Used to add FDB entries to dump requests. Implementers should add
+ *	entries to skb and update idx with the number of entries.
  */
 struct net_device_ops {
 	int			(*ndo_init)(struct net_device *dev);
@@ -964,6 +1000,20 @@ struct net_device_ops {
 						    netdev_features_t features);
 	int			(*ndo_set_features)(struct net_device *dev,
 						    netdev_features_t features);
+	int			(*ndo_neigh_construct)(struct neighbour *n);
+	void			(*ndo_neigh_destroy)(struct neighbour *n);
+
+	int			(*ndo_fdb_add)(struct ndmsg *ndm,
+					       struct net_device *dev,
+					       unsigned char *addr,
+					       u16 flags);
+	int			(*ndo_fdb_del)(struct ndmsg *ndm,
+					       struct net_device *dev,
+					       unsigned char *addr);
+	int			(*ndo_fdb_dump)(struct sk_buff *skb,
+						struct netlink_callback *cb,
+						struct net_device *dev,
+						int idx);
 };
 
 /*
@@ -1045,7 +1095,8 @@ struct net_device {
 	const struct header_ops *header_ops;
 
 	unsigned int		flags;	/* interface flags (a la BSD)	*/
-	unsigned int		priv_flags; /* Like 'flags' but invisible to userspace. */
+	unsigned int		priv_flags; /* Like 'flags' but invisible to userspace.
+					     * See if.h for definitions. */
 	unsigned short		gflags;
 	unsigned short		padded;	/* How much padding added by alloc_netdev() */
 
@@ -1070,6 +1121,7 @@ struct net_device {
 	unsigned char		perm_addr[MAX_ADDR_LEN]; /* permanent hw address */
 	unsigned char		addr_assign_type; /* hw address assignment type */
 	unsigned char		addr_len;	/* hardware address length	*/
+	unsigned char		neigh_priv_len;
 	unsigned short          dev_id;		/* for shared network cards */
 
 	spinlock_t		addr_list_lock;
@@ -1122,9 +1174,11 @@ struct net_device {
 
 	unsigned char		broadcast[MAX_ADDR_LEN];	/* hw bcast add	*/
 
-#ifdef CONFIG_RPS
+#ifdef CONFIG_SYSFS
 	struct kset		*queues_kset;
+#endif
 
+#ifdef CONFIG_RPS
 	struct netdev_rx_queue	*_rx;
 
 	/* Number of RX queues allocated at register_netdev() time */
@@ -1251,6 +1305,9 @@ struct net_device {
 #if defined(CONFIG_FCOE) || defined(CONFIG_FCOE_MODULE)
 	/* max exchange id for FCoE LRO by ddp */
 	unsigned int		fcoe_ddp_xid;
+#endif
+#if IS_ENABLED(CONFIG_NETPRIO_CGROUP)
+	struct netprio_map __rcu *priomap;
 #endif
 	/* phy device may attach itself for hardware timestamping */
 	struct phy_device *phydev;
@@ -1434,6 +1491,8 @@ struct napi_gro_cb {
 
 	/* Free the skb? */
 	int free;
+#define NAPI_GRO_FREE		  1
+#define NAPI_GRO_FREE_STOLEN_HEAD 2
 };
 
 #define NAPI_GRO_CB(skb) ((struct napi_gro_cb *)(skb)->cb)
@@ -1714,7 +1773,7 @@ extern void __netif_schedule(struct Qdisc *q);
 
 static inline void netif_schedule_queue(struct netdev_queue *txq)
 {
-	if (!test_bit(__QUEUE_STATE_XOFF, &txq->state))
+	if (!(txq->state & QUEUE_STATE_ANY_XOFF))
 		__netif_schedule(txq->qdisc);
 }
 
@@ -1728,7 +1787,7 @@ static inline void netif_tx_schedule_all(struct net_device *dev)
 
 static inline void netif_tx_start_queue(struct netdev_queue *dev_queue)
 {
-	clear_bit(__QUEUE_STATE_XOFF, &dev_queue->state);
+	clear_bit(__QUEUE_STATE_DRV_XOFF, &dev_queue->state);
 }
 
 /**
@@ -1760,7 +1819,7 @@ static inline void netif_tx_wake_queue(struct netdev_queue *dev_queue)
 		return;
 	}
 #endif
-	if (test_and_clear_bit(__QUEUE_STATE_XOFF, &dev_queue->state))
+	if (test_and_clear_bit(__QUEUE_STATE_DRV_XOFF, &dev_queue->state))
 		__netif_schedule(dev_queue->qdisc);
 }
 
@@ -1792,7 +1851,7 @@ static inline void netif_tx_stop_queue(struct netdev_queue *dev_queue)
 		pr_info("netif_stop_queue() cannot be called before register_netdev()\n");
 		return;
 	}
-	set_bit(__QUEUE_STATE_XOFF, &dev_queue->state);
+	set_bit(__QUEUE_STATE_DRV_XOFF, &dev_queue->state);
 }
 
 /**
@@ -1819,7 +1878,7 @@ static inline void netif_tx_stop_all_queues(struct net_device *dev)
 
 static inline int netif_tx_queue_stopped(const struct netdev_queue *dev_queue)
 {
-	return test_bit(__QUEUE_STATE_XOFF, &dev_queue->state);
+	return test_bit(__QUEUE_STATE_DRV_XOFF, &dev_queue->state);
 }
 
 /**
@@ -1833,9 +1892,68 @@ static inline int netif_queue_stopped(const struct net_device *dev)
 	return netif_tx_queue_stopped(netdev_get_tx_queue(dev, 0));
 }
 
-static inline int netif_tx_queue_frozen_or_stopped(const struct netdev_queue *dev_queue)
+static inline int netif_xmit_stopped(const struct netdev_queue *dev_queue)
 {
-	return dev_queue->state & QUEUE_STATE_XOFF_OR_FROZEN;
+	return dev_queue->state & QUEUE_STATE_ANY_XOFF;
+}
+
+static inline int netif_xmit_frozen_or_stopped(const struct netdev_queue *dev_queue)
+{
+	return dev_queue->state & QUEUE_STATE_ANY_XOFF_OR_FROZEN;
+}
+
+static inline void netdev_tx_sent_queue(struct netdev_queue *dev_queue,
+					unsigned int bytes)
+{
+#ifdef CONFIG_BQL
+	dql_queued(&dev_queue->dql, bytes);
+	if (unlikely(dql_avail(&dev_queue->dql) < 0)) {
+		set_bit(__QUEUE_STATE_STACK_XOFF, &dev_queue->state);
+		if (unlikely(dql_avail(&dev_queue->dql) >= 0))
+			clear_bit(__QUEUE_STATE_STACK_XOFF,
+			    &dev_queue->state);
+	}
+#endif
+}
+
+static inline void netdev_sent_queue(struct net_device *dev, unsigned int bytes)
+{
+	netdev_tx_sent_queue(netdev_get_tx_queue(dev, 0), bytes);
+}
+
+static inline void netdev_tx_completed_queue(struct netdev_queue *dev_queue,
+					     unsigned int pkts, unsigned int bytes)
+{
+#ifdef CONFIG_BQL
+	if (likely(bytes)) {
+		dql_completed(&dev_queue->dql, bytes);
+		if (unlikely(test_bit(__QUEUE_STATE_STACK_XOFF,
+		    &dev_queue->state) &&
+		    dql_avail(&dev_queue->dql) >= 0)) {
+			if (test_and_clear_bit(__QUEUE_STATE_STACK_XOFF,
+			     &dev_queue->state))
+				netif_schedule_queue(dev_queue);
+		}
+	}
+#endif
+}
+
+static inline void netdev_completed_queue(struct net_device *dev,
+					  unsigned int pkts, unsigned int bytes)
+{
+	netdev_tx_completed_queue(netdev_get_tx_queue(dev, 0), pkts, bytes);
+}
+
+static inline void netdev_tx_reset_queue(struct netdev_queue *q)
+{
+#ifdef CONFIG_BQL
+	dql_reset(&q->dql);
+#endif
+}
+
+static inline void netdev_reset_queue(struct net_device *dev_queue)
+{
+	netdev_tx_reset_queue(netdev_get_tx_queue(dev_queue, 0));
 }
 
 /**
@@ -1922,7 +2040,7 @@ static inline void netif_wake_subqueue(struct net_device *dev, u16 queue_index)
 	if (netpoll_trap())
 		return;
 #endif
-	if (test_and_clear_bit(__QUEUE_STATE_XOFF, &txq->state))
+	if (test_and_clear_bit(__QUEUE_STATE_DRV_XOFF, &txq->state))
 		__netif_schedule(txq->qdisc);
 }
 
@@ -2012,7 +2130,7 @@ extern int netdev_rx_handler_register(struct net_device *dev,
 				      void *rx_handler_data);
 extern void netdev_rx_handler_unregister(struct net_device *dev);
 
-extern int		dev_valid_name(const char *name);
+extern bool		dev_valid_name(const char *name);
 extern int		dev_ioctl(struct net *net, unsigned int cmd, void __user *);
 extern int		dev_ethtool(struct net *net, struct ifreq *);
 extern unsigned int	dev_get_flags(const struct net_device *);
@@ -2341,6 +2459,11 @@ static inline void netif_addr_lock(struct net_device *dev)
 	spin_lock(&dev->addr_list_lock);
 }
 
+static inline void netif_addr_lock_nested(struct net_device *dev)
+{
+	spin_lock_nested(&dev->addr_list_lock, SINGLE_DEPTH_NESTING);
+}
+
 static inline void netif_addr_lock_bh(struct net_device *dev)
 {
 	spin_lock_bh(&dev->addr_list_lock);
@@ -2412,6 +2535,7 @@ extern int dev_addr_init(struct net_device *dev);
 
 /* Functions used for unicast addresses handling */
 extern int dev_uc_add(struct net_device *dev, unsigned char *addr);
+extern int dev_uc_add_excl(struct net_device *dev, unsigned char *addr);
 extern int dev_uc_del(struct net_device *dev, unsigned char *addr);
 extern int dev_uc_sync(struct net_device *to, struct net_device *from);
 extern void dev_uc_unsync(struct net_device *to, struct net_device *from);
@@ -2421,6 +2545,7 @@ extern void dev_uc_init(struct net_device *dev);
 /* Functions used for multicast addresses handling */
 extern int dev_mc_add(struct net_device *dev, unsigned char *addr);
 extern int dev_mc_add_global(struct net_device *dev, unsigned char *addr);
+extern int dev_mc_add_excl(struct net_device *dev, unsigned char *addr);
 extern int dev_mc_del(struct net_device *dev, unsigned char *addr);
 extern int dev_mc_del_global(struct net_device *dev, unsigned char *addr);
 extern int dev_mc_sync(struct net_device *to, struct net_device *from);
@@ -2442,6 +2567,8 @@ extern void		dev_load(struct net *net, const char *name);
 extern void		dev_mcast_init(void);
 extern struct rtnl_link_stats64 *dev_get_stats(struct net_device *dev,
 					       struct rtnl_link_stats64 *storage);
+extern void netdev_stats_to_stats64(struct rtnl_link_stats64 *stats64,
+				    const struct net_device_stats *netdev_stats);
 
 extern int		netdev_max_backlog;
 extern int		netdev_tstamp_prequeue;
@@ -2537,23 +2664,12 @@ static inline int netif_is_bond_slave(struct net_device *dev)
 	return dev->flags & IFF_SLAVE && dev->priv_flags & IFF_BONDING;
 }
 
+static inline bool netif_supports_nofcs(struct net_device *dev)
+{
+	return dev->priv_flags & IFF_SUPP_NOFCS;
+}
+
 extern struct pernet_operations __net_initdata loopback_net_ops;
-
-static inline u32 dev_ethtool_get_rx_csum(struct net_device *dev)
-{
-	if (dev->features & NETIF_F_RXCSUM)
-		return 1;
-	if (!dev->ethtool_ops || !dev->ethtool_ops->get_rx_csum)
-		return 0;
-	return dev->ethtool_ops->get_rx_csum(dev);
-}
-
-static inline u32 dev_ethtool_get_flags(struct net_device *dev)
-{
-	if (!dev->ethtool_ops || !dev->ethtool_ops->get_flags)
-		return 0;
-	return dev->ethtool_ops->get_flags(dev);
-}
 
 /* Logging, debugging and troubleshooting/diagnostic helpers. */
 

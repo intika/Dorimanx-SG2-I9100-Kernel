@@ -30,7 +30,6 @@
 #include <net/netfilter/nf_nat_helper.h>
 #include <net/netfilter/nf_conntrack_helper.h>
 #include <net/netfilter/nf_conntrack_l3proto.h>
-#include <net/netfilter/nf_conntrack_l4proto.h>
 #include <net/netfilter/nf_conntrack_zones.h>
 
 static DEFINE_SPINLOCK(nf_nat_lock);
@@ -57,7 +56,7 @@ hash_by_src(const struct net *net, u16 zone,
 	/* Original src, to ensure we map it consistently if poss. */
 	hash = jhash_3words((__force u32)tuple->src.u3.ip,
 			    (__force u32)tuple->src.u.all ^ zone,
-			    tuple->dst.protonum, 0);
+			    tuple->dst.protonum, nf_conntrack_hash_rnd);
 	return ((u64)hash * net->ipv4.nat_htable_size) >> 32;
 }
 
@@ -317,7 +316,7 @@ nf_nat_setup_info(struct nf_conn *ct,
 		srchash = hash_by_src(net, nf_ct_zone(ct),
 				      &ct->tuplehash[IP_CT_DIR_ORIGINAL].tuple);
 		spin_lock_bh(&nf_nat_lock);
-		/* nf_conntrack_alter_reply might re-allocate exntension aera */
+		/* nf_conntrack_alter_reply might re-allocate extension area */
 		nat = nfct_nat(ct);
 		nat->ct = ct;
 		hlist_add_head_rcu(&nat->bysource,
@@ -413,8 +412,7 @@ int nf_nat_icmp_reply_translation(struct nf_conn *ct,
 		struct icmphdr icmp;
 		struct iphdr ip;
 	} *inside;
-	const struct nf_conntrack_l4proto *l4proto;
-	struct nf_conntrack_tuple inner, target;
+	struct nf_conntrack_tuple target;
 	int hdrlen = ip_hdrlen(skb);
 	enum ip_conntrack_dir dir = CTINFO2DIR(ctinfo);
 	unsigned long statusbit;
@@ -461,16 +459,6 @@ int nf_nat_icmp_reply_translation(struct nf_conn *ct,
 	pr_debug("icmp_reply_translation: translating error %p manip %u "
 		 "dir %s\n", skb, manip,
 		 dir == IP_CT_DIR_ORIGINAL ? "ORIG" : "REPLY");
-
-	/* rcu_read_lock()ed by nf_hook_slow */
-	l4proto = __nf_ct_l4proto_find(PF_INET, inside->ip.protocol);
-
-	if (!nf_ct_get_tuple(skb, hdrlen + sizeof(struct icmphdr),
-			     (hdrlen +
-			      sizeof(struct icmphdr) + inside->ip.ihl * 4),
-			     (u_int16_t)AF_INET, inside->ip.protocol,
-			     &inner, l3proto, l4proto))
-		return 0;
 
 	/* Change inner back to look like incoming packet.  We do the
 	   opposite manip on this hook to normal, because it might not
@@ -524,7 +512,7 @@ EXPORT_SYMBOL(nf_nat_protocol_register);
 void nf_nat_protocol_unregister(const struct nf_nat_protocol *proto)
 {
 	spin_lock_bh(&nf_nat_lock);
-	rcu_assign_pointer_nonull(nf_nat_protos[proto->protonum],
+	RCU_INIT_POINTER(nf_nat_protos[proto->protonum],
 			   &nf_nat_unknown_protocol);
 	spin_unlock_bh(&nf_nat_lock);
 	synchronize_rcu();
@@ -574,26 +562,6 @@ static struct nf_ct_ext_type nat_extend __read_mostly = {
 #include <linux/netfilter/nfnetlink.h>
 #include <linux/netfilter/nfnetlink_conntrack.h>
 
-static const struct nf_nat_protocol *
-nf_nat_proto_find_get(u_int8_t protonum)
-{
-	const struct nf_nat_protocol *p;
-
-	rcu_read_lock();
-	p = __nf_nat_proto_find(protonum);
-	if (!try_module_get(p->me))
-		p = &nf_nat_unknown_protocol;
-	rcu_read_unlock();
-
-	return p;
-}
-
-static void
-nf_nat_proto_put(const struct nf_nat_protocol *p)
-{
-	module_put(p->me);
-}
-
 static const struct nla_policy protonat_nla_policy[CTA_PROTONAT_MAX+1] = {
 	[CTA_PROTONAT_PORT_MIN]	= { .type = NLA_U16 },
 	[CTA_PROTONAT_PORT_MAX]	= { .type = NLA_U16 },
@@ -611,16 +579,18 @@ static int nfnetlink_parse_nat_proto(struct nlattr *attr,
 	if (err < 0)
 		return err;
 
-	npt = nf_nat_proto_find_get(nf_ct_protonum(ct));
+	rcu_read_lock();
+	npt = __nf_nat_proto_find(nf_ct_protonum(ct));
 	if (npt->nlattr_to_range)
 		err = npt->nlattr_to_range(tb, range);
-	nf_nat_proto_put(npt);
+	rcu_read_unlock();
 	return err;
 }
 
 static const struct nla_policy nat_nla_policy[CTA_NAT_MAX+1] = {
 	[CTA_NAT_MINIP]		= { .type = NLA_U32 },
 	[CTA_NAT_MAXIP]		= { .type = NLA_U32 },
+	[CTA_NAT_PROTO]		= { .type = NLA_NESTED },
 };
 
 static int
@@ -715,6 +685,11 @@ static struct pernet_operations nf_nat_net_ops = {
 	.exit = nf_nat_net_exit,
 };
 
+static struct nf_ct_helper_expectfn follow_master_nat = {
+	.name		= "nat-follow-master",
+	.expectfn	= nf_nat_follow_master,
+};
+
 static int __init nf_nat_init(void)
 {
 	size_t i;
@@ -735,10 +710,10 @@ static int __init nf_nat_init(void)
 	/* Sew in builtin protocols. */
 	spin_lock_bh(&nf_nat_lock);
 	for (i = 0; i < MAX_IP_NAT_PROTO; i++)
-		rcu_assign_pointer_nonull(nf_nat_protos[i], &nf_nat_unknown_protocol);
-	rcu_assign_pointer_nonull(nf_nat_protos[IPPROTO_TCP], &nf_nat_protocol_tcp);
-	rcu_assign_pointer_nonull(nf_nat_protos[IPPROTO_UDP], &nf_nat_protocol_udp);
-	rcu_assign_pointer_nonull(nf_nat_protos[IPPROTO_ICMP], &nf_nat_protocol_icmp);
+		RCU_INIT_POINTER(nf_nat_protos[i], &nf_nat_unknown_protocol);
+	RCU_INIT_POINTER(nf_nat_protos[IPPROTO_TCP], &nf_nat_protocol_tcp);
+	RCU_INIT_POINTER(nf_nat_protos[IPPROTO_UDP], &nf_nat_protocol_udp);
+	RCU_INIT_POINTER(nf_nat_protos[IPPROTO_ICMP], &nf_nat_protocol_icmp);
 	spin_unlock_bh(&nf_nat_lock);
 
 	/* Initialize fake conntrack so that NAT will skip it */
@@ -746,13 +721,15 @@ static int __init nf_nat_init(void)
 
 	l3proto = nf_ct_l3proto_find_get((u_int16_t)AF_INET);
 
+	nf_ct_helper_expectfn_register(&follow_master_nat);
+
 	BUG_ON(nf_nat_seq_adjust_hook != NULL);
-	rcu_assign_pointer_nonull(nf_nat_seq_adjust_hook, nf_nat_seq_adjust);
+	RCU_INIT_POINTER(nf_nat_seq_adjust_hook, nf_nat_seq_adjust);
 	BUG_ON(nfnetlink_parse_nat_setup_hook != NULL);
-	rcu_assign_pointer_nonull(nfnetlink_parse_nat_setup_hook,
+	RCU_INIT_POINTER(nfnetlink_parse_nat_setup_hook,
 			   nfnetlink_parse_nat_setup);
 	BUG_ON(nf_ct_nat_offset != NULL);
-	rcu_assign_pointer_nonull(nf_ct_nat_offset, nf_nat_get_offset);
+	RCU_INIT_POINTER(nf_ct_nat_offset, nf_nat_get_offset);
 	return 0;
 
  cleanup_extend:
@@ -765,6 +742,7 @@ static void __exit nf_nat_cleanup(void)
 	unregister_pernet_subsys(&nf_nat_net_ops);
 	nf_ct_l3proto_put(l3proto);
 	nf_ct_extend_unregister(&nat_extend);
+	nf_ct_helper_expectfn_unregister(&follow_master_nat);
 	RCU_INIT_POINTER(nf_nat_seq_adjust_hook, NULL);
 	RCU_INIT_POINTER(nfnetlink_parse_nat_setup_hook, NULL);
 	RCU_INIT_POINTER(nf_ct_nat_offset, NULL);

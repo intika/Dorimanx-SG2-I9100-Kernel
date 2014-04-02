@@ -202,10 +202,8 @@ ip_vs_lblc_new(struct ip_vs_lblc_table *tbl, const union nf_inet_addr *daddr,
 	en = ip_vs_lblc_get(dest->af, tbl, daddr);
 	if (!en) {
 		en = kmalloc(sizeof(*en), GFP_ATOMIC);
-		if (!en) {
-			pr_err("%s(): no memory\n", __func__);
+		if (!en)
 			return NULL;
-		}
 
 		en->af = dest->af;
 		ip_vs_addr_copy(dest->af, &en->addr, daddr);
@@ -344,11 +342,10 @@ static int ip_vs_lblc_init_svc(struct ip_vs_service *svc)
 	/*
 	 *    Allocate the ip_vs_lblc_table for this service
 	 */
-	tbl = kmalloc(sizeof(*tbl), GFP_ATOMIC);
-	if (tbl == NULL) {
-		pr_err("%s(): no memory\n", __func__);
+	tbl = kmalloc(sizeof(*tbl), GFP_KERNEL);
+	if (tbl == NULL)
 		return -ENOMEM;
-	}
+
 	svc->sched_data = tbl;
 	IP_VS_DBG(6, "LBLC hash table (memory=%Zdbytes) allocated for "
 		  "current service\n", sizeof(*tbl));
@@ -554,6 +551,9 @@ static int __net_init __ip_vs_lblc_init(struct net *net)
 {
 	struct netns_ipvs *ipvs = net_ipvs(net);
 
+	if (!ipvs)
+		return -ENOENT;
+
 	if (!net_eq(net, &init_net)) {
 		ipvs->lblc_ctl_table = kmemdup(vs_vars_table,
 						sizeof(vs_vars_table),
@@ -566,8 +566,7 @@ static int __net_init __ip_vs_lblc_init(struct net *net)
 	ipvs->lblc_ctl_table[0].data = &ipvs->sysctl_lblc_expiration;
 
 	ipvs->lblc_ctl_header =
-		register_net_sysctl_table(net, net_vs_ctl_path,
-					  ipvs->lblc_ctl_table);
+		register_net_sysctl(net, "net/ipv4/vs", ipvs->lblc_ctl_table);
 	if (!ipvs->lblc_ctl_header) {
 		if (!net_eq(net, &init_net))
 			kfree(ipvs->lblc_ctl_table);

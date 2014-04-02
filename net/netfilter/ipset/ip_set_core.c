@@ -75,27 +75,33 @@ find_set_type(const char *name, u8 family, u8 revision)
 }
 
 /* Unlock, try to load a set type module and lock again */
-static int
-try_to_load_type(const char *name)
+static bool
+load_settype(const char *name)
 {
 	nfnl_unlock();
 	pr_debug("try to load ip_set_%s\n", name);
 	if (request_module("ip_set_%s", name) < 0) {
 		pr_warning("Can't find ip_set type %s\n", name);
 		nfnl_lock();
-		return -IPSET_ERR_FIND_TYPE;
+		return false;
 	}
 	nfnl_lock();
-	return -EAGAIN;
+	return true;
 }
 
 /* Find a set type and reference it */
+#define find_set_type_get(name, family, revision, found)	\
+	__find_set_type_get(name, family, revision, found, false)
+
 static int
-find_set_type_get(const char *name, u8 family, u8 revision,
-		  struct ip_set_type **found)
+__find_set_type_get(const char *name, u8 family, u8 revision,
+		    struct ip_set_type **found, bool retry)
 {
 	struct ip_set_type *type;
 	int err;
+
+	if (retry && !load_settype(name))
+		return -IPSET_ERR_FIND_TYPE;
 
 	rcu_read_lock();
 	*found = find_set_type(name, family, revision);
@@ -103,7 +109,8 @@ find_set_type_get(const char *name, u8 family, u8 revision,
 		err = !try_module_get((*found)->me) ? -EFAULT : 0;
 		goto unlock;
 	}
-	/* Make sure the type is loaded but we don't support the revision */
+	/* Make sure the type is already loaded
+	 * but we don't support the revision */
 	list_for_each_entry_rcu(type, &ip_set_type_list, list)
 		if (STREQ(type->name, name)) {
 			err = -IPSET_ERR_FIND_TYPE;
@@ -111,7 +118,8 @@ find_set_type_get(const char *name, u8 family, u8 revision,
 		}
 	rcu_read_unlock();
 
-	return try_to_load_type(name);
+	return retry ? -IPSET_ERR_FIND_TYPE :
+		__find_set_type_get(name, family, revision, found, true);
 
 unlock:
 	rcu_read_unlock();
@@ -122,11 +130,18 @@ unlock:
  * If we succeeded, the supported minimal and maximum revisions are
  * filled out.
  */
+#define find_set_type_minmax(name, family, min, max) \
+	__find_set_type_minmax(name, family, min, max, false)
+
 static int
-find_set_type_minmax(const char *name, u8 family, u8 *min, u8 *max)
+__find_set_type_minmax(const char *name, u8 family, u8 *min, u8 *max,
+		       bool retry)
 {
 	struct ip_set_type *type;
 	bool found = false;
+
+	if (retry && !load_settype(name))
+		return -IPSET_ERR_FIND_TYPE;
 
 	*min = 255; *max = 0;
 	rcu_read_lock();
@@ -143,7 +158,8 @@ find_set_type_minmax(const char *name, u8 family, u8 *min, u8 *max)
 	if (found)
 		return 0;
 
-	return try_to_load_type(name);
+	return retry ? -IPSET_ERR_FIND_TYPE :
+		__find_set_type_minmax(name, family, min, max, true);
 }
 
 #define family_name(f)	((f) == AF_INET ? "inet" : \
@@ -1054,17 +1070,21 @@ dump_last:
 			ret = -EMSGSIZE;
 			goto release_refcount;
 		}
-		NLA_PUT_U8(skb, IPSET_ATTR_PROTOCOL, IPSET_PROTOCOL);
-		NLA_PUT_STRING(skb, IPSET_ATTR_SETNAME, set->name);
+		if (nla_put_u8(skb, IPSET_ATTR_PROTOCOL, IPSET_PROTOCOL) ||
+		    nla_put_string(skb, IPSET_ATTR_SETNAME, set->name))
+			goto nla_put_failure;
+		if (dump_flags & IPSET_FLAG_LIST_SETNAME)
+			goto next_set;
 		switch (cb->args[2]) {
 		case 0:
 			/* Core header data */
-			NLA_PUT_STRING(skb, IPSET_ATTR_TYPENAME,
-				       set->type->name);
-			NLA_PUT_U8(skb, IPSET_ATTR_FAMILY,
-				   set->family);
-			NLA_PUT_U8(skb, IPSET_ATTR_REVISION,
-				   set->type->revision);
+			if (nla_put_string(skb, IPSET_ATTR_TYPENAME,
+					   set->type->name) ||
+			    nla_put_u8(skb, IPSET_ATTR_FAMILY,
+				       set->family) ||
+			    nla_put_u8(skb, IPSET_ATTR_REVISION,
+				       set->revision))
+				goto nla_put_failure;
 			ret = set->variant->head(set, skb);
 			if (ret < 0)
 				goto release_refcount;
@@ -1098,6 +1118,7 @@ release_refcount:
 	if (ret || !cb->args[2]) {
 		pr_debug("release set %s\n", ip_set_list[index]->name);
 		ip_set_put_byindex(index);
+		cb->args[2] = 0;
 	}
 out:
 	if (nlh) {
@@ -1364,11 +1385,12 @@ ip_set_header(struct sock *ctnl, struct sk_buff *skb,
 			 IPSET_CMD_HEADER);
 	if (!nlh2)
 		goto nlmsg_failure;
-	NLA_PUT_U8(skb2, IPSET_ATTR_PROTOCOL, IPSET_PROTOCOL);
-	NLA_PUT_STRING(skb2, IPSET_ATTR_SETNAME, set->name);
-	NLA_PUT_STRING(skb2, IPSET_ATTR_TYPENAME, set->type->name);
-	NLA_PUT_U8(skb2, IPSET_ATTR_FAMILY, set->family);
-	NLA_PUT_U8(skb2, IPSET_ATTR_REVISION, set->type->revision);
+	if (nla_put_u8(skb2, IPSET_ATTR_PROTOCOL, IPSET_PROTOCOL) ||
+	    nla_put_string(skb2, IPSET_ATTR_SETNAME, set->name) ||
+	    nla_put_string(skb2, IPSET_ATTR_TYPENAME, set->type->name) ||
+	    nla_put_u8(skb2, IPSET_ATTR_FAMILY, set->family) ||
+	    nla_put_u8(skb2, IPSET_ATTR_REVISION, set->revision))
+		goto nla_put_failure;
 	nlmsg_end(skb2, nlh2);
 
 	ret = netlink_unicast(ctnl, skb2, NETLINK_CB(skb).pid, MSG_DONTWAIT);
@@ -1423,11 +1445,12 @@ ip_set_type(struct sock *ctnl, struct sk_buff *skb,
 			 IPSET_CMD_TYPE);
 	if (!nlh2)
 		goto nlmsg_failure;
-	NLA_PUT_U8(skb2, IPSET_ATTR_PROTOCOL, IPSET_PROTOCOL);
-	NLA_PUT_STRING(skb2, IPSET_ATTR_TYPENAME, typename);
-	NLA_PUT_U8(skb2, IPSET_ATTR_FAMILY, family);
-	NLA_PUT_U8(skb2, IPSET_ATTR_REVISION, max);
-	NLA_PUT_U8(skb2, IPSET_ATTR_REVISION_MIN, min);
+	if (nla_put_u8(skb2, IPSET_ATTR_PROTOCOL, IPSET_PROTOCOL) ||
+	    nla_put_string(skb2, IPSET_ATTR_TYPENAME, typename) ||
+	    nla_put_u8(skb2, IPSET_ATTR_FAMILY, family) ||
+	    nla_put_u8(skb2, IPSET_ATTR_REVISION, max) ||
+	    nla_put_u8(skb2, IPSET_ATTR_REVISION_MIN, min))
+		goto nla_put_failure;
 	nlmsg_end(skb2, nlh2);
 
 	pr_debug("Send TYPE, nlmsg_len: %u\n", nlh2->nlmsg_len);
@@ -1471,7 +1494,8 @@ ip_set_protocol(struct sock *ctnl, struct sk_buff *skb,
 			 IPSET_CMD_PROTOCOL);
 	if (!nlh2)
 		goto nlmsg_failure;
-	NLA_PUT_U8(skb2, IPSET_ATTR_PROTOCOL, IPSET_PROTOCOL);
+	if (nla_put_u8(skb2, IPSET_ATTR_PROTOCOL, IPSET_PROTOCOL))
+		goto nla_put_failure;
 	nlmsg_end(skb2, nlh2);
 
 	ret = netlink_unicast(ctnl, skb2, NETLINK_CB(skb).pid, MSG_DONTWAIT);
@@ -1674,10 +1698,8 @@ ip_set_init(void)
 
 	ip_set_list = kzalloc(sizeof(struct ip_set *) * ip_set_max,
 			      GFP_KERNEL);
-	if (!ip_set_list) {
-		pr_err("ip_set: Unable to create ip_set_list\n");
+	if (!ip_set_list)
 		return -ENOMEM;
-	}
 
 	ret = nfnetlink_subsys_register(&ip_set_netlink_subsys);
 	if (ret != 0) {
