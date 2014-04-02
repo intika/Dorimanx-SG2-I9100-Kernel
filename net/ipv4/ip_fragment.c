@@ -148,17 +148,17 @@ static unsigned int ip4_hashfn(struct inet_frag_queue *q)
 	return ipqhashfn(ipq->id, ipq->saddr, ipq->daddr, ipq->protocol);
 }
 
-static int ip4_frag_match(struct inet_frag_queue *q, void *a)
+static bool ip4_frag_match(struct inet_frag_queue *q, void *a)
 {
 	struct ipq *qp;
 	struct ip4_create_arg *arg = a;
 
 	qp = container_of(q, struct ipq, q);
 	return	qp->id == arg->iph->id &&
-			qp->saddr == arg->iph->saddr &&
-			qp->daddr == arg->iph->daddr &&
-			qp->protocol == arg->iph->protocol &&
-			qp->user == arg->user;
+		qp->saddr == arg->iph->saddr &&
+		qp->daddr == arg->iph->daddr &&
+		qp->protocol == arg->iph->protocol &&
+		qp->user == arg->user;
 }
 
 /* Memory Tracking Functions. */
@@ -391,7 +391,7 @@ static int ip_frag_queue(struct ipq *qp, struct sk_buff *skb)
 	/* Is this the final fragment? */
 	if ((flags & IP_MF) == 0) {
 		/* If we already have some bits beyond end
-		 * or have different end, the segment is corrrupted.
+		 * or have different end, the segment is corrupted.
 		 */
 		if (end < qp->q.len ||
 		    ((qp->q.last_in & INET_FRAG_LAST_IN) && end != qp->q.len))
@@ -574,7 +574,7 @@ static int ip_frag_reasm(struct ipq *qp, struct sk_buff *prev,
 		skb_morph(head, qp->q.fragments);
 		head->next = qp->q.fragments->next;
 
-		kfree_skb(qp->q.fragments);
+		consume_skb(qp->q.fragments);
 		qp->q.fragments = head;
 	}
 
@@ -644,14 +644,12 @@ static int ip_frag_reasm(struct ipq *qp, struct sk_buff *prev,
 	return 0;
 
 out_nomem:
-	LIMIT_NETDEBUG(KERN_ERR "IP: queue_glue: no memory for gluing "
-			      "queue %p\n", qp);
+	LIMIT_NETDEBUG(KERN_ERR pr_fmt("queue_glue: no memory for gluing queue %p\n"),
+		       qp);
 	err = -ENOMEM;
 	goto out_fail;
 out_oversize:
-	if (net_ratelimit())
-		printk(KERN_INFO "Oversized IP packet from %pI4.\n",
-			&qp->saddr);
+	net_info_ratelimited("Oversized IP packet from %pI4\n", &qp->saddr);
 out_fail:
 	IP_INC_STATS_BH(net, IPSTATS_MIB_REASMFAILS);
 	return err;
@@ -788,7 +786,7 @@ static int __net_init ip4_frags_ns_ctl_register(struct net *net)
 		table[2].data = &net->ipv4.frags.timeout;
 	}
 
-	hdr = register_net_sysctl_table(net, net_ipv4_ctl_path, table);
+	hdr = register_net_sysctl(net, "net/ipv4", table);
 	if (hdr == NULL)
 		goto err_reg;
 

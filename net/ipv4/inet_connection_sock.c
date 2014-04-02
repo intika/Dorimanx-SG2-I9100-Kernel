@@ -54,7 +54,7 @@ void inet_get_local_port_range(int *low, int *high)
 EXPORT_SYMBOL(inet_get_local_port_range);
 
 int inet_csk_bind_conflict(const struct sock *sk,
-			   const struct inet_bind_bucket *tb)
+			   const struct inet_bind_bucket *tb, bool relax)
 {
 	struct sock *sk2;
 	int reuse = sk->sk_reuse;
@@ -75,6 +75,14 @@ int inet_csk_bind_conflict(const struct sock *sk,
 			if (!reuse || !sk2->sk_reuse ||
 			    sk2->sk_state == TCP_LISTEN) {
 				const __be32 sk2_rcv_saddr = sk_rcv_saddr(sk2);
+				if (!sk2_rcv_saddr || !sk_rcv_saddr(sk) ||
+				    sk2_rcv_saddr == sk_rcv_saddr(sk))
+					break;
+			}
+			if (!relax && reuse && sk2->sk_reuse &&
+			    sk2->sk_state != TCP_LISTEN) {
+				const __be32 sk2_rcv_saddr = sk_rcv_saddr(sk2);
+
 				if (!sk2_rcv_saddr || !sk_rcv_saddr(sk) ||
 				    sk2_rcv_saddr == sk_rcv_saddr(sk))
 					break;
@@ -121,11 +129,15 @@ again:
 					    (tb->num_owners < smallest_size || smallest_size == -1)) {
 						smallest_size = tb->num_owners;
 						smallest_rover = rover;
-						if (atomic_read(&hashinfo->bsockets) > (high - low) + 1) {
-							spin_unlock(&head->lock);
+						if (atomic_read(&hashinfo->bsockets) > (high - low) + 1 &&
+						    !inet_csk(sk)->icsk_af_ops->bind_conflict(sk, tb, false)) {
 							snum = smallest_rover;
-							goto have_snum;
+							goto tb_found;
 						}
+					}
+					if (!inet_csk(sk)->icsk_af_ops->bind_conflict(sk, tb, false)) {
+						snum = rover;
+						goto tb_found;
 					}
 					goto next;
 				}
@@ -168,18 +180,22 @@ have_snum:
 	goto tb_not_found;
 tb_found:
 	if (!hlist_empty(&tb->owners)) {
+		if (sk->sk_reuse == SK_FORCE_REUSE)
+			goto success;
+
 		if (tb->fastreuse > 0 &&
 		    sk->sk_reuse && sk->sk_state != TCP_LISTEN &&
 		    smallest_size == -1) {
 			goto success;
 		} else {
 			ret = 1;
-			if (inet_csk(sk)->icsk_af_ops->bind_conflict(sk, tb)) {
+			if (inet_csk(sk)->icsk_af_ops->bind_conflict(sk, tb, true)) {
 				if (sk->sk_reuse && sk->sk_state != TCP_LISTEN &&
 				    smallest_size != -1 && --attempts >= 0) {
 					spin_unlock(&head->lock);
 					goto again;
 				}
+
 				goto fail_unlock;
 			}
 		}
@@ -511,7 +527,7 @@ void inet_csk_reqsk_queue_prune(struct sock *parent,
 
 	/* Normally all the openreqs are young and become mature
 	 * (i.e. converted to established socket) for first timeout.
-	 * If synack was not acknowledged for 3 seconds, it means
+	 * If synack was not acknowledged for 1 second, it means
 	 * one of the following things: synack was lost, ack was lost,
 	 * rtt is high or nobody planned to ack (i.e. synflood).
 	 * When server is a bit loaded, queue is populated with old
@@ -552,8 +568,7 @@ void inet_csk_reqsk_queue_prune(struct sock *parent,
 				syn_ack_recalc(req, thresh, max_retries,
 					       queue->rskq_defer_accept,
 					       &expire, &resend);
-				if (req->rsk_ops->syn_ack_timeout)
-					req->rsk_ops->syn_ack_timeout(parent, req);
+				req->rsk_ops->syn_ack_timeout(parent, req);
 				if (!expire &&
 				    (!resend ||
 				     !req->rsk_ops->rtx_syn_ack(parent, req, NULL) ||
@@ -588,10 +603,19 @@ void inet_csk_reqsk_queue_prune(struct sock *parent,
 }
 EXPORT_SYMBOL_GPL(inet_csk_reqsk_queue_prune);
 
-struct sock *inet_csk_clone(struct sock *sk, const struct request_sock *req,
-			    const gfp_t priority)
+/**
+ *	inet_csk_clone_lock - clone an inet socket, and lock its clone
+ *	@sk: the socket to clone
+ *	@req: request_sock
+ *	@priority: for allocation (%GFP_KERNEL, %GFP_ATOMIC, etc)
+ *
+ *	Caller must unlock socket even in error path (bh_unlock_sock(newsk))
+ */
+struct sock *inet_csk_clone_lock(const struct sock *sk,
+				 const struct request_sock *req,
+				 const gfp_t priority)
 {
-	struct sock *newsk = sk_clone(sk, priority);
+	struct sock *newsk = sk_clone_lock(sk, priority);
 
 	if (newsk != NULL) {
 		struct inet_connection_sock *newicsk = inet_csk(newsk);
@@ -615,7 +639,7 @@ struct sock *inet_csk_clone(struct sock *sk, const struct request_sock *req,
 	}
 	return newsk;
 }
-EXPORT_SYMBOL_GPL(inet_csk_clone);
+EXPORT_SYMBOL_GPL(inet_csk_clone_lock);
 
 /*
  * At this point, there should be no process reference to this

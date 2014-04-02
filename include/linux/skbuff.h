@@ -89,7 +89,6 @@
  *	at device setup time.
  *	NETIF_F_HW_CSUM	- it is clever device, it is able to checksum
  *			  everything.
- *	NETIF_F_NO_CSUM - loopback or reliable single hop media.
  *	NETIF_F_IP_CSUM - device is dumb. It is able to csum only
  *			  TCP/UDP over IPv4. Sigh. Vendors like this
  *			  way by an unknown reason. Though, see comment above
@@ -369,6 +368,7 @@ typedef unsigned char *sk_buff_data_t;
  *		ports.
  *	@wifi_acked_valid: wifi_acked was set
  *	@wifi_acked: whether frame was acked on wifi or not
+ *	@no_fcs:  Request NIC to treat last 4 bytes as Ethernet FCS
  *	@dma_cookie: a cookie to one of several possible DMA operations
  *		done by skb DMA functions
   *	@napi_id: id of the NAPI struct this skb came from
@@ -454,7 +454,9 @@ struct sk_buff {
 	__u8			l4_rxhash:1;
 	__u8			wifi_acked_valid:1;
 	__u8			wifi_acked:1;
-	/* 10/12 bit hole (depending on ndisc_nodetype presence) */
+	__u8			no_fcs:1;
+	__u8			head_frag:1;
+	/* 8/10 bit hole (depending on ndisc_nodetype presence) */
 	kmemcheck_bitfield_end(flags2);
 
 #if defined CONFIG_NET_DMA || defined CONFIG_NET_LL_RX_POLL
@@ -469,6 +471,7 @@ struct sk_buff {
 	union {
 		__u32		mark;
 		__u32		dropcount;
+		__u32		avail_size;
 	};
 
 	__u16			vlan_tci;
@@ -548,8 +551,10 @@ static inline struct rtable *skb_rtable(const struct sk_buff *skb)
 extern void kfree_skb(struct sk_buff *skb);
 extern void consume_skb(struct sk_buff *skb);
 extern void	       __kfree_skb(struct sk_buff *skb);
+extern struct kmem_cache *skbuff_head_cache;
 extern struct sk_buff *__alloc_skb(unsigned int size,
 				   gfp_t priority, int fclone, int node);
+extern struct sk_buff *build_skb(void *data, unsigned int frag_size);
 static inline struct sk_buff *alloc_skb(unsigned int size,
 					gfp_t priority)
 {
@@ -573,6 +578,7 @@ extern struct sk_buff *skb_copy(const struct sk_buff *skb,
 				gfp_t priority);
 extern struct sk_buff *__pskb_copy(struct sk_buff *skb,
 				 int headroom, gfp_t gfp_mask);
+
 extern int	       pskb_expand_head(struct sk_buff *skb,
 					int nhead, int ntail,
 					gfp_t gfp_mask);
@@ -629,10 +635,20 @@ static inline unsigned char *skb_end_pointer(const struct sk_buff *skb)
 {
 	return skb->head + skb->end;
 }
+
+static inline unsigned int skb_end_offset(const struct sk_buff *skb)
+{
+	return skb->end;
+}
 #else
 static inline unsigned char *skb_end_pointer(const struct sk_buff *skb)
 {
 	return skb->end;
+}
+
+static inline unsigned int skb_end_offset(const struct sk_buff *skb)
+{
+	return skb->end - skb->head;
 }
 #endif
 
@@ -871,6 +887,24 @@ static inline struct sk_buff *skb_peek(const struct sk_buff_head *list_)
 	if (list == (struct sk_buff *)list_)
 		list = NULL;
 	return list;
+}
+
+/**
+ *	skb_peek_next - peek skb following the given one from a queue
+ *	@skb: skb to start from
+ *	@list_: list to peek at
+ *
+ *	Returns %NULL when the end of the list is met or a pointer to the
+ *	next element. The reference count is not incremented and the
+ *	reference is therefore volatile. Use with caution.
+ */
+static inline struct sk_buff *skb_peek_next(struct sk_buff *skb,
+		const struct sk_buff_head *list_)
+{
+	struct sk_buff *next = skb->next;
+	if (next == (struct sk_buff *)list_)
+		next = NULL;
+	return next;
 }
 
 /**
@@ -1214,7 +1248,7 @@ static inline void skb_fill_page_desc(struct sk_buff *skb, int i,
 }
 
 extern void skb_add_rx_frag(struct sk_buff *skb, int i, struct page *page,
-			    int off, int size);
+			    int off, int size, unsigned int truesize);
 
 #define SKB_PAGE_ASSERT(skb) 	BUG_ON(skb_shinfo(skb)->nr_frags)
 #define SKB_FRAG_ASSERT(skb) 	BUG_ON(skb_has_frag_list(skb))
@@ -1333,6 +1367,18 @@ static inline unsigned int skb_headroom(const struct sk_buff *skb)
 static inline int skb_tailroom(const struct sk_buff *skb)
 {
 	return skb_is_nonlinear(skb) ? 0 : skb->end - skb->tail;
+}
+
+/**
+ *	skb_availroom - bytes at buffer end
+ *	@skb: buffer to check
+ *
+ *	Return the number of bytes of free space at the tail of an sk_buff
+ *	allocated by sk_stream_alloc()
+ */
+static inline int skb_availroom(const struct sk_buff *skb)
+{
+	return skb_is_nonlinear(skb) ? 0 : skb->avail_size - skb->len;
 }
 
 /**
@@ -1620,31 +1666,11 @@ static inline void __skb_queue_purge(struct sk_buff_head *list)
 		kfree_skb(skb);
 }
 
-/**
- *	__dev_alloc_skb - allocate an skbuff for receiving
- *	@length: length to allocate
- *	@gfp_mask: get_free_pages mask, passed to alloc_skb
- *
- *	Allocate a new &sk_buff and assign it a usage count of one. The
- *	buffer has unspecified headroom built in. Users should allocate
- *	the headroom they think they need without accounting for the
- *	built in space. The built in space is used for optimisations.
- *
- *	%NULL is returned if there is no free memory.
- */
-static inline struct sk_buff *__dev_alloc_skb(unsigned int length,
-					      gfp_t gfp_mask)
-{
-	struct sk_buff *skb = alloc_skb(length + NET_SKB_PAD, gfp_mask);
-	if (likely(skb))
-		skb_reserve(skb, NET_SKB_PAD);
-	return skb;
-}
-
-extern struct sk_buff *dev_alloc_skb(unsigned int length);
+extern void *netdev_alloc_frag(unsigned int fragsz);
 
 extern struct sk_buff *__netdev_alloc_skb(struct net_device *dev,
-		unsigned int length, gfp_t gfp_mask);
+					  unsigned int length,
+					  gfp_t gfp_mask);
 
 /**
  *	netdev_alloc_skb - allocate an skbuff for rx on a specific device
@@ -1660,10 +1686,24 @@ extern struct sk_buff *__netdev_alloc_skb(struct net_device *dev,
  *	allocates memory it can be called from an interrupt.
  */
 static inline struct sk_buff *netdev_alloc_skb(struct net_device *dev,
-		unsigned int length)
+					       unsigned int length)
 {
 	return __netdev_alloc_skb(dev, length, GFP_ATOMIC);
 }
+
+/* legacy helper around __netdev_alloc_skb() */
+static inline struct sk_buff *__dev_alloc_skb(unsigned int length,
+					      gfp_t gfp_mask)
+{
+	return __netdev_alloc_skb(NULL, length, gfp_mask);
+}
+
+/* legacy helper around netdev_alloc_skb() */
+static inline struct sk_buff *dev_alloc_skb(unsigned int length)
+{
+	return netdev_alloc_skb(NULL, length);
+}
+
 
 static inline struct sk_buff *__netdev_alloc_skb_ip_align(struct net_device *dev,
 		unsigned int length, gfp_t gfp)
@@ -1711,12 +1751,6 @@ static inline struct page *netdev_alloc_page(struct net_device *dev)
 static inline void netdev_free_page(struct net_device *dev, struct page *page)
 {
 	__free_page(page);
-}
-
-static inline struct sk_buff *pskb_copy(struct sk_buff *skb,
-					gfp_t gfp_mask)
-{
-	return __pskb_copy(skb, skb_headroom(skb), gfp_mask);
 }
 
 /**
@@ -1850,6 +1884,12 @@ static inline dma_addr_t skb_frag_dma_map(struct device *dev,
 			    frag->page_offset + offset, size, dir);
 }
 
+static inline struct sk_buff *pskb_copy(struct sk_buff *skb,
+					gfp_t gfp_mask)
+{
+	return __pskb_copy(skb, skb_headroom(skb), gfp_mask);
+}
+
 /**
  *	skb_clone_writable - is the header of a clone writable
  *	@skb: buffer to check
@@ -1949,8 +1989,8 @@ static inline int skb_add_data(struct sk_buff *skb,
 	return -EFAULT;
 }
 
-static inline int skb_can_coalesce(struct sk_buff *skb, int i,
-				   const struct page *page, int off)
+static inline bool skb_can_coalesce(struct sk_buff *skb, int i,
+				    const struct page *page, int off)
 {
 	if (i) {
 		const struct skb_frag_struct *frag = &skb_shinfo(skb)->frags[i - 1];
@@ -1958,7 +1998,7 @@ static inline int skb_can_coalesce(struct sk_buff *skb, int i,
 		return page == skb_frag_page(frag) &&
 		       off == frag->page_offset + skb_frag_size(frag);
 	}
-	return 0;
+	return false;
 }
 
 static inline int __skb_linearize(struct sk_buff *skb)
@@ -2547,13 +2587,27 @@ static inline bool skb_is_recycleable(struct sk_buff *skb, int skb_size)
 		return false;
 
 	skb_size = SKB_DATA_ALIGN(skb_size + NET_SKB_PAD);
-	if (skb_end_pointer(skb) - skb->head < skb_size)
+	if (skb_end_offset(skb) < skb_size)
 		return false;
 
 	if (skb_shared(skb) || skb_cloned(skb))
 		return false;
 
 	return true;
+}
+
+/**
+ * skb_head_is_locked - Determine if the skb->head is locked down
+ * @skb: skb to check
+ *
+ * The head on skbs build around a head frag can be removed if they are
+ * not cloned.  This function returns true if the skb head is locked down
+ * due to either being allocated via kmalloc, or by being a clone with
+ * multiple references to the head.
+ */
+static inline bool skb_head_is_locked(const struct sk_buff *skb)
+{
+	return !skb->head_frag || skb_cloned(skb);
 }
 #endif	/* __KERNEL__ */
 #endif	/* _LINUX_SKBUFF_H */

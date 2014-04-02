@@ -1,6 +1,6 @@
 /*
  * Copyright (C) ST-Ericsson AB 2010
- * Author:	Sjur Brendeland
+ * Author:	Sjur Brendeland/sjur.brandeland@stericsson.com
  * License terms: GNU General Public License (GPL) version 2
  */
 
@@ -25,7 +25,7 @@
 #define container_obj(layr) container_of(layr, struct cfsrvl, layer)
 
 static void cfservl_ctrlcmd(struct cflayer *layr, enum caif_ctrlcmd ctrl,
-			    int phyid)
+				int phyid)
 {
 	struct cfsrvl *service = container_obj(layr);
 
@@ -158,9 +158,10 @@ static void cfsrvl_release(struct cflayer *layer)
 }
 
 void cfsrvl_init(struct cfsrvl *service,
-		 u8 channel_id,
-		 struct dev_info *dev_info,
-		 bool supports_flowctrl)
+			u8 channel_id,
+			struct dev_info *dev_info,
+			bool supports_flowctrl
+			)
 {
 	caif_assert(offsetof(struct cfsrvl, layer) == 0);
 	service->open = false;
@@ -176,11 +177,15 @@ void cfsrvl_init(struct cfsrvl *service,
 
 bool cfsrvl_ready(struct cfsrvl *service, int *err)
 {
+	if (service->open && service->modem_flow_on && service->phy_flow_on)
+		return true;
 	if (!service->open) {
 		*err = -ENOTCONN;
 		return false;
 	}
-	return true;
+	caif_assert(!(service->modem_flow_on && service->phy_flow_on));
+	*err = -EAGAIN;
+	return false;
 }
 
 u8 cfsrvl_getphyid(struct cflayer *layer)
@@ -206,14 +211,13 @@ void caif_free_client(struct cflayer *adap_layer)
 EXPORT_SYMBOL(caif_free_client);
 
 void caif_client_register_refcnt(struct cflayer *adapt_layer,
-				 void (*hold)(struct cflayer *lyr),
-				 void (*put)(struct cflayer *lyr))
+					void (*hold)(struct cflayer *lyr),
+					void (*put)(struct cflayer *lyr))
 {
 	struct cfsrvl *service;
-
-	if (WARN_ON(adapt_layer == NULL || adapt_layer->dn == NULL))
-		return;
 	service = container_of(adapt_layer->dn, struct cfsrvl, layer);
+
+	WARN_ON(adapt_layer == NULL || adapt_layer->dn == NULL);
 	service->hold = hold;
 	service->put = put;
 }

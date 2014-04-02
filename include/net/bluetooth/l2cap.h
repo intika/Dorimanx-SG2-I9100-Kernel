@@ -280,6 +280,16 @@ struct l2cap_conn_param_update_rsp {
 #define L2CAP_CONN_PARAM_REJECTED	0x0001
 
 /* ----- L2CAP channels and connections ----- */
+struct l2cap_seq_list {
+	__u16	head;
+	__u16	tail;
+	__u16	mask;
+	__u16	*list;
+};
+
+#define L2CAP_SEQ_LIST_CLEAR	0xFFFF
+#define L2CAP_SEQ_LIST_TAIL	0x8000
+
 struct srej_list {
 	__u8	tx_seq;
 	struct list_head list;
@@ -355,6 +365,8 @@ struct l2cap_chan {
 	struct sk_buff		*tx_send_head;
 	struct sk_buff_head	tx_q;
 	struct sk_buff_head	srej_q;
+	struct l2cap_seq_list	srej_list;
+	struct l2cap_seq_list	retrans_list;
 	struct list_head	srej_l;
 
 	struct list_head list;
@@ -483,7 +495,7 @@ static inline int l2cap_tx_window_full(struct l2cap_chan *ch)
 #define __is_sframe(ctrl)	((ctrl) & L2CAP_CTRL_FRAME_TYPE)
 #define __is_sar_start(ctrl)	(((ctrl) & L2CAP_CTRL_SAR) == L2CAP_SDU_START)
 
-extern int disable_ertm;
+extern bool disable_ertm;
 
 int l2cap_init_sockets(void);
 void l2cap_cleanup_sockets(void);
@@ -494,7 +506,7 @@ int __l2cap_wait_ack(struct sock *sk);
 int l2cap_add_psm(struct l2cap_chan *chan, bdaddr_t *src, __le16 psm);
 int l2cap_add_scid(struct l2cap_chan *chan,  __u16 scid);
 
-struct l2cap_chan *l2cap_chan_create(struct sock *sk);
+struct l2cap_chan *l2cap_chan_create(void);
 void l2cap_chan_close(struct l2cap_chan *chan, int reason);
 void l2cap_chan_destroy(struct l2cap_chan *chan);
 int l2cap_chan_connect(struct l2cap_chan *chan);

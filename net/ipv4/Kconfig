@@ -312,7 +312,7 @@ config SYN_COOKIES
 
 config INET_AH
 	tristate "IP: AH transformation"
-	select XFRM
+	select XFRM_ALGO
 	select CRYPTO
 	select CRYPTO_HMAC
 	select CRYPTO_MD5
@@ -324,7 +324,7 @@ config INET_AH
 
 config INET_ESP
 	tristate "IP: ESP transformation"
-	select XFRM
+	select XFRM_ALGO
 	select CRYPTO
 	select CRYPTO_AUTHENC
 	select CRYPTO_HMAC
@@ -406,6 +406,14 @@ config INET_DIAG
 config INET_TCP_DIAG
 	depends on INET_DIAG
 	def_tristate INET_DIAG
+
+config INET_UDP_DIAG
+	tristate "UDP: socket monitoring interface"
+	depends on INET_DIAG && (IPV6 || IPV6=n)
+	default n
+	---help---
+	  Support for UDP socket monitoring interface used by the ss tool.
+	  If unsure, say Y.
 
 menuconfig TCP_CONG_ADVANCED
 	bool "TCP: advanced congestion control"

@@ -67,15 +67,13 @@ tcpmss_mangle_packet(struct sk_buff *skb,
 
 	if (info->mss == XT_TCPMSS_CLAMP_PMTU) {
 		if (dst_mtu(skb_dst(skb)) <= minlen) {
-			if (net_ratelimit())
-				pr_err("unknown or invalid path-MTU (%u)\n",
-				       dst_mtu(skb_dst(skb)));
+			net_err_ratelimited("unknown or invalid path-MTU (%u)\n",
+					    dst_mtu(skb_dst(skb)));
 			return -1;
 		}
 		if (in_mtu <= minlen) {
-			if (net_ratelimit())
-				pr_err("unknown or invalid path-MTU (%u)\n",
-				       in_mtu);
+			net_err_ratelimited("unknown or invalid path-MTU (%u)\n",
+					    in_mtu);
 			return -1;
 		}
 		newmss = min(dst_mtu(skb_dst(skb)), in_mtu) - minlen;
@@ -198,7 +196,7 @@ tcpmss_tg4(struct sk_buff *skb, const struct xt_action_param *par)
 	return XT_CONTINUE;
 }
 
-#if defined(CONFIG_IP6_NF_IPTABLES) || defined(CONFIG_IP6_NF_IPTABLES_MODULE)
+#if IS_ENABLED(CONFIG_IP6_NF_IPTABLES)
 static unsigned int
 tcpmss_tg6(struct sk_buff *skb, const struct xt_action_param *par)
 {
@@ -260,7 +258,7 @@ static int tcpmss_tg4_check(const struct xt_tgchk_param *par)
 	return -EINVAL;
 }
 
-#if defined(CONFIG_IP6_NF_IPTABLES) || defined(CONFIG_IP6_NF_IPTABLES_MODULE)
+#if IS_ENABLED(CONFIG_IP6_NF_IPTABLES)
 static int tcpmss_tg6_check(const struct xt_tgchk_param *par)
 {
 	const struct xt_tcpmss_info *info = par->targinfo;
@@ -293,7 +291,7 @@ static struct xt_target tcpmss_tg_reg[] __read_mostly = {
 		.proto		= IPPROTO_TCP,
 		.me		= THIS_MODULE,
 	},
-#if defined(CONFIG_IP6_NF_IPTABLES) || defined(CONFIG_IP6_NF_IPTABLES_MODULE)
+#if IS_ENABLED(CONFIG_IP6_NF_IPTABLES)
 	{
 		.family		= NFPROTO_IPV6,
 		.name		= "TCPMSS",
