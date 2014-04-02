@@ -142,6 +142,11 @@ struct hci_dev {
 	__le16		lmp_subver;
 	__u16		voice_setting;
 	__u8		io_capability;
+	__s8		inq_tx_power;
+	__u16		devid_source;
+	__u16		devid_vendor;
+	__u16		devid_product;
+	__u16		devid_version;
 
 	__u16		pkt_type;
 	__u16		esco_type;
@@ -275,6 +280,7 @@ struct hci_conn {
 	__u8		remote_cap;
 	__u8		remote_oob;
 	__u8		remote_auth;
+	bool		flush_key;
 
 	unsigned int	sent;
 
@@ -910,7 +916,6 @@ void hci_le_conn_update(struct hci_conn *conn, u16 min, u16 max,
 					u16 latency, u16 to_multiplier);
 void hci_le_start_enc(struct hci_conn *conn, __le16 ediv, __u8 rand[8],
 							__u8 ltk[16]);
-void hci_le_ltk_reply(struct hci_conn *conn, u8 ltk[16]);
 void hci_le_ltk_neg_reply(struct hci_conn *conn);
 
 #endif /* __HCI_CORE_H */

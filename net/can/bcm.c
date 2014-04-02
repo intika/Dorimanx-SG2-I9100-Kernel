@@ -54,7 +54,6 @@
 #include <linux/skbuff.h>
 #include <linux/can.h>
 #include <linux/can/core.h>
-#include <linux/can/skb.h>
 #include <linux/can/bcm.h>
 #include <linux/slab.h>
 #include <net/sock.h>
@@ -78,7 +77,7 @@
 		     (CAN_SFF_MASK | CAN_EFF_FLAG | CAN_RTR_FLAG))
 
 #define CAN_BCM_VERSION CAN_VERSION
-static __initconst const char banner[] = KERN_INFO
+static __initdata const char banner[] = KERN_INFO
 	"can: broadcast manager protocol (rev " CAN_BCM_VERSION " t)\n";
 
 MODULE_DESCRIPTION("PF_CAN broadcast manager protocol");
@@ -226,7 +225,7 @@ static int bcm_proc_show(struct seq_file *m, void *v)
 
 static int bcm_proc_open(struct inode *inode, struct file *file)
 {
-	return single_open(file, bcm_proc_show, PDE_DATA(inode));
+	return single_open(file, bcm_proc_show, PDE(inode)->data);
 }
 
 static const struct file_operations bcm_proc_fops = {
@@ -257,12 +256,9 @@ static void bcm_can_tx(struct bcm_op *op)
 		return;
 	}
 
-	skb = alloc_skb(CFSIZ + sizeof(struct can_skb_priv), gfp_any());
+	skb = alloc_skb(CFSIZ, gfp_any());
 	if (!skb)
 		goto out;
-
-	can_skb_reserve(skb);
-	can_skb_prv(skb)->ifindex = dev->ifindex;
 
 	memcpy(skb_put(skb, CFSIZ), cf, CFSIZ);
 
@@ -1088,9 +1084,6 @@ static int bcm_rx_setup(struct bcm_msg_head *msg_head, struct msghdr *msg,
 		op->sk = sk;
 		op->ifindex = ifindex;
 
-		/* ifindex for timeout events w/o previous frame reception */
-		op->rx_ifindex = ifindex;
-
 		/* initialize uninitialized (kzalloc) structure */
 		hrtimer_init(&op->timer, CLOCK_MONOTONIC, HRTIMER_MODE_REL);
 		op->timer.function = bcm_rx_timeout_handler;
@@ -1203,11 +1196,10 @@ static int bcm_tx_send(struct msghdr *msg, int ifindex, struct sock *sk)
 	if (!ifindex)
 		return -ENODEV;
 
-	skb = alloc_skb(CFSIZ + sizeof(struct can_skb_priv), GFP_KERNEL);
+	skb = alloc_skb(CFSIZ, GFP_KERNEL);
+
 	if (!skb)
 		return -ENOMEM;
-
-	can_skb_reserve(skb);
 
 	err = memcpy_fromiovec(skb_put(skb, CFSIZ), msg->msg_iov, CFSIZ);
 	if (err < 0) {
@@ -1221,7 +1213,6 @@ static int bcm_tx_send(struct msghdr *msg, int ifindex, struct sock *sk)
 		return -ENODEV;
 	}
 
-	can_skb_prv(skb)->ifindex = dev->ifindex;
 	skb->dev = dev;
 	skb->sk  = sk;
 	err = can_send(skb, 1); /* send with loopback */
@@ -1350,9 +1341,9 @@ static int bcm_sendmsg(struct kiocb *iocb, struct socket *sock,
  * notification handler for netdevice status changes
  */
 static int bcm_notifier(struct notifier_block *nb, unsigned long msg,
-			void *ptr)
+			void *data)
 {
-	struct net_device *dev = netdev_notifier_info_to_dev(ptr);
+	struct net_device *dev = (struct net_device *)data;
 	struct bcm_sock *bo = container_of(nb, struct bcm_sock, notifier);
 	struct sock *sk = &bo->sk;
 	struct bcm_op *op;
@@ -1633,7 +1624,7 @@ static void __exit bcm_module_exit(void)
 	can_proto_unregister(&bcm_can_proto);
 
 	if (proc_dir)
-		remove_proc_entry("can-bcm", init_net.proc_net);
+		proc_net_remove(&init_net, "can-bcm");
 }
 
 module_init(bcm_module_init);

@@ -32,12 +32,18 @@ struct inet_peer {
 	struct inet_peer __rcu	*avl_left, *avl_right;
 	struct inetpeer_addr	daddr;
 	__u32			avl_height;
-	__u32			dtime;		/* the time of last use of not
-						 * referenced entries */
-	atomic_t		refcnt;
+
+	u32			metrics[RTAX_MAX];
+	u32			rate_tokens;	/* rate limiting for ICMP */
+	unsigned long		rate_last;
+	unsigned long		pmtu_expires;
+	u32			pmtu_orig;
+	u32			pmtu_learned;
+	struct inetpeer_addr_base redirect_learned;
+	struct list_head	gc_list;
 	/*
 	 * Once inet_peer is queued for deletion (refcnt == -1), following fields
-	 * are not available: rid, ip_id_count, tcp_ts, tcp_ts_stamp, metrics
+	 * are not available: rid, ip_id_count, tcp_ts, tcp_ts_stamp
 	 * We can share memory with rcu_head to help keep inet_peer small.
 	 */
 	union {
@@ -46,17 +52,14 @@ struct inet_peer {
 			atomic_t			ip_id_count;	/* IP ID for the next packet */
 			__u32				tcp_ts;
 			__u32				tcp_ts_stamp;
-			u32				metrics[RTAX_MAX];
-			u32				rate_tokens;	/* rate limiting for ICMP */
-			unsigned long			rate_last;
-			unsigned long			pmtu_expires;
-			u32				pmtu_orig;
-			u32				pmtu_learned;
-			struct inetpeer_addr_base	redirect_learned;
 		};
 		struct rcu_head         rcu;
 		struct inet_peer	*gc_next;
 	};
+
+	/* following fields might be frequently dirtied */
+	__u32			dtime;	/* the time of last use of not referenced entries */
+	atomic_t		refcnt;
 };
 
 void			inet_initpeers(void) __init;
@@ -92,6 +95,8 @@ static inline struct inet_peer *inet_getpeer_v6(const struct in6_addr *v6daddr, 
 /* can be called from BH context or outside */
 extern void inet_putpeer(struct inet_peer *p);
 extern bool inet_peer_xrlim_allow(struct inet_peer *peer, int timeout);
+
+extern void inetpeer_invalidate_tree(int family);
 
 /*
  * temporary check to make sure we dont access rid, ip_id_count, tcp_ts,

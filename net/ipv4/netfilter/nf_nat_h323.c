@@ -42,9 +42,7 @@ static int set_addr(struct sk_buff *skb,
 		if (!nf_nat_mangle_tcp_packet(skb, ct, ctinfo,
 					      addroff, sizeof(buf),
 					      (char *) &buf, sizeof(buf))) {
-			if (net_ratelimit())
-				pr_notice("nf_nat_h323: nf_nat_mangle_tcp_packet"
-				       " error\n");
+			net_notice_ratelimited("nf_nat_h323: nf_nat_mangle_tcp_packet error\n");
 			return -1;
 		}
 
@@ -58,9 +56,7 @@ static int set_addr(struct sk_buff *skb,
 		if (!nf_nat_mangle_udp_packet(skb, ct, ctinfo,
 					      addroff, sizeof(buf),
 					      (char *) &buf, sizeof(buf))) {
-			if (net_ratelimit())
-				pr_notice("nf_nat_h323: nf_nat_mangle_udp_packet"
-				       " error\n");
+			net_notice_ratelimited("nf_nat_h323: nf_nat_mangle_udp_packet error\n");
 			return -1;
 		}
 		/* nf_nat_mangle_udp_packet uses skb_make_writable() to copy
@@ -214,8 +210,7 @@ static int nat_rtp_rtcp(struct sk_buff *skb, struct nf_conn *ct,
 
 	/* Run out of expectations */
 	if (i >= H323_RTP_CHANNEL_MAX) {
-		if (net_ratelimit())
-			pr_notice("nf_nat_h323: out of expectations\n");
+		net_notice_ratelimited("nf_nat_h323: out of expectations\n");
 		return 0;
 	}
 
@@ -244,8 +239,7 @@ static int nat_rtp_rtcp(struct sk_buff *skb, struct nf_conn *ct,
 	}
 
 	if (nated_port == 0) {	/* No port available */
-		if (net_ratelimit())
-			pr_notice("nf_nat_h323: out of RTP ports\n");
+		net_notice_ratelimited("nf_nat_h323: out of RTP ports\n");
 		return 0;
 	}
 
@@ -308,8 +302,7 @@ static int nat_t120(struct sk_buff *skb, struct nf_conn *ct,
 	}
 
 	if (nated_port == 0) {	/* No port available */
-		if (net_ratelimit())
-			pr_notice("nf_nat_h323: out of TCP ports\n");
+		net_notice_ratelimited("nf_nat_h323: out of TCP ports\n");
 		return 0;
 	}
 
@@ -365,8 +358,7 @@ static int nat_h245(struct sk_buff *skb, struct nf_conn *ct,
 	}
 
 	if (nated_port == 0) {	/* No port available */
-		if (net_ratelimit())
-			pr_notice("nf_nat_q931: out of TCP ports\n");
+		net_notice_ratelimited("nf_nat_q931: out of TCP ports\n");
 		return 0;
 	}
 
@@ -456,8 +448,7 @@ static int nat_q931(struct sk_buff *skb, struct nf_conn *ct,
 	}
 
 	if (nated_port == 0) {	/* No port available */
-		if (net_ratelimit())
-			pr_notice("nf_nat_ras: out of TCP ports\n");
+		net_notice_ratelimited("nf_nat_ras: out of TCP ports\n");
 		return 0;
 	}
 
@@ -545,8 +536,7 @@ static int nat_callforwarding(struct sk_buff *skb, struct nf_conn *ct,
 	}
 
 	if (nated_port == 0) {	/* No port available */
-		if (net_ratelimit())
-			pr_notice("nf_nat_q931: out of TCP ports\n");
+		net_notice_ratelimited("nf_nat_q931: out of TCP ports\n");
 		return 0;
 	}
 
@@ -568,6 +558,16 @@ static int nat_callforwarding(struct sk_buff *skb, struct nf_conn *ct,
 	return 0;
 }
 
+static struct nf_ct_helper_expectfn q931_nat = {
+	.name		= "Q.931",
+	.expectfn	= ip_nat_q931_expect,
+};
+
+static struct nf_ct_helper_expectfn callforwarding_nat = {
+	.name		= "callforwarding",
+	.expectfn	= ip_nat_callforwarding_expect,
+};
+
 /****************************************************************************/
 static int __init init(void)
 {
@@ -581,15 +581,17 @@ static int __init init(void)
 	BUG_ON(nat_callforwarding_hook != NULL);
 	BUG_ON(nat_q931_hook != NULL);
 
-	rcu_assign_pointer_nonull(set_h245_addr_hook, set_h245_addr);
-	rcu_assign_pointer_nonull(set_h225_addr_hook, set_h225_addr);
-	rcu_assign_pointer_nonull(set_sig_addr_hook, set_sig_addr);
-	rcu_assign_pointer_nonull(set_ras_addr_hook, set_ras_addr);
-	rcu_assign_pointer_nonull(nat_rtp_rtcp_hook, nat_rtp_rtcp);
-	rcu_assign_pointer_nonull(nat_t120_hook, nat_t120);
-	rcu_assign_pointer_nonull(nat_h245_hook, nat_h245);
-	rcu_assign_pointer_nonull(nat_callforwarding_hook, nat_callforwarding);
-	rcu_assign_pointer_nonull(nat_q931_hook, nat_q931);
+	RCU_INIT_POINTER(set_h245_addr_hook, set_h245_addr);
+	RCU_INIT_POINTER(set_h225_addr_hook, set_h225_addr);
+	RCU_INIT_POINTER(set_sig_addr_hook, set_sig_addr);
+	RCU_INIT_POINTER(set_ras_addr_hook, set_ras_addr);
+	RCU_INIT_POINTER(nat_rtp_rtcp_hook, nat_rtp_rtcp);
+	RCU_INIT_POINTER(nat_t120_hook, nat_t120);
+	RCU_INIT_POINTER(nat_h245_hook, nat_h245);
+	RCU_INIT_POINTER(nat_callforwarding_hook, nat_callforwarding);
+	RCU_INIT_POINTER(nat_q931_hook, nat_q931);
+	nf_ct_helper_expectfn_register(&q931_nat);
+	nf_ct_helper_expectfn_register(&callforwarding_nat);
 	return 0;
 }
 
@@ -605,6 +607,8 @@ static void __exit fini(void)
 	RCU_INIT_POINTER(nat_h245_hook, NULL);
 	RCU_INIT_POINTER(nat_callforwarding_hook, NULL);
 	RCU_INIT_POINTER(nat_q931_hook, NULL);
+	nf_ct_helper_expectfn_unregister(&q931_nat);
+	nf_ct_helper_expectfn_unregister(&callforwarding_nat);
 	synchronize_rcu();
 }
 
