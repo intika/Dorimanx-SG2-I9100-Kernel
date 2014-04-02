@@ -303,7 +303,8 @@ static void irda_connect_response(struct irda_sock *self)
 
 	IRDA_DEBUG(2, "%s()\n", __func__);
 
-	skb = alloc_skb(TTP_MAX_HEADER + TTP_SAR_HEADER, GFP_KERNEL);
+	skb = alloc_skb(TTP_MAX_HEADER + TTP_SAR_HEADER,
+			GFP_ATOMIC);
 	if (skb == NULL) {
 		IRDA_DEBUG(0, "%s() Unable to allocate sk_buff!\n",
 			   __func__);
@@ -465,7 +466,7 @@ static int irda_open_tsap(struct irda_sock *self, __u8 tsap_sel, char *name)
 	notify_t notify;
 
 	if (self->tsap) {
-		IRDA_DEBUG(0, "%s: busy!\n", __func__);
+		IRDA_WARNING("%s: busy!\n", __func__);
 		return -EBUSY;
 	}
 
@@ -952,7 +953,7 @@ out:
  * The main difference with a "standard" connect is that with IrDA we need
  * to resolve the service name into a TSAP selector (in TCP, port number
  * doesn't have to be resolved).
- * Because of this service name resolution, we can offer "auto-connect",
+ * Because of this service name resoltion, we can offer "auto-connect",
  * where we connect to a service without specifying a destination address.
  *
  * Note : by consulting "errno", the user space caller may learn the cause
@@ -1117,7 +1118,7 @@ static int irda_create(struct net *net, struct socket *sock, int protocol,
 	}
 
 	/* Allocate networking socket */
-	sk = sk_alloc(net, PF_IRDA, GFP_KERNEL, &irda_proto);
+	sk = sk_alloc(net, PF_IRDA, GFP_ATOMIC, &irda_proto);
 	if (sk == NULL)
 		return -ENOMEM;
 
@@ -2557,11 +2558,13 @@ bed:
 				  jiffies + msecs_to_jiffies(val));
 
 			/* Wait for IR-LMP to call us back */
-			err = __wait_event_interruptible(self->query_wait,
-			      (self->cachedaddr != 0 || self->errno == -ETIME));
+			__wait_event_interruptible(self->query_wait,
+			      (self->cachedaddr != 0 || self->errno == -ETIME),
+						   err);
 
 			/* If watchdog is still activated, kill it! */
-			del_timer(&(self->watchdog));
+			if(timer_pending(&(self->watchdog)))
+				del_timer(&(self->watchdog));
 
 			IRDA_DEBUG(1, "%s(), ...waking up !\n", __func__);
 
@@ -2577,10 +2580,8 @@ bed:
 				    NULL, NULL, NULL);
 
 		/* Check if the we got some results */
-		if (!self->cachedaddr) {
-			err = -EAGAIN;		/* Didn't find any devices */
-			goto out;
-		}
+		if (!self->cachedaddr)
+			return -EAGAIN;		/* Didn't find any devices */
 		daddr = self->cachedaddr;
 		/* Cleanup */
 		self->cachedaddr = 0;

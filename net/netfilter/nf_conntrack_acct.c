@@ -46,8 +46,8 @@ seq_print_acct(struct seq_file *s, const struct nf_conn *ct, int dir)
 		return 0;
 
 	return seq_printf(s, "packets=%llu bytes=%llu ",
-			  (unsigned long long)acct[dir].packets,
-			  (unsigned long long)acct[dir].bytes);
+			  (unsigned long long)atomic64_read(&acct[dir].packets),
+			  (unsigned long long)atomic64_read(&acct[dir].bytes));
 };
 EXPORT_SYMBOL_GPL(seq_print_acct);
 
@@ -69,8 +69,8 @@ static int nf_conntrack_acct_init_sysctl(struct net *net)
 
 	table[0].data = &net->ct.sysctl_acct;
 
-	net->ct.acct_sysctl_header = register_net_sysctl_table(net,
-			nf_net_netfilter_sysctl_path, table);
+	net->ct.acct_sysctl_header = register_net_sysctl(net, "net/netfilter",
+							 table);
 	if (!net->ct.acct_sysctl_header) {
 		printk(KERN_ERR "nf_conntrack_acct: can't register to sysctl.\n");
 		goto out_register;

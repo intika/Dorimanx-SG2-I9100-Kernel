@@ -865,12 +865,12 @@ static int netem_change(struct Qdisc *sch, struct nlattr *opt)
 	if (tb[TCA_NETEM_RATE])
 		get_rate(sch, tb[TCA_NETEM_RATE]);
 
+	if (tb[TCA_NETEM_ECN])
+		q->ecn = nla_get_u32(tb[TCA_NETEM_ECN]);
+
 	if (tb[TCA_NETEM_RATE64])
 		q->rate = max_t(u64, q->rate,
 				nla_get_u64(tb[TCA_NETEM_RATE64]));
-
-	if (tb[TCA_NETEM_ECN])
-		q->ecn = nla_get_u32(tb[TCA_NETEM_ECN]);
 
 	q->loss_model = CLG_RANDOM;
 	if (tb[TCA_NETEM_LOSS])

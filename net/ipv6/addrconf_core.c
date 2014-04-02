@@ -10,7 +10,7 @@
 
 static inline unsigned int ipv6_addr_scope2type(unsigned int scope)
 {
-	switch(scope) {
+	switch (scope) {
 	case IPV6_ADDR_SCOPE_NODELOCAL:
 		return (IPV6_ADDR_SCOPE_TYPE(IPV6_ADDR_SCOPE_NODELOCAL) |
 			IPV6_ADDR_LOOPBACK);
