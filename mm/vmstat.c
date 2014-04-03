@@ -774,6 +774,9 @@ const char * const vmstat_text[] = {
 	"numa_local",
 	"numa_other",
 #endif
+	"workingset_refault",
+	"workingset_activate",
+	"workingset_nodereclaim",
 	"nr_anon_transparent_hugepages",
 #ifdef CONFIG_DMA_CMA
 	"nr_free_cma",
@@ -815,6 +818,9 @@ const char * const vmstat_text[] = {
 	"allocstall",
 
 	"pgrotated",
+
+	"drop_pagecache",
+	"drop_slab",
 
 #ifdef CONFIG_NUMA_BALANCING
 	"numa_pte_updates",
