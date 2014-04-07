@@ -1552,7 +1552,7 @@ static void __l2cap_send_ack(struct l2cap_chan *chan)
 	control |= chan->buffer_seq << L2CAP_CTRL_REQSEQ_SHIFT;
 
 	if (test_bit(CONN_LOCAL_BUSY, &chan->conn_state)) {
-		control |= L2CAP_SUPER_RCV_NOT_READY;
+		control |= __set_ctrl_super(chan, L2CAP_SUPER_RNR);
 		set_bit(CONN_RNR_SENT, &chan->conn_state);
 		l2cap_send_sframe(chan, control);
 		return;
@@ -1561,7 +1561,7 @@ static void __l2cap_send_ack(struct l2cap_chan *chan)
 	if (l2cap_ertm_send(chan) > 0)
 		return;
 
-	control |= L2CAP_SUPER_RCV_READY;
+	control |= __set_ctrl_super(chan, L2CAP_SUPER_RR);
 	l2cap_send_sframe(chan, control);
 }
 
