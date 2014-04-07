@@ -1184,6 +1184,8 @@ CONFIG_BPF_JIT=y
 # CONFIG_CAN_DEBUG_DEVICES is not set
 # CONFIG_IRDA is not set
 CONFIG_BT=y
+CONFIG_BT_L2CAP=y
+CONFIG_BT_SCO=y
 CONFIG_BT_RFCOMM=y
 CONFIG_BT_RFCOMM_TTY=y
 CONFIG_BT_BNEP=y
@@ -1207,12 +1209,6 @@ CONFIG_BT_HCIUART_H4=y
 # CONFIG_BT_HCIBFUSB is not set
 # CONFIG_BT_HCIVHCI is not set
 # CONFIG_BT_MRVL is not set
-CONFIG_BT_L2CAP=y
-CONFIG_BT_SCO=y
-
-#
-# Bluetooth device drivers
-#
 
 #
 # Bluetooth device drivers
