@@ -53,7 +53,6 @@
 #include <asm/uaccess.h>
 
 #include <trace/events/timer.h>
-#include <mach/sec_debug.h>
 
 /*
  * The timer bases:
@@ -176,10 +175,7 @@ struct hrtimer_clock_base *lock_hrtimer_base(const struct hrtimer *timer,
 static int hrtimer_get_target(int this_cpu, int pinned)
 {
 #ifdef CONFIG_NO_HZ_COMMON
-	/* if (!pinned && get_sysctl_timer_migration() && idle_cpu(this_cpu))
-	 * ORIGINAL, we have HACK here!
-	 */
-	if (!pinned && get_sysctl_timer_migration())
+	if (!pinned && get_sysctl_timer_migration() && idle_cpu(this_cpu))
 		return get_nohz_timer_target();
 #endif
 	return this_cpu;
@@ -1259,9 +1255,7 @@ static void __run_hrtimer(struct hrtimer *timer, ktime_t *now)
 	 */
 	raw_spin_unlock(&cpu_base->lock);
 	trace_hrtimer_expire_entry(timer, now);
-	sec_debug_hrtimer_log(timer, fn, 1);
 	restart = fn(timer);
-	sec_debug_hrtimer_log(timer, fn, 2);
 	trace_hrtimer_expire_exit(timer);
 	raw_spin_lock(&cpu_base->lock);
 
