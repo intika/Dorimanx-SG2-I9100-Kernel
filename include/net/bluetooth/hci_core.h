@@ -60,7 +60,7 @@ struct inquiry_entry {
 };
 
 struct discovery_state {
-	int type;
+	int		type;
 	enum {
 		DISCOVERY_STOPPED,
 		DISCOVERY_STARTING,
@@ -68,9 +68,9 @@ struct discovery_state {
 		DISCOVERY_RESOLVING,
 		DISCOVERY_STOPPING,
 	} state;
-	struct list_head all;		/* All devices found during inquiry */
-	struct list_head unknown;	/* Name state not known */
-	struct list_head resolve;	/* Name needs to be resolved */
+	struct list_head	all;		/* All devices found during inquiry */
+	struct list_head	unknown;	/* Name state not known */
+	struct list_head	resolve;	/* Name needs to be resolved */
 	__u32			timestamp;
 };
 
@@ -237,7 +237,7 @@ struct hci_dev {
 	struct workqueue_struct	*workqueue;
 
 	struct work_struct	power_on;
-	struct delayed_work power_off;
+	struct delayed_work	power_off;
 
 	__u16			discov_timeout;
 	struct delayed_work	discov_off;
@@ -629,7 +629,6 @@ static inline void hci_conn_put(struct hci_conn *conn)
 {
 	if (atomic_dec_and_test(&conn->refcnt)) {
 		unsigned long timeo;
-
 		if (conn->type == ACL_LINK || conn->type == LE_LINK) {
 			del_timer(&conn->idle_timer);
 			if (conn->state == BT_CONNECTED) {
@@ -1087,6 +1086,7 @@ int mgmt_discovering(struct hci_dev *hdev, u8 discovering);
 int mgmt_interleaved_discovery(struct hci_dev *hdev);
 int mgmt_device_blocked(struct hci_dev *hdev, bdaddr_t *bdaddr, u8 type);
 int mgmt_device_unblocked(struct hci_dev *hdev, bdaddr_t *bdaddr, u8 type);
+
 int mgmt_new_ltk(struct hci_dev *hdev, struct smp_ltk *key, u8 persistent);
 
 int mgmt_encrypt_change(struct hci_dev *hdev, bdaddr_t *bdaddr, u8 status);

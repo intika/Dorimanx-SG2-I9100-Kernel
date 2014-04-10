@@ -181,9 +181,9 @@ struct l2cap_conninfo {
 #define L2CAP_SAR_CONTINUE	0x03
 
 /* L2CAP Command rej. reasons */
-#define L2CAP_REJ_NOT_UNDERSTOOD      0x0000
-#define L2CAP_REJ_MTU_EXCEEDED        0x0001
-#define L2CAP_REJ_INVALID_CID         0x0002
+#define L2CAP_REJ_NOT_UNDERSTOOD	0x0000
+#define L2CAP_REJ_MTU_EXCEEDED		0x0001
+#define L2CAP_REJ_INVALID_CID		0x0002
 
 
 /* L2CAP structures */
@@ -391,13 +391,13 @@ struct l2cap_move_chan_cfm_rsp {
 } __packed;
 
 /* info type */
-#define L2CAP_IT_CL_MTU     0x0001
-#define L2CAP_IT_FEAT_MASK  0x0002
-#define L2CAP_IT_FIXED_CHAN 0x0003
+#define L2CAP_IT_CL_MTU		0x0001
+#define L2CAP_IT_FEAT_MASK	0x0002
+#define L2CAP_IT_FIXED_CHAN	0x0003
 
 /* info result */
-#define L2CAP_IR_SUCCESS    0x0000
-#define L2CAP_IR_NOTSUPP    0x0001
+#define L2CAP_IR_SUCCESS	0x0000
+#define L2CAP_IR_NOTSUPP	0x0001
 
 struct l2cap_conn_param_update_req {
 	__le16      min;
@@ -523,16 +523,16 @@ struct l2cap_chan {
 	struct l2cap_seq_list	retrans_list;
 	struct list_head	srej_l;
 
-	struct list_head list;
-	struct list_head global_l;
+	struct list_head	list;
+	struct list_head	global_l;
 
-	void		*data;
-	struct l2cap_ops *ops;
+	void			*data;
+	struct l2cap_ops	*ops;
 	struct mutex		lock;
 };
 
 struct l2cap_ops {
-	char		*name;
+	char			*name;
 
 	struct l2cap_chan	*(*new_connection) (void *data);
 	int			(*recv) (void *data, struct sk_buff *skb);
@@ -544,35 +544,35 @@ struct l2cap_ops {
 };
 
 struct l2cap_conn {
-	struct hci_conn	*hcon;
-	struct hci_chan	*hchan;
+	struct hci_conn		*hcon;
+	struct hci_chan		*hchan;
 
-	bdaddr_t	*dst;
-	bdaddr_t	*src;
+	bdaddr_t		*dst;
+	bdaddr_t		*src;
 
-	unsigned int	mtu;
+	unsigned int		mtu;
 
-	__u32		feat_mask;
-	__u8		fixed_chan_mask;
+	__u32			feat_mask;
+	__u8			fixed_chan_mask;
 
-	__u8		info_state;
-	__u8		info_ident;
+	__u8			info_state;
+	__u8			info_ident;
 
-	struct delayed_work info_timer;
+	struct delayed_work	info_timer;
 
-	spinlock_t	lock;
+	spinlock_t		lock;
 
-	struct sk_buff *rx_skb;
-	__u32		rx_len;
-	__u8		tx_ident;
+	struct sk_buff		*rx_skb;
+	__u32			rx_len;
+	__u8			tx_ident;
 
-	__u8		disc_reason;
+	__u8			disc_reason;
 
-	struct delayed_work  security_timer;
-	struct smp_chan *smp_chan;
+	struct delayed_work	security_timer;
+	struct smp_chan		*smp_chan;
 
-	struct list_head chan_l;
-	struct mutex	chan_lock;
+	struct list_head	chan_l;
+	struct mutex		chan_lock;
 };
 
 #define L2CAP_INFO_CL_MTU_REQ_SENT	0x01
@@ -691,18 +691,19 @@ static inline void l2cap_chan_unlock(struct l2cap_chan *chan)
 }
 
 static inline void l2cap_set_timer(struct l2cap_chan *chan,
-					struct delayed_work *work, long timeout)
+				   struct delayed_work *work, long timeout)
 {
 	BT_DBG("chan %p state %s timeout %ld", chan,
-					state_to_string(chan->state), timeout);
+	       state_to_string(chan->state), timeout);
 
 	if (!cancel_delayed_work(work))
 		l2cap_chan_hold(chan);
+
 	schedule_delayed_work(work, timeout);
 }
 
 static inline bool l2cap_clear_timer(struct l2cap_chan *chan,
-					struct delayed_work *work)
+				     struct delayed_work *work)
 {
 	bool ret;
 

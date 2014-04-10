@@ -80,6 +80,7 @@ enum {
 	HCI_INQUIRY,
 
 	HCI_RAW,
+
 	HCI_RESET,
 };
 
@@ -96,6 +97,7 @@ enum {
 	HCI_LINK_KEYS,
 	HCI_DEBUG_KEYS,
 	HCI_UNREGISTER,
+
 	HCI_LE_SCAN,
 	HCI_SSP_ENABLED,
 	HCI_HS_ENABLED,
@@ -177,10 +179,10 @@ enum {
 #define ESCO_2EV5	0x0100
 #define ESCO_3EV5	0x0200
 /* wbs */
-#define ESCO_WBS	(ESCO_EV3 | (EDR_ESCO_MASK ^ ESCO_2EV3))
+#define ESCO_WBS       (ESCO_EV3 | (EDR_ESCO_MASK ^ ESCO_2EV3))
 
-#define SCO_ESCO_MASK	(ESCO_HV1 | ESCO_HV2 | ESCO_HV3)
-#define EDR_ESCO_MASK	(ESCO_2EV3 | ESCO_3EV3 | ESCO_2EV5 | ESCO_3EV5)
+#define SCO_ESCO_MASK  (ESCO_HV1 | ESCO_HV2 | ESCO_HV3)
+#define EDR_ESCO_MASK  (ESCO_2EV3 | ESCO_3EV3 | ESCO_2EV5 | ESCO_3EV5)
 /* SS_BLUETOOTH(is80.hwang) 2012.03.02 */
 /* change applied EDR ESCO packet */
 #ifdef CONFIG_BT_CSR8811
@@ -311,6 +313,17 @@ EDR_ESCO_MASK)
 #define HCI_SMP_LTK			0x82
 #define HCI_SMP_LTK_SLAVE		0x83
 
+/* ---- HCI Error Codes ---- */
+#define HCI_ERROR_AUTH_FAILURE		0x05
+#define HCI_ERROR_REJ_BAD_ADDR		0x0f
+#define HCI_ERROR_REMOTE_USER_TERM	0x13
+#define HCI_ERROR_LOCAL_HOST_TERM	0x16
+#define HCI_ERROR_PAIRING_NOT_ALLOWED	0x18
+
+/* Flow control modes */
+#define HCI_FLOW_CTL_MODE_PACKET_BASED	0x00
+#define HCI_FLOW_CTL_MODE_BLOCK_BASED	0x01
+
 /* Extended Inquiry Response field types */
 #define EIR_FLAGS		0x01 /* flags */
 #define EIR_UUID16_SOME		0x02 /* 16-bit UUID, more available */
@@ -326,17 +339,6 @@ EDR_ESCO_MASK)
 #define EIR_SSP_HASH_C		0x0E /* Simple Pairing Hash C */
 #define EIR_SSP_RAND_R		0x0F /* Simple Pairing Randomizer R */
 #define EIR_DEVICE_ID		0x10 /* device ID */
-
-/* ---- HCI Error Codes ---- */
-#define HCI_ERROR_AUTH_FAILURE		0x05
-#define HCI_ERROR_REJ_BAD_ADDR		0x0f
-#define HCI_ERROR_REMOTE_USER_TERM	0x13
-#define HCI_ERROR_LOCAL_HOST_TERM	0x16
-#define HCI_ERROR_PAIRING_NOT_ALLOWED	0x18
-
-/* Flow control modes */
-#define HCI_FLOW_CTL_MODE_PACKET_BASED	0x00
-#define HCI_FLOW_CTL_MODE_BLOCK_BASED	0x01
 
 /* -----  HCI Commands ---- */
 #define HCI_OP_NOP			0x0000
@@ -722,8 +724,8 @@ struct hci_cp_host_buffer_size {
 
 #define HCI_OP_WRITE_EIR		0x0c52
 struct hci_cp_write_eir {
-	__u8		fec;
-	__u8		data[HCI_MAX_EIR_LENGTH];
+	__u8	fec;
+	__u8	data[HCI_MAX_EIR_LENGTH];
 } __packed;
 
 #define HCI_OP_READ_SSP_MODE		0x0c55
@@ -758,8 +760,8 @@ struct hci_rp_read_flow_control_mode {
 
 #define HCI_OP_WRITE_LE_HOST_SUPPORTED	0x0c6d
 struct hci_cp_write_le_host_supported {
-	__u8 le;
-	__u8 simul;
+	__u8	le;
+	__u8	simul;
 } __packed;
 
 #define HCI_OP_READ_LOCAL_VERSION	0x1001
@@ -818,6 +820,16 @@ struct hci_rp_read_data_block_size {
 	__le16   num_blocks;
 } __packed;
 
+#define HCI_OP_WRITE_PAGE_SCAN_ACTIVITY	0x0c1c
+struct hci_cp_write_page_scan_activity {
+	__le16   interval;
+	__le16   window;
+} __packed;
+
+#define HCI_OP_WRITE_PAGE_SCAN_TYPE	0x0c47
+	#define PAGE_SCAN_TYPE_STANDARD		0x00
+	#define PAGE_SCAN_TYPE_INTERLACED	0x01
+
 /* monitoring of the RSSI of the link between two Bluetooth devices */
 #define HCI_OP_READ_RSSI		0x1405
 struct hci_cp_read_rssi {
@@ -829,16 +841,6 @@ struct hci_rp_read_rssi {
 	__le16	handle;
 	__s8	rssi;
 } __packed;
-
-#define HCI_OP_WRITE_PAGE_SCAN_ACTIVITY	0x0c1c
-struct hci_cp_write_page_scan_activity {
-	__le16   interval;
-	__le16   window;
-} __packed;
-
-#define HCI_OP_WRITE_PAGE_SCAN_TYPE	0x0c47
-	#define PAGE_SCAN_TYPE_STANDARD		0x00
-	#define PAGE_SCAN_TYPE_INTERLACED	0x01
 
 #define HCI_OP_READ_LOCAL_AMP_INFO	0x1409
 struct hci_rp_read_local_amp_info {
@@ -1210,7 +1212,6 @@ struct hci_ev_user_confirm_req {
 struct hci_ev_user_passkey_req {
 	bdaddr_t	bdaddr;
 } __packed;
-
 
 #define HCI_EV_REMOTE_OOB_DATA_REQUEST	0x35
 struct hci_ev_remote_oob_data_request {

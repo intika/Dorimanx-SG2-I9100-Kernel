@@ -126,8 +126,8 @@ struct smp_chan {
 	struct l2cap_conn *conn;
 	u8		preq[7]; /* SMP Pairing Request */
 	u8		prsp[7]; /* SMP Pairing Response */
-	u8		prnd[16]; /* SMP Pairing Random (local) */
-	u8		rrnd[16]; /* SMP Pairing Random (remote) */
+	u8              prnd[16]; /* SMP Pairing Random (local) */
+	u8              rrnd[16]; /* SMP Pairing Random (remote) */
 	u8		pcnf[16]; /* SMP Pairing Confirm */
 	u8		tk[16]; /* SMP Temporary Key */
 	u8		enc_key_size;
@@ -135,6 +135,7 @@ struct smp_chan {
 	struct crypto_blkcipher	*tfm;
 	struct work_struct confirm;
 	struct work_struct random;
+
 };
 
 /* SMP Commands */
