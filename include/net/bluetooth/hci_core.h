@@ -60,7 +60,7 @@ struct inquiry_entry {
 };
 
 struct discovery_state {
-	int		type;
+	int			type;
 	enum {
 		DISCOVERY_STOPPED,
 		DISCOVERY_STARTING,
@@ -953,7 +953,10 @@ static inline size_t eir_get_length(u8 *eir, size_t eir_len)
 	while (parsed < eir_len) {
 		u8 field_len = eir[0];
 
-		if (field_len == 0)
+/*
++  * if (field_len == 0)
++  */
+		if (field_len == 0 && eir[1] == 0)
 			return parsed;
 
 		parsed += field_len + 1;
@@ -973,35 +976,6 @@ static inline u16 eir_append_data(u8 *eir, u16 eir_len, u8 type, u8 *data,
 
 	return eir_len;
 }
-
-/* for eir length */
-static inline size_t eir_length(u8 *eir, size_t maxlen)
-{
-	u8 field_len;
-	size_t parsed;
-	size_t length;
-
-	for (parsed = 0, length = 0; parsed < maxlen - 1; ) {
-		field_len = eir[0];
-
-/*
-  * if (field_len == 0)
-  */
-		if (field_len == 0 && eir[1] == 0)
-			break;
-
-		parsed += field_len + 1;
-
-		if (parsed > maxlen)
-			break;
-
-		length = parsed;
-		eir += field_len + 1;
-	}
-
-	return length;
-}
-
 
 int hci_register_cb(struct hci_cb *hcb);
 int hci_unregister_cb(struct hci_cb *hcb);

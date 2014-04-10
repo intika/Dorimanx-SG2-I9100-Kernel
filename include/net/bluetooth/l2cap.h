@@ -185,7 +185,6 @@ struct l2cap_conninfo {
 #define L2CAP_REJ_MTU_EXCEEDED		0x0001
 #define L2CAP_REJ_INVALID_CID		0x0002
 
-
 /* L2CAP structures */
 struct l2cap_hdr {
 	__le16     len;
@@ -540,7 +539,6 @@ struct l2cap_ops {
 	void			(*state_change) (void *data, int state);
 	struct sk_buff		*(*alloc_skb) (struct l2cap_chan *chan,
 					       unsigned long len, int nb);
-
 };
 
 struct l2cap_conn {
@@ -587,9 +585,9 @@ struct l2cap_conn {
 #define l2cap_pi(sk) ((struct l2cap_pinfo *) sk)
 
 struct l2cap_pinfo {
-	struct bt_sock	bt;
+	struct bt_sock		bt;
 	struct l2cap_chan	*chan;
-	struct sk_buff	*rx_busy_skb;
+	struct sk_buff		*rx_busy_skb;
 };
 
 enum {
