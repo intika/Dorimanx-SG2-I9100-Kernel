@@ -1255,8 +1255,6 @@ static int set_le(struct sock *sk, struct hci_dev *hdev, void *data, u16 len)
 	memset(&hci_cp, 0, sizeof(hci_cp));
 
 	if (val) {
-		enable_le = true;
-		BT_DBG("enable_le %d", enable_le);
 		hci_cp.le = val;
 		hci_cp.simul = !!(hdev->features[6] & LMP_SIMUL_LE_BR);
 	}
@@ -1951,7 +1949,7 @@ static int pair_device(struct sock *sk, struct hci_dev *hdev, void *data,
 		goto unlock;
 	}
 
-	if (cp->addr.type == DBADDR_BREDR)
+	if (cp->addr.type == BDADDR_BREDR)
 		conn->connect_cfm_cb = pairing_complete_cb;
 	else
 		conn->connect_cfm_cb = le_connect_complete_cb;
@@ -2445,12 +2443,6 @@ static int stop_discovery(struct sock *sk, struct hci_dev *hdev, void *data,
 
 		break;
 
-	/* for LE SCAN stop */
-	case DISCOVERY_LE_SCAN:
-		err = hci_cancel_le_scan(hdev);
-
-		break;
-
 	default:
 		BT_DBG("unknown discovery state %u", hdev->discovery.state);
 		err = -EFAULT;
@@ -2842,11 +2834,10 @@ int mgmt_read_rssi_complete(struct hci_dev *hdev, bdaddr_t *bdaddr, s8 rssi, u8 
 		return -ENOENT;
 
 	bacpy(&rp.bdaddr, bdaddr);
-	rp.status = status;
 	rp.rssi = rssi;
 
-	err = cmd_complete(cmd->sk, cmd->index, MGMT_OP_READ_RSSI, &rp,
-								sizeof(rp));
+	err = cmd_complete(cmd->sk, cmd->index, MGMT_OP_READ_RSSI, status,
+			   &rp, sizeof(rp));
 
 	mgmt_pending_remove(cmd);
 
@@ -2865,11 +2856,12 @@ static int le_test_end_complete(struct hci_dev *hdev, u8 status, u16 num_pkts)
 		return -ENOENT;
 	}
 
-	rp.status = status;
 	rp.num_pkts = num_pkts;
 
-	BT_DBG("le_test_end_complete : %s status %d, num_pkts 0x%x(%d)", hdev->name, rp.status, rp.num_pkts, rp.num_pkts);
-	err = cmd_complete(cmd->sk, hdev->id, MGMT_OP_LE_TEST_END, &rp, sizeof(rp));
+	BT_DBG("le_test_end_complete : %s status %d, num_pkts 0x%x(%d)",
+	       hdev->name, status, rp.num_pkts, rp.num_pkts);
+	err = cmd_complete(cmd->sk, hdev->id, MGMT_OP_LE_TEST_END, status,
+			   &rp, sizeof(rp));
 	mgmt_pending_remove(cmd);
 	return err;
 }
@@ -3702,7 +3694,7 @@ int mgmt_read_local_oob_data_reply_complete(struct hci_dev *hdev, u8 *hash,
 
 int mgmt_le_enable_complete(struct hci_dev *hdev, u8 enable, u8 status)
 {
-	struct cmd_lookup match = { enable, NULL, hdev };
+	struct cmd_lookup match = { NULL, hdev };
 	bool changed = false;
 	int err = 0;
 

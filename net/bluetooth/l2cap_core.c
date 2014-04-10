@@ -3140,9 +3140,9 @@ static inline int l2cap_connect_req(struct l2cap_conn *conn, struct l2cap_cmd_hd
 		 * this workaround is for ford carkit. (incoming avdtp connection failed)
 		 */
 		if ((conn->hcon->link_mode & HCI_LM_AUTH) && (conn->hcon->link_mode & HCI_LM_ENCRYPT) &&
-				!(conn->hcon->ssp_mode > 0) &&
+				!test_bit(HCI_SSP_ENABLED, &conn->hcon->flags) &&
 				psm == cpu_to_le16(0x0019) &&
-				bt_sk(sk)->defer_setup) {
+				test_bit(BT_DEFER_SETUP, &bt_sk(sk)->flags)) {
 			BT_DBG("psm is 0x0019, info req was not sent before");
 
 			/* Address Filer
@@ -3296,7 +3296,7 @@ static inline int l2cap_config_req(struct l2cap_conn *conn, struct l2cap_cmd_hdr
 	if (!chan)
 		return -ENOENT;
 
-	if (sk->sk_state != BT_CONFIG && sk->sk_state != BT_CONNECT2) {
+	if (chan->state != BT_CONFIG && chan->state != BT_CONNECT2) {
 		struct l2cap_cmd_rej_cid rej;
 
 		rej.reason = cpu_to_le16(L2CAP_REJ_INVALID_CID);
@@ -5002,12 +5002,6 @@ int l2cap_security_cfm(struct hci_conn *hcon, u8 status, u8 encrypt)
 		return 0;
 
 	BT_DBG("conn %p, status %u", conn, status);
-/* to do */
-	if (hcon->type == LE_LINK) {
-		smp_distribute_keys(conn, 0);
-		del_timer(&conn->security_timer);
-		/* cancel_delayed_work(&conn->security_timer); */
-	}
 
 	if (hcon->type == LE_LINK) {
 		if (!status && encrypt)

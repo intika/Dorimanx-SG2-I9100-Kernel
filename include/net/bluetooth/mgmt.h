@@ -360,7 +360,6 @@ struct mgmt_cp_set_device_id {
 
 #define MGMT_OP_LE_TEST_END		0x0029
 struct mgmt_rp_le_test_end {
-	__u8 status;
 	__u16 num_pkts;
 } __packed;
 
@@ -498,7 +497,6 @@ struct mgmt_cp_read_rssi {
 } __packed;
 
 struct mgmt_rp_read_rssi {
-	__u8 status;
 	bdaddr_t bdaddr;
 	__s8 rssi;
 } __packed;

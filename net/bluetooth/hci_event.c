@@ -1807,8 +1807,8 @@ static inline void hci_conn_complete_evt(struct hci_dev *hdev, struct sk_buff *s
 			/* update mgmt state */
 			if (!test_and_set_bit(HCI_CONN_MGMT_CONNECTED, &conn->flags))
 					mgmt_device_connected(hdev, &conn->dst, conn->type,
-									conn->dst_type, NULL, 0,
-									conn->dev_class);
+							      conn->dst_type, 0, NULL, 0,
+							      conn->dev_class);
 
 			/* Encryption implies authentication
 			     - 0x00 Link level encryption disabled.
@@ -1997,8 +1997,9 @@ static inline void hci_auth_complete_evt(struct hci_dev *hdev, struct sk_buff *s
 	BT_DBG("conn->remote_auth %x, conn->remote_cap %x, conn->auth_type %x, conn->io_capability %x",
 		conn->remote_auth, conn->remote_cap, conn->auth_type, conn->io_capability);
 
-	if (ev->status == 0x06 && hdev->ssp_mode > 0 &&
-						conn->ssp_mode > 0) {
+	if (ev->status == 0x06 &&
+		test_bit(HCI_SSP_ENABLED, &conn->hdev->dev_flags) &&
+		test_bit(HCI_CONN_SSP_ENABLED, &conn->flags)) {
 		struct hci_cp_auth_requested cp;
 		hci_remove_link_key(hdev, &conn->dst);
 		cp.handle = cpu_to_le16(conn->handle);
