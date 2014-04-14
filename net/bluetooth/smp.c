@@ -788,7 +788,7 @@ int smp_conn_security(struct l2cap_conn *conn, __u8 sec_level)
 	/* SSBT :: KJH + (0223), for Pin or Key Missing case */
 	if (sec_level == BT_SECURITY_LOW) {
 		if (hcon->link_mode & HCI_LM_MASTER)
-			if (smp_ltk_encrypt(conn))
+			if (smp_ltk_encrypt(conn, sec_level))
 				goto done;
 
 		return 1;
