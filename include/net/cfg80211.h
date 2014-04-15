@@ -2405,9 +2405,6 @@ struct wireless_dev {
 	struct ieee80211_channel *preset_chan;
 	enum nl80211_channel_type preset_chantype;
 
-	/* for AP and mesh channel tracking */
-	struct ieee80211_channel *channel;
-
 	bool ps;
 	int ps_timeout;
 

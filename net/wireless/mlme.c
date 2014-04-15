@@ -948,6 +948,7 @@ void cfg80211_ch_switch_notify(struct net_device *dev, int freq,
 		goto out;
 
 	wdev->channel = chan;
+
 	nl80211_ch_switch_notify(rdev, dev, freq, type, GFP_KERNEL);
 out:
 	wdev_unlock(wdev);
