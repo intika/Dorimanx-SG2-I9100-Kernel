@@ -82,7 +82,7 @@ int cfg80211_set_freq(struct cfg80211_registered_device *rdev,
 		      enum nl80211_channel_type channel_type)
 {
 	struct ieee80211_channel *chan;
-	int err;
+	int result;
 
 	if (wdev && wdev->iftype == NL80211_IFTYPE_MONITOR)
 		wdev = NULL;
@@ -115,17 +115,16 @@ int cfg80211_set_freq(struct cfg80211_registered_device *rdev,
 		return -EINVAL;
 	}
 
-	err = rdev->ops->set_channel(&rdev->wiphy,
-				     wdev ? wdev->netdev : NULL,
-				     chan, channel_type);
-	if (!err) {
-		if (wdev)
-			wdev->channel = chan;
-		rdev->monitor_channel = chan;
-		rdev->monitor_channel_type = channel_type;
-	}
+	result = rdev->ops->set_channel(&rdev->wiphy,
+					wdev ? wdev->netdev : NULL,
+					chan, channel_type);
+	if (result)
+		return result;
 
-	return err;
+	if (wdev)
+		wdev->channel = chan;
+
+	return 0;
 }
 
 void
