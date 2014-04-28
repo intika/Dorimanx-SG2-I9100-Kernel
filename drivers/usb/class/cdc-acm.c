@@ -1247,8 +1247,7 @@ skip_countries:
 	usb_set_intfdata(data_interface, acm);
 
 	usb_get_intf(control_interface);
-	tty_port_register_device(&acm->port, acm_tty_driver, minor,
-			&control_interface->dev);
+	tty_register_device(acm_tty_driver, minor, &control_interface->dev);
 
 	acm_table[minor] = acm;
 
