@@ -1416,9 +1416,6 @@ struct tty_struct *tty_init_dev(struct tty_driver *driver, int idx)
 	if (retval < 0)
 		goto err_deinit_tty;
 
-	if (!tty->port)
-		tty->port = driver->ports[idx];
-
 	/*
 	 * Structures all installed ... call the ldisc open routines.
 	 * If we fail here just call release_tty to clean up.  No need
@@ -3084,7 +3081,6 @@ static void destruct_tty_driver(struct kref *kref)
 		kfree(p);
 		cdev_del(&driver->cdev);
 	}
-	kfree(driver->ports);
 	kfree(driver);
 }
 
@@ -3122,18 +3118,6 @@ int tty_register_driver(struct tty_driver *driver)
 		p = kzalloc(driver->num * 2 * sizeof(void *), GFP_KERNEL);
 		if (!p)
 			return -ENOMEM;
-	}
-	/*
-	 * There is too many lines in PTY and we won't need the array there
-	 * since it has an ->install hook where it assigns ports properly.
-	 */
-	if (driver->type != TTY_DRIVER_TYPE_PTY) {
-		driver->ports = kcalloc(driver->num, sizeof(struct tty_port *),
-				GFP_KERNEL);
-		if (!driver->ports) {
-			error = -ENOMEM;
-			goto err_free_p;
-		}
 	}
 
 	if (!driver->major) {
@@ -3193,7 +3177,7 @@ err_unreg_char:
 	unregister_chrdev_region(dev, driver->num);
 	driver->ttys = NULL;
 	driver->termios = NULL;
-err_free_p: /* destruct_tty_driver will free driver->ports */
+err_free_p:
 	kfree(p);
 	return error;
 }
