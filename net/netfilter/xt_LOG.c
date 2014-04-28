@@ -152,7 +152,7 @@ static void dump_sk_uid_gid(struct sbuff *m, struct sock *sk)
 
 	read_lock_bh(&sk->sk_callback_lock);
 	if (sk->sk_socket && sk->sk_socket->file) {
-		const struct cred *cred = skb->sk->sk_socket->file->f_cred;
+		const struct cred *cred = sk->sk_socket->file->f_cred;
 		sb_add(m, "UID=%u GID=%u ",
 			from_kuid_munged(&init_user_ns, cred->fsuid),
 			from_kgid_munged(&init_user_ns, cred->fsgid));
