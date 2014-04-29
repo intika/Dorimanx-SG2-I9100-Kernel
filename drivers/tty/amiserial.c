@@ -1983,7 +1983,6 @@ static int __init amiga_serial_probe(struct platform_device *pdev)
 
 	/* Initialize the tty_driver structure */
 
-	serial_driver->owner = THIS_MODULE;
 	serial_driver->driver_name = "amiserial";
 	serial_driver->name = "ttyS";
 	serial_driver->major = TTY_MAJOR;

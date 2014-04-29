@@ -26,11 +26,13 @@
 #include <linux/bitops.h>
 #include <linux/devpts_fs.h>
 #include <linux/slab.h>
+#include <linux/mutex.h>
 
 
 #ifdef CONFIG_UNIX98_PTYS
 static struct tty_driver *ptm_driver;
 static struct tty_driver *pts_driver;
+static DEFINE_MUTEX(devpts_mutex);
 #endif
 
 static void pty_close(struct tty_struct *tty, struct file *filp)
@@ -53,8 +55,11 @@ static void pty_close(struct tty_struct *tty, struct file *filp)
 	if (tty->driver->subtype == PTY_TYPE_MASTER) {
 		set_bit(TTY_OTHER_CLOSED, &tty->flags);
 #ifdef CONFIG_UNIX98_PTYS
-		if (tty->driver == ptm_driver)
+		if (tty->driver == ptm_driver) {
+		        mutex_lock(&devpts_mutex);
 			devpts_pty_kill(tty->link);
+		        mutex_unlock(&devpts_mutex);
+		}
 #endif
 		tty_unlock();
 		tty_vhangup(tty->link);
@@ -225,8 +230,8 @@ out:
 static void pty_set_termios(struct tty_struct *tty,
 					struct ktermios *old_termios)
 {
-	tty->termios->c_cflag &= ~(CSIZE | PARENB);
-	tty->termios->c_cflag |= (CS8 | CREAD);
+	tty->termios.c_cflag &= ~(CSIZE | PARENB);
+	tty->termios.c_cflag |= (CS8 | CREAD);
 }
 
 /**
@@ -276,39 +281,45 @@ done:
 	return 0;
 }
 
-/* Traditional BSD devices */
-#ifdef CONFIG_LEGACY_PTYS
-
-static int pty_install(struct tty_driver *driver, struct tty_struct *tty)
+static int pty_common_install(struct tty_driver *driver, struct tty_struct *tty,
+		bool legacy)
 {
 	struct tty_struct *o_tty;
 	int idx = tty->index;
-	int retval;
+	int retval = -ENOMEM;
 
 	o_tty = alloc_tty_struct();
 	if (!o_tty)
-		return -ENOMEM;
+		goto err;
 	if (!try_module_get(driver->other->owner)) {
 		/* This cannot in fact currently happen */
-		retval = -ENOMEM;
 		goto err_free_tty;
 	}
 	initialize_tty_struct(o_tty, driver->other, idx);
 
-	/* We always use new tty termios data so we can do this
-	   the easy way .. */
-	retval = tty_init_termios(tty);
-	if (retval)
-		goto err_deinit_tty;
+	if (legacy) {
+		/* We always use new tty termios data so we can do this
+		   the easy way .. */
+		retval = tty_init_termios(tty);
+		if (retval)
+			goto err_deinit_tty;
 
-	retval = tty_init_termios(o_tty);
-	if (retval)
-		goto err_free_termios;
+		retval = tty_init_termios(o_tty);
+		if (retval)
+			goto err_free_termios;
+
+		driver->other->ttys[idx] = o_tty;
+		driver->ttys[idx] = tty;
+	} else {
+		memset(&tty->termios_locked, 0, sizeof(tty->termios_locked));
+		tty->termios = driver->init_termios;
+		memset(&o_tty->termios_locked, 0, sizeof(tty->termios_locked));
+		o_tty->termios = driver->other->init_termios;
+	}
 
 	/*
 	 * Everything allocated ... set up the o_tty structure.
 	 */
-	driver->other->ttys[idx] = o_tty;
 	tty_driver_kref_get(driver->other);
 	if (driver->subtype == PTY_TYPE_MASTER)
 		o_tty->count++;
@@ -318,16 +329,25 @@ static int pty_install(struct tty_driver *driver, struct tty_struct *tty)
 
 	tty_driver_kref_get(driver);
 	tty->count++;
-	driver->ttys[idx] = tty;
 	return 0;
 err_free_termios:
-	tty_free_termios(tty);
+	if (legacy)
+		tty_free_termios(tty);
 err_deinit_tty:
 	deinitialize_tty_struct(o_tty);
 	module_put(o_tty->driver->owner);
 err_free_tty:
 	free_tty_struct(o_tty);
+err:
 	return retval;
+}
+
+/* Traditional BSD devices */
+#ifdef CONFIG_LEGACY_PTYS
+
+static int pty_install(struct tty_driver *driver, struct tty_struct *tty)
+{
+	return pty_common_install(driver, tty, true);
 }
 
 static int pty_bsd_ioctl(struct tty_struct *tty,
@@ -391,7 +411,6 @@ static void __init legacy_pty_init(void)
 	if (!pty_slave_driver)
 		panic("Couldn't allocate pty slave driver");
 
-	pty_driver->owner = THIS_MODULE;
 	pty_driver->driver_name = "pty_master";
 	pty_driver->name = "pty";
 	pty_driver->major = PTY_MASTER_MAJOR;
@@ -409,7 +428,6 @@ static void __init legacy_pty_init(void)
 	pty_driver->other = pty_slave_driver;
 	tty_set_operations(pty_driver, &master_pty_ops_bsd);
 
-	pty_slave_driver->owner = THIS_MODULE;
 	pty_slave_driver->driver_name = "pty_slave";
 	pty_slave_driver->name = "ttyp";
 	pty_slave_driver->major = PTY_SLAVE_MAJOR;
@@ -476,13 +494,17 @@ static struct tty_struct *ptm_unix98_lookup(struct tty_driver *driver,
  *	@idx: tty index
  *
  *	Look up a pty master device. Called under the tty_mutex for now.
- *	This provides our locking.
+ *	This provides our locking for the tty pointer.
  */
 
 static struct tty_struct *pts_unix98_lookup(struct tty_driver *driver,
 		struct inode *pts_inode, int idx)
 {
-	struct tty_struct *tty = devpts_get_tty(pts_inode, idx);
+	struct tty_struct *tty;
+
+	mutex_lock(&devpts_mutex);
+	tty = devpts_get_tty(pts_inode, idx);
+	mutex_unlock(&devpts_mutex);
 	/* Master must be open before slave */
 	if (!tty)
 		return ERR_PTR(-EIO);
@@ -493,7 +515,6 @@ static void pty_unix98_shutdown(struct tty_struct *tty)
 {
 	tty_driver_remove_tty(tty->driver, tty);
 	/* We have our own method as we don't use the tty index */
-	kfree(tty->termios);
 }
 
 /* We have no need to install and remove our tty objects as devpts does all
@@ -501,52 +522,7 @@ static void pty_unix98_shutdown(struct tty_struct *tty)
 
 static int pty_unix98_install(struct tty_driver *driver, struct tty_struct *tty)
 {
-	struct tty_struct *o_tty;
-	int idx = tty->index;
-
-	o_tty = alloc_tty_struct();
-	if (!o_tty)
-		return -ENOMEM;
-	if (!try_module_get(driver->other->owner)) {
-		/* This cannot in fact currently happen */
-		goto err_free_tty;
-	}
-	initialize_tty_struct(o_tty, driver->other, idx);
-
-	tty->termios = kzalloc(sizeof(struct ktermios[2]), GFP_KERNEL);
-	if (tty->termios == NULL)
-		goto err_free_mem;
-	*tty->termios = driver->init_termios;
-	tty->termios_locked = tty->termios + 1;
-
-	o_tty->termios = kzalloc(sizeof(struct ktermios[2]), GFP_KERNEL);
-	if (o_tty->termios == NULL)
-		goto err_free_mem;
-	*o_tty->termios = driver->other->init_termios;
-	o_tty->termios_locked = o_tty->termios + 1;
-
-	tty_driver_kref_get(driver->other);
-	if (driver->subtype == PTY_TYPE_MASTER)
-		o_tty->count++;
-	/* Establish the links in both directions */
-	tty->link   = o_tty;
-	o_tty->link = tty;
-	/*
-	 * All structures have been allocated, so now we install them.
-	 * Failures after this point use release_tty to clean up, so
-	 * there's no need to null out the local pointers.
-	 */
-	tty_driver_kref_get(driver);
-	tty->count++;
-	return 0;
-err_free_mem:
-	deinitialize_tty_struct(o_tty);
-	kfree(o_tty->termios);
-	kfree(tty->termios);
-	module_put(o_tty->driver->owner);
-err_free_tty:
-	free_tty_struct(o_tty);
-	return -ENOMEM;
+	return pty_common_install(driver, tty, false);
 }
 
 static void ptm_unix98_remove(struct tty_driver *driver, struct tty_struct *tty)
@@ -625,9 +601,13 @@ static int ptmx_open(struct inode *inode, struct file *filp)
 		goto err_file;
 	}
 
+	mutex_unlock(&devpts_mutex);
+
 	mutex_lock(&tty_mutex);
-	tty_lock();
+	mutex_lock(&devpts_mutex);
 	tty = tty_init_dev(ptm_driver, index);
+	mutex_unlock(&devpts_mutex);
+	tty_lock();
 	mutex_unlock(&tty_mutex);
 
 	if (IS_ERR(tty)) {
@@ -657,6 +637,7 @@ out:
 	devpts_kill_index(inode, index);
 	tty_unlock();
 err_file:
+        mutex_unlock(&devpts_mutex);
 	tty_free_file(filp);
 	return retval;
 }
@@ -672,7 +653,6 @@ static void __init unix98_pty_init(void)
 	if (!pts_driver)
 		panic("Couldn't allocate Unix98 pts driver");
 
-	ptm_driver->owner = THIS_MODULE;
 	ptm_driver->driver_name = "pty_master";
 	ptm_driver->name = "ptm";
 	ptm_driver->major = UNIX98_PTY_MASTER_MAJOR;
@@ -691,7 +671,6 @@ static void __init unix98_pty_init(void)
 	ptm_driver->other = pts_driver;
 	tty_set_operations(ptm_driver, &ptm_unix98_ops);
 
-	pts_driver->owner = THIS_MODULE;
 	pts_driver->driver_name = "pty_slave";
 	pts_driver->name = "pts";
 	pts_driver->major = UNIX98_PTY_SLAVE_MAJOR;

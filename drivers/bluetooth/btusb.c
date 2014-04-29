@@ -21,15 +21,7 @@
  *
  */
 
-#include <linux/kernel.h>
 #include <linux/module.h>
-#include <linux/init.h>
-#include <linux/slab.h>
-#include <linux/types.h>
-#include <linux/sched.h>
-#include <linux/errno.h>
-#include <linux/skbuff.h>
-
 #include <linux/usb.h>
 
 #include <net/bluetooth/bluetooth.h>
@@ -778,7 +770,7 @@ done:
 
 static void btusb_destruct(struct hci_dev *hdev)
 {
-	struct btusb_data *data = hdev->driver_data;
+	struct btusb_data *data = hci_get_drvdata(hdev);
 
 	BT_DBG("%s", hdev->name);
 
@@ -1000,8 +992,6 @@ static int btusb_probe(struct usb_interface *intf,
 	hdev->destruct = btusb_destruct;
 	hdev->notify   = btusb_notify;
 
-	hdev->owner = THIS_MODULE;
-
 	/* Interface numbers are hardcoded in the specification */
 	data->isoc = usb_ifnum_to_if(data->udev, 1);
 
@@ -1084,7 +1074,7 @@ static void btusb_disconnect(struct usb_interface *intf)
 
 	hdev = data->hdev;
 
-	__hci_dev_hold(hdev);
+	hci_dev_hold(hdev);
 
 	usb_set_intfdata(data->intf, NULL);
 
@@ -1098,7 +1088,7 @@ static void btusb_disconnect(struct usb_interface *intf)
 	else if (data->isoc)
 		usb_driver_release_interface(&btusb_driver, data->isoc);
 
-	__hci_dev_put(hdev);
+	hci_dev_put(hdev);
 
 	hci_free_dev(hdev);
 }

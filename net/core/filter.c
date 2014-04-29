@@ -82,6 +82,14 @@ int sk_filter(struct sock *sk, struct sk_buff *skb)
 	int err;
 	struct sk_filter *filter;
 
+	/*
+	 * If the skb was allocated from pfmemalloc reserves, only
+	 * allow SOCK_MEMALLOC sockets to use it as this socket is
+	 * helping free memory
+	 */
+	if (skb_pfmemalloc(skb) && !sock_flag(sk, SOCK_MEMALLOC))
+		return -ENOMEM;
+
 	err = security_sock_rcv_skb(sk, skb);
 	if (err)
 		return err;
@@ -158,6 +166,14 @@ unsigned int sk_run_filter(const struct sk_buff *skb,
 		case BPF_S_ALU_DIV_K:
 			A /= K;
 			continue;
+		case BPF_S_ALU_MOD_X:
+			if (X == 0)
+				return 0;
+			A %= X;
+			continue;
+		case BPF_S_ALU_MOD_K:
+			A %= K;
+			continue;
 		case BPF_S_ALU_AND_X:
 			A &= X;
 			continue;
@@ -169,6 +185,13 @@ unsigned int sk_run_filter(const struct sk_buff *skb,
 			continue;
 		case BPF_S_ALU_OR_K:
 			A |= K;
+			continue;
+		case BPF_S_ANC_ALU_XOR_X:
+		case BPF_S_ALU_XOR_X:
+			A ^= X;
+			continue;
+		case BPF_S_ALU_XOR_K:
+			A ^= K;
 			continue;
 		case BPF_S_ALU_LSH_X:
 			A <<= X;
@@ -317,9 +340,6 @@ load_b:
 		case BPF_S_ANC_CPU:
 			A = raw_smp_processor_id();
 			continue;
-		case BPF_S_ANC_ALU_XOR_X:
-			A ^= X;
-			continue;
 		case BPF_S_ANC_NLATTR: {
 			struct nlattr *nla;
 
@@ -460,10 +480,14 @@ int sk_chk_filter(struct sock_filter *filter, unsigned int flen)
 		[BPF_ALU|BPF_MUL|BPF_K]  = BPF_S_ALU_MUL_K,
 		[BPF_ALU|BPF_MUL|BPF_X]  = BPF_S_ALU_MUL_X,
 		[BPF_ALU|BPF_DIV|BPF_X]  = BPF_S_ALU_DIV_X,
+		[BPF_ALU|BPF_MOD|BPF_K]  = BPF_S_ALU_MOD_K,
+		[BPF_ALU|BPF_MOD|BPF_X]  = BPF_S_ALU_MOD_X,
 		[BPF_ALU|BPF_AND|BPF_K]  = BPF_S_ALU_AND_K,
 		[BPF_ALU|BPF_AND|BPF_X]  = BPF_S_ALU_AND_X,
 		[BPF_ALU|BPF_OR|BPF_K]   = BPF_S_ALU_OR_K,
 		[BPF_ALU|BPF_OR|BPF_X]   = BPF_S_ALU_OR_X,
+		[BPF_ALU|BPF_XOR|BPF_K]  = BPF_S_ALU_XOR_K,
+		[BPF_ALU|BPF_XOR|BPF_X]  = BPF_S_ALU_XOR_X,
 		[BPF_ALU|BPF_LSH|BPF_K]  = BPF_S_ALU_LSH_K,
 		[BPF_ALU|BPF_LSH|BPF_X]  = BPF_S_ALU_LSH_X,
 		[BPF_ALU|BPF_RSH|BPF_K]  = BPF_S_ALU_RSH_K,
@@ -517,6 +541,11 @@ int sk_chk_filter(struct sock_filter *filter, unsigned int flen)
 		/* Some instructions need special checks */
 		switch (code) {
 		case BPF_S_ALU_DIV_K:
+			break;
+		case BPF_S_ALU_MOD_K:
+			/* check for division by zero */
+			if (ftest->k == 0)
+				return -EINVAL;
 			break;
 		case BPF_S_LD_MEM:
 		case BPF_S_LDX_MEM:
@@ -610,9 +639,9 @@ static int __sk_prepare_filter(struct sk_filter *fp)
 /**
  *	sk_unattached_filter_create - create an unattached filter
  *	@fprog: the filter program
- *	@sk: the socket to use
+ *	@pfp: the unattached filter that is created
  *
- * Create a filter independent ofr any socket. We first run some
+ * Create a filter independent of any socket. We first run some
  * sanity checks on it to make sure it does not explode on us later.
  * If an error occurs or there is insufficient memory for the filter
  * a negative errno code is returned. On success the return is zero.

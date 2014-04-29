@@ -165,7 +165,7 @@ static inline struct nlmsghdr *nlmsg_hdr(const struct sk_buff *skb)
 
 struct netlink_skb_parms {
 	struct scm_creds	creds;		/* Skb credentials	*/
-	__u32			pid;
+	__u32			portid;
 	__u32			dst_group;
 	struct sock		*ssk;
 };
@@ -185,6 +185,7 @@ struct netlink_kernel_cfg {
 	unsigned int	groups;
 	void		(*input)(struct sk_buff *skb);
 	struct mutex	*cb_mutex;
+	void		(*bind)(int group);
 	unsigned int	flags;
 };
 
@@ -204,14 +205,14 @@ extern void __netlink_clear_multicast_users(struct sock *sk, unsigned int group)
 extern void netlink_clear_multicast_users(struct sock *sk, unsigned int group);
 extern void netlink_ack(struct sk_buff *in_skb, struct nlmsghdr *nlh, int err);
 extern int netlink_has_listeners(struct sock *sk, unsigned int group);
-extern int netlink_unicast(struct sock *ssk, struct sk_buff *skb, __u32 pid, int nonblock);
-extern int netlink_broadcast(struct sock *ssk, struct sk_buff *skb, __u32 pid,
+extern int netlink_unicast(struct sock *ssk, struct sk_buff *skb, __u32 portid, int nonblock);
+extern int netlink_broadcast(struct sock *ssk, struct sk_buff *skb, __u32 portid,
 			     __u32 group, gfp_t allocation);
 extern int netlink_broadcast_filtered(struct sock *ssk, struct sk_buff *skb,
-	__u32 pid, __u32 group, gfp_t allocation,
+	__u32 portid, __u32 group, gfp_t allocation,
 	int (*filter)(struct sock *dsk, struct sk_buff *skb, void *data),
 	void *filter_data);
-extern int netlink_set_err(struct sock *ssk, __u32 pid, __u32 group, int code);
+extern int netlink_set_err(struct sock *ssk, __u32 portid, __u32 group, int code);
 extern int netlink_register_notifier(struct notifier_block *nb);
 extern int netlink_unregister_notifier(struct notifier_block *nb);
 
@@ -244,6 +245,8 @@ struct netlink_callback {
 					struct netlink_callback *cb);
 	int			(*done)(struct netlink_callback *cb);
 	void			*data;
+	/* the module that dump function belong to */
+	struct module		*module;
 	u16			family;
 	u16			min_dump_alloc;
 	unsigned int		prev_seq, seq;
@@ -252,12 +255,12 @@ struct netlink_callback {
 
 struct netlink_notify {
 	struct net *net;
-	int pid;
+	int portid;
 	int protocol;
 };
 
 struct nlmsghdr *
-__nlmsg_put(struct sk_buff *skb, u32 pid, u32 seq, int type, int len, int flags);
+__nlmsg_put(struct sk_buff *skb, u32 portid, u32 seq, int type, int len, int flags);
 
 #define NLMSG_NEW(skb, pid, seq, type, len, flags) \
 ({	if (unlikely(skb_tailroom(skb) < (int)NLMSG_SPACE(len))) \
@@ -269,14 +272,24 @@ __nlmsg_put(struct sk_buff *skb, u32 pid, u32 seq, int type, int len, int flags)
 
 struct netlink_dump_control {
 	int (*dump)(struct sk_buff *skb, struct netlink_callback *);
-	int (*done)(struct netlink_callback*);
+	int (*done)(struct netlink_callback *);
 	void *data;
+	struct module *module;
 	u16 min_dump_alloc;
 };
 
-extern int netlink_dump_start(struct sock *ssk, struct sk_buff *skb,
-			      const struct nlmsghdr *nlh,
-			      struct netlink_dump_control *control);
+extern int __netlink_dump_start(struct sock *ssk, struct sk_buff *skb,
+				const struct nlmsghdr *nlh,
+				struct netlink_dump_control *control);
+static inline int netlink_dump_start(struct sock *ssk, struct sk_buff *skb,
+				     const struct nlmsghdr *nlh,
+				     struct netlink_dump_control *control)
+{
+	if (!control->module)
+		control->module = THIS_MODULE;
+
+	return __netlink_dump_start(ssk, skb, nlh, control);
+}
 
 #endif /* __KERNEL__ */
 

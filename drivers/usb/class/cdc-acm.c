@@ -764,7 +764,7 @@ static void acm_tty_set_termios(struct tty_struct *tty,
 						struct ktermios *termios_old)
 {
 	struct acm *acm = tty->driver_data;
-	struct ktermios *termios = tty->termios;
+	struct ktermios *termios = &tty->termios;
 	struct usb_cdc_line_coding newline;
 	int newctrl = acm->ctrlout;
 
@@ -1666,7 +1666,6 @@ static int __init acm_init(void)
 	acm_tty_driver = alloc_tty_driver(ACM_TTY_MINORS);
 	if (!acm_tty_driver)
 		return -ENOMEM;
-	acm_tty_driver->owner = THIS_MODULE,
 	acm_tty_driver->driver_name = "acm",
 	acm_tty_driver->name = "ttyACM",
 	acm_tty_driver->major = ACM_TTY_MAJOR,

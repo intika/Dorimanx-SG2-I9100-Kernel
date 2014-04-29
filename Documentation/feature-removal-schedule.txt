@@ -412,14 +412,6 @@ Why:	Internal alias support has been present in module-init-tools for some
 
 Who:	Wey-Yi Guy <wey-yi.w.guy@intel.com>
 
----------------------------
-
-What:	xt_NOTRACK
-Files:	net/netfilter/xt_NOTRACK.c
-When:	April 2011
-Why:	Superseded by xt_CT
-Who:	Netfilter developer team <netfilter-devel@vger.kernel.org>
-
 ----------------------------
 
 What:	IRQF_DISABLED
@@ -534,6 +526,19 @@ Why:	Just opening a V4L device should not change the state of the hardware
 	switch to radio mode by calling VIDIOC_S_FREQUENCY. This is the second
 	and last step of the move to consistent handling of tv and radio tuners.
 Who:	Hans Verkuil <hans.verkuil@cisco.com>
+
+----------------------------
+
+What:	CONFIG_CFG80211_WEXT
+When:	as soon as distributions ship new wireless tools, ie. wpa_supplicant 1.0
+	and NetworkManager/connman/etc. that are able to use nl80211
+Why:	Wireless extensions are deprecated, and userland tools are moving to
+	using nl80211. New drivers are no longer using wireless extensions,
+	and while there might still be old drivers, both new drivers and new
+	userland no longer needs them and they can't be used for an feature
+	developed in the past couple of years. As such, compatibility with
+	wireless extensions in new drivers will be removed.
+Who:	Johannes Berg <johannes@sipsolutions.net>
 
 ----------------------------
 

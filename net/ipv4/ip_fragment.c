@@ -171,6 +171,10 @@ static void frag_kfree_skb(struct netns_frags *nf, struct sk_buff *skb)
 static void ip4_frag_init(struct inet_frag_queue *q, void *a)
 {
 	struct ipq *qp = container_of(q, struct ipq, q);
+	struct netns_ipv4 *ipv4 = container_of(q->net, struct netns_ipv4,
+					       frags);
+	struct net *net = container_of(ipv4, struct net, ipv4);
+
 	struct ip4_create_arg *arg = a;
 
 	qp->protocol = arg->iph->protocol;
@@ -180,7 +184,7 @@ static void ip4_frag_init(struct inet_frag_queue *q, void *a)
 	qp->daddr = arg->iph->daddr;
 	qp->user = arg->user;
 	qp->peer = sysctl_ipfrag_max_dist ?
-		inet_getpeer_v4(arg->iph->saddr, 1) : NULL;
+		inet_getpeer_v4(net->ipv4.peers, arg->iph->saddr, 1) : NULL;
 }
 
 static __inline__ void ip4_frag_free(struct inet_frag_queue *q)
@@ -215,7 +219,7 @@ static void ip_evictor(struct net *net)
 {
 	int evicted;
 
-	evicted = inet_frag_evictor(&net->ipv4.frags, &ip4_frags);
+	evicted = inet_frag_evictor(&net->ipv4.frags, &ip4_frags, false);
 	if (evicted)
 		IP_ADD_STATS_BH(net, IPSTATS_MIB_REASMFAILS, evicted);
 }
@@ -516,6 +520,10 @@ found:
 	if (offset == 0)
 		qp->q.last_in |= INET_FRAG_FIRST_IN;
 
+	if (ip_hdr(skb)->frag_off & htons(IP_DF) &&
+	    skb->len + ihl > qp->q.max_size)
+		qp->q.max_size = skb->len + ihl;
+
 	if (qp->q.last_in == (INET_FRAG_FIRST_IN | INET_FRAG_LAST_IN) &&
 	    qp->q.meat == qp->q.len) {
 		unsigned long orefdst = skb->_skb_refdst;
@@ -550,6 +558,7 @@ static int ip_frag_reasm(struct ipq *qp, struct sk_buff *prev,
 	int len;
 	int ihlen;
 	int err;
+	int sum_truesize;
 	u8 ecn;
 
 	ipq_kill(qp);
@@ -616,26 +625,41 @@ static int ip_frag_reasm(struct ipq *qp, struct sk_buff *prev,
 		atomic_add(clone->truesize, &qp->q.net->mem);
 	}
 
-	skb_shinfo(head)->frag_list = head->next;
 	skb_push(head, head->data - skb_network_header(head));
 
-	for (fp=head->next; fp; fp = fp->next) {
-		head->data_len += fp->len;
-		head->len += fp->len;
+	sum_truesize = head->truesize;
+	for (fp = head->next; fp;) {
+		bool headstolen;
+		int delta;
+		struct sk_buff *next = fp->next;
+
+		sum_truesize += fp->truesize;
 		if (head->ip_summed != fp->ip_summed)
 			head->ip_summed = CHECKSUM_NONE;
 		else if (head->ip_summed == CHECKSUM_COMPLETE)
 			head->csum = csum_add(head->csum, fp->csum);
-		head->truesize += fp->truesize;
+
+		if (skb_try_coalesce(head, fp, &headstolen, &delta)) {
+			kfree_skb_partial(fp, headstolen);
+		} else {
+			if (!skb_shinfo(head)->frag_list)
+				skb_shinfo(head)->frag_list = fp;
+			head->data_len += fp->len;
+			head->len += fp->len;
+			head->truesize += fp->truesize;
+		}
+		fp = next;
 	}
-	atomic_sub(head->truesize, &qp->q.net->mem);
+	atomic_sub(sum_truesize, &qp->q.net->mem);
 
 	head->next = NULL;
 	head->dev = dev;
 	head->tstamp = qp->q.stamp;
+	IPCB(head)->frag_max_size = qp->q.max_size;
 
 	iph = ip_hdr(head);
-	iph->frag_off = 0;
+	/* max_size != 0 implies at least one fragment had IP_DF set */
+	iph->frag_off = qp->q.max_size ? htons(IP_DF) : 0;
 	iph->tot_len = htons(len);
 	iph->tos |= ecn;
 	IP_INC_STATS_BH(net, IPSTATS_MIB_REASMOKS);
@@ -665,8 +689,7 @@ int ip_defrag(struct sk_buff *skb, u32 user)
 	IP_INC_STATS_BH(net, IPSTATS_MIB_REASMREQDS);
 
 	/* Start by cleaning up the memory. */
-	if (atomic_read(&net->ipv4.frags.mem) > net->ipv4.frags.high_thresh)
-		ip_evictor(net);
+	ip_evictor(net);
 
 	/* Lookup (or create) queue header */
 	if ((qp = ip_find(net, ip_hdr(skb), user)) != NULL) {

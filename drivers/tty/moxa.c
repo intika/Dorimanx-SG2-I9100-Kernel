@@ -44,6 +44,7 @@
 #include <linux/init.h>
 #include <linux/bitops.h>
 #include <linux/slab.h>
+#include <linux/ratelimit.h>
 
 #include <asm/io.h>
 #include <asm/uaccess.h>
@@ -241,8 +242,8 @@ static void moxa_wait_finish(void __iomem *ofsAddr)
 	while (readw(ofsAddr + FuncCode) != 0)
 		if (time_after(jiffies, end))
 			return;
-	if (readw(ofsAddr + FuncCode) != 0 && printk_ratelimit())
-		printk(KERN_WARNING "moxa function expired\n");
+	if (readw(ofsAddr + FuncCode) != 0)
+		printk_ratelimited(KERN_WARNING "moxa function expired\n");
 }
 
 static void moxafunc(void __iomem *ofsAddr, u16 cmd, u16 arg)
@@ -366,10 +367,10 @@ static int moxa_ioctl(struct tty_struct *tty,
 					tmp.dcd = 1;
 
 				ttyp = tty_port_tty_get(&p->port);
-				if (!ttyp || !ttyp->termios)
+				if (!ttyp)
 					tmp.cflag = p->cflag;
 				else
-					tmp.cflag = ttyp->termios->c_cflag;
+					tmp.cflag = ttyp->termios.c_cflag;
 				tty_kref_put(ttyp);
 copy:
 				if (copy_to_user(argm, &tmp, sizeof(tmp)))
@@ -1034,7 +1035,6 @@ static int __init moxa_init(void)
 	if (!moxaDriver)
 		return -ENOMEM;
 
-	moxaDriver->owner = THIS_MODULE;
 	moxaDriver->name = "ttyMX";
 	moxaDriver->major = ttymajor;
 	moxaDriver->minor_start = 0;
@@ -1178,7 +1178,7 @@ static int moxa_open(struct tty_struct *tty, struct file *filp)
 	mutex_lock(&ch->port.mutex);
 	if (!(ch->port.flags & ASYNC_INITIALIZED)) {
 		ch->statusflags = 0;
-		moxa_set_tty_param(tty, tty->termios);
+		moxa_set_tty_param(tty, &tty->termios);
 		MoxaPortLineCtrl(ch, 1, 1);
 		MoxaPortEnable(ch);
 		MoxaSetFifo(ch, ch->type == PORT_16550A);
@@ -1193,7 +1193,7 @@ static int moxa_open(struct tty_struct *tty, struct file *filp)
 static void moxa_close(struct tty_struct *tty, struct file *filp)
 {
 	struct moxa_port *ch = tty->driver_data;
-	ch->cflag = tty->termios->c_cflag;
+	ch->cflag = tty->termios.c_cflag;
 	tty_port_close(&ch->port, tty, filp);
 }
 
@@ -1464,7 +1464,7 @@ static void moxa_poll(unsigned long ignored)
 
 static void moxa_set_tty_param(struct tty_struct *tty, struct ktermios *old_termios)
 {
-	register struct ktermios *ts = tty->termios;
+	register struct ktermios *ts = &tty->termios;
 	struct moxa_port *ch = tty->driver_data;
 	int rts, cts, txflow, rxflow, xany, baud;
 
