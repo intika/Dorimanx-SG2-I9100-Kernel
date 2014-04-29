@@ -1025,7 +1025,7 @@ static chanspec_t wl_cfg80211_get_shared_freq(struct wiphy *wiphy)
 	return chspec;
 }
 
-static struct wireless_dev* wl_cfg80211_add_monitor_if(char *name)
+static struct wireless_dev* wl_cfg80211_add_monitor_if(const char *name)
 {
 #if defined(WLP2P) && defined(WL_ENABLE_P2P_IF)
 	WL_INFO(("wl_cfg80211_add_monitor_if: No more support monitor interface\n"));
@@ -1040,7 +1040,7 @@ static struct wireless_dev* wl_cfg80211_add_monitor_if(char *name)
 }
 
 static struct wireless_dev *
-wl_cfg80211_add_virtual_iface(struct wiphy *wiphy, char *name,
+wl_cfg80211_add_virtual_iface(struct wiphy *wiphy, const char *name,
 	enum nl80211_iftype type, u32 *flags,
 	struct vif_params *params)
 {
