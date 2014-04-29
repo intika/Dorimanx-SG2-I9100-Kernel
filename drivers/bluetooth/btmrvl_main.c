@@ -556,7 +556,6 @@ int btmrvl_register_hdev(struct btmrvl_private *priv)
 	hdev->send = btmrvl_send_frame;
 	hdev->destruct = btmrvl_destruct;
 	hdev->ioctl = btmrvl_ioctl;
-	hdev->owner = THIS_MODULE;
 
 	btmrvl_send_module_cfg_cmd(priv, MODULE_BRINGUP_REQ);
 

@@ -2636,11 +2636,15 @@ int tioclinux(struct tty_struct *tty, unsigned long arg)
 			ret = __put_user(data, p);
 			break;
 		case TIOCL_GETMOUSEREPORTING:
+			console_lock();	/* May be overkill */
 			data = mouse_reporting();
+			console_unlock();
 			ret = __put_user(data, p);
 			break;
 		case TIOCL_SETVESABLANK:
+			console_lock();
 			ret = set_vesa_blanking(p);
+			console_unlock();
 			break;
 		case TIOCL_GETKMSGREDIRECT:
 			data = vt_get_kmsg_redirect();
@@ -2657,13 +2661,21 @@ int tioclinux(struct tty_struct *tty, unsigned long arg)
 			}
 			break;
 		case TIOCL_GETFGCONSOLE:
+			/* No locking needed as this is a transiently
+			   correct return anyway if the caller hasn't
+			   disabled switching */
 			ret = fg_console;
 			break;
 		case TIOCL_SCROLLCONSOLE:
 			if (get_user(lines, (s32 __user *)(p+4))) {
 				ret = -EFAULT;
 			} else {
+				/* Need the console lock here. Note that lots
+				   of other calls need fixing before the lock
+				   is actually useful ! */
+				console_lock();
 				scrollfront(vc_cons[fg_console].d, lines);
+				console_unlock();
 				ret = 0;
 			}
 			break;
@@ -2778,40 +2790,51 @@ static void con_flush_chars(struct tty_struct *tty)
 /*
  * Allocate the console screen memory.
  */
-static int con_open(struct tty_struct *tty, struct file *filp)
+static int con_install(struct tty_driver *driver, struct tty_struct *tty)
 {
 	unsigned int currcons = tty->index;
-	int ret = 0;
+	struct vc_data *vc;
+	int ret;
 
 	console_lock();
-	if (tty->driver_data == NULL) {
-		ret = vc_allocate(currcons);
-		if (ret == 0) {
-			struct vc_data *vc = vc_cons[currcons].d;
+	ret = vc_allocate(currcons);
+	if (ret)
+		goto unlock;
 
-			/* Still being freed */
-			if (vc->port.tty) {
-				console_unlock();
-				return -ERESTARTSYS;
-			}
-			tty->driver_data = vc;
-			vc->port.tty = tty;
+	vc = vc_cons[currcons].d;
 
-			if (!tty->winsize.ws_row && !tty->winsize.ws_col) {
-				tty->winsize.ws_row = vc_cons[currcons].d->vc_rows;
-				tty->winsize.ws_col = vc_cons[currcons].d->vc_cols;
-			}
-			if (vc->vc_utf)
-				tty->termios->c_iflag |= IUTF8;
-			else
-				tty->termios->c_iflag &= ~IUTF8;
-			console_unlock();
-			return ret;
-		}
+	/* Still being freed */
+	if (vc->port.tty) {
+		ret = -ERESTARTSYS;
+		goto unlock;
 	}
+
+	ret = tty_port_install(&vc->port, driver, tty);
+	if (ret)
+		goto unlock;
+
+	tty->driver_data = vc;
+	vc->port.tty = tty;
+
+	if (!tty->winsize.ws_row && !tty->winsize.ws_col) {
+		tty->winsize.ws_row = vc_cons[currcons].d->vc_rows;
+		tty->winsize.ws_col = vc_cons[currcons].d->vc_cols;
+	}
+	if (vc->vc_utf)
+		tty->termios.c_iflag |= IUTF8;
+	else
+		tty->termios.c_iflag &= ~IUTF8;
+unlock:
 	console_unlock();
 	return ret;
 }
+
+static int con_open(struct tty_struct *tty, struct file *filp)
+{
+	/* everything done in install */
+	return 0;
+}
+
 
 static void con_close(struct tty_struct *tty, struct file *filp)
 {
@@ -2934,6 +2957,7 @@ static int __init con_init(void)
 console_initcall(con_init);
 
 static const struct tty_operations con_ops = {
+	.install = con_install,
 	.open = con_open,
 	.close = con_close,
 	.write = con_write,
@@ -2979,7 +3003,7 @@ int __init vty_init(const struct file_operations *console_fops)
 	console_driver = alloc_tty_driver(MAX_NR_CONSOLES);
 	if (!console_driver)
 		panic("Couldn't allocate console driver\n");
-	console_driver->owner = THIS_MODULE;
+
 	console_driver->name = "tty";
 	console_driver->name_base = 1;
 	console_driver->major = TTY_MAJOR;

@@ -175,6 +175,8 @@ static inline u32 ethtool_rxfh_indir_default(u32 index, u32 n_rx_rings)
  * @get_module_info: Get the size and type of the eeprom contained within
  *	a plug-in module.
  * @get_module_eeprom: Get the eeprom information from the plug-in module
+ * @get_eee: Get Energy-Efficient (EEE) supported and status.
+ * @set_eee: Set EEE status (enable/disable) as well as LPI timers.
  *
  * All operations are optional (i.e. the function pointer may be set
  * to %NULL) and callers must take this into account.  Callers must
@@ -242,6 +244,8 @@ struct ethtool_ops {
 				   struct ethtool_modinfo *);
 	int	(*get_module_eeprom)(struct net_device *,
 				     struct ethtool_eeprom *, u8 *);
+	int	(*get_eee)(struct net_device *, struct ethtool_eee *);
+	int	(*set_eee)(struct net_device *, struct ethtool_eee *);
 
 };
 

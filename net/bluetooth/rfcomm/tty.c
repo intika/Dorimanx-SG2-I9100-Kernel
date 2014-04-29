@@ -31,11 +31,6 @@
 #include <linux/tty_driver.h>
 #include <linux/tty_flip.h>
 
-#include <linux/capability.h>
-#include <linux/slab.h>
-#include <linux/skbuff.h>
-#include <linux/workqueue.h>
-
 #include <net/bluetooth/bluetooth.h>
 #include <net/bluetooth/hci_core.h>
 #include <net/bluetooth/rfcomm.h>
@@ -132,7 +127,7 @@ static struct rfcomm_dev *__rfcomm_dev_get(int id)
 	return NULL;
 }
 
-static inline struct rfcomm_dev *rfcomm_dev_get(int id)
+static struct rfcomm_dev *rfcomm_dev_get(int id)
 {
 	struct rfcomm_dev *dev;
 
@@ -171,7 +166,7 @@ static struct device *rfcomm_get_device(struct rfcomm_dev *dev)
 static ssize_t show_address(struct device *tty_dev, struct device_attribute *attr, char *buf)
 {
 	struct rfcomm_dev *dev = dev_get_drvdata(tty_dev);
-	return sprintf(buf, "%s\n", batostr(&dev->dst));
+	return sprintf(buf, "%pMR\n", &dev->dst);
 }
 
 static ssize_t show_channel(struct device *tty_dev, struct device_attribute *attr, char *buf)
@@ -186,7 +181,7 @@ static DEVICE_ATTR(channel, S_IRUGO, show_channel, NULL);
 static int rfcomm_dev_add(struct rfcomm_dev_req *req, struct rfcomm_dlc *dlc)
 {
 	struct rfcomm_dev *dev, *entry;
-	struct list_head *head = &rfcomm_dev_list, *p;
+	struct list_head *head = &rfcomm_dev_list;
 	int err = 0;
 
 	BT_DBG("id %d channel %d", req->dev_id, req->channel);
@@ -205,7 +200,7 @@ static int rfcomm_dev_add(struct rfcomm_dev_req *req, struct rfcomm_dlc *dlc)
 				break;
 
 			dev->id++;
-			head = p;
+			head = &entry->list;
 		}
 	} else {
 		dev->id = req->dev_id;
@@ -219,7 +214,7 @@ static int rfcomm_dev_add(struct rfcomm_dev_req *req, struct rfcomm_dlc *dlc)
 			if (entry->id > dev->id - 1)
 				break;
 
-			head = p;
+			head = &entry->list;
 		}
 	}
 
@@ -345,7 +340,7 @@ static void rfcomm_wfree(struct sk_buff *skb)
 	tty_port_put(&dev->port);
 }
 
-static inline void rfcomm_set_owner_w(struct sk_buff *skb, struct rfcomm_dev *dev)
+static void rfcomm_set_owner_w(struct sk_buff *skb, struct rfcomm_dev *dev)
 {
 	tty_port_get(&dev->port);
 	atomic_add(skb->truesize, &dev->wmem_alloc);
@@ -461,7 +456,7 @@ static int rfcomm_get_dev_list(void __user *arg)
 
 	size = sizeof(*dl) + dev_num * sizeof(*di);
 
-	dl = kmalloc(size, GFP_KERNEL);
+	dl = kzalloc(size, GFP_KERNEL);
 	if (!dl)
 		return -ENOMEM;
 
@@ -668,8 +663,8 @@ static int rfcomm_tty_open(struct tty_struct *tty, struct file *filp)
 	if (!dev)
 		return -ENODEV;
 
-	BT_DBG("dev %p dst %s channel %d opened %d", dev, batostr(&dev->dst),
-				dev->channel, dev->port.count);
+	BT_DBG("dev %p dst %pMR channel %d opened %d", dev, &dev->dst,
+	       dev->channel, dev->port.count);
 
 	spin_lock_irqsave(&dev->port.lock, flags);
 	if (++dev->port.count > 1) {
@@ -866,7 +861,7 @@ static int rfcomm_tty_ioctl(struct tty_struct *tty, unsigned int cmd, unsigned l
 
 static void rfcomm_tty_set_termios(struct tty_struct *tty, struct ktermios *old)
 {
-	struct ktermios *new = tty->termios;
+	struct ktermios *new = &tty->termios;
 	int old_baud_rate = tty_termios_baud_rate(old);
 	int new_baud_rate = tty_termios_baud_rate(new);
 
@@ -1148,7 +1143,6 @@ int __init rfcomm_init_ttys(void)
 	if (!rfcomm_tty_driver)
 		return -ENOMEM;
 
-	rfcomm_tty_driver->owner	= THIS_MODULE;
 	rfcomm_tty_driver->driver_name	= "rfcomm";
 	rfcomm_tty_driver->name		= "rfcomm";
 	rfcomm_tty_driver->major	= RFCOMM_TTY_MAJOR;

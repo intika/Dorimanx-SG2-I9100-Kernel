@@ -105,7 +105,7 @@ int udp_v6_get_port(struct sock *sk, unsigned short snum)
 {
 	unsigned int hash2_nulladdr =
 		udp6_portaddr_hash(sock_net(sk), &in6addr_any, snum);
-	unsigned int hash2_partial = 
+	unsigned int hash2_partial =
 		udp6_portaddr_hash(sock_net(sk), &inet6_sk(sk)->rcv_saddr, 0);
 
 	/* precompute partial secondary hash */
@@ -351,7 +351,7 @@ int udpv6_recvmsg(struct kiocb *iocb, struct sock *sk,
 	bool slow;
 
 	if (addr_len)
-		*addr_len=sizeof(struct sockaddr_in6);
+		*addr_len = sizeof(struct sockaddr_in6);
 
 	if (flags & MSG_ERRQUEUE)
 		return ipv6_recv_error(sk, msg, len, addr_len);
@@ -387,7 +387,7 @@ try_again:
 
 	if (skb_csum_unnecessary(skb))
 		err = skb_copy_datagram_iovec(skb, sizeof(struct udphdr),
-					      msg->msg_iov, copied       );
+					      msg->msg_iov, copied);
 	else {
 		err = skb_copy_and_csum_datagram_iovec(skb, sizeof(struct udphdr), msg->msg_iov);
 		if (err == -EINVAL)
@@ -395,6 +395,17 @@ try_again:
 	}
 	if (unlikely(err)) {
 		trace_kfree_skb(skb, udpv6_recvmsg);
+		if (!peeked) {
+			atomic_inc(&sk->sk_drops);
+			if (is_udp4)
+				UDP_INC_STATS_USER(sock_net(sk),
+						   UDP_MIB_INERRORS,
+						   is_udplite);
+			else
+				UDP6_INC_STATS_USER(sock_net(sk),
+						    UDP_MIB_INERRORS,
+						    is_udplite);
+		}
 		goto out_free;
 	}
 	if (!peeked) {
@@ -481,6 +492,11 @@ void __udp6_lib_err(struct sk_buff *skb, struct inet6_skb_parm *opt,
 			       saddr, uh->source, inet6_iif(skb), udptable);
 	if (sk == NULL)
 		return;
+
+	if (type == ICMPV6_PKT_TOOBIG)
+		ip6_sk_update_pmtu(skb, sk, info);
+	if (type == NDISC_REDIRECT)
+		ip6_sk_redirect(skb, sk);
 
 	np = inet6_sk(sk);
 
@@ -1387,7 +1403,7 @@ static struct sk_buff *udp6_ufo_fragment(struct sk_buff *skb,
 	 * do checksum of UDP packets sent as multiple IP fragments.
 	 */
 	offset = skb_checksum_start_offset(skb);
-	csum = skb_checksum(skb, offset, skb->len- offset, 0);
+	csum = skb_checksum(skb, offset, skb->len - offset, 0);
 	offset += skb->csum_offset;
 	*(__sum16 *)(skb->data + offset) = csum_fold(csum);
 	skb->ip_summed = CHECKSUM_NONE;
@@ -1414,8 +1430,7 @@ static struct sk_buff *udp6_ufo_fragment(struct sk_buff *skb,
 	fptr = (struct frag_hdr *)(skb_network_header(skb) + unfrag_ip6hlen);
 	fptr->nexthdr = nexthdr;
 	fptr->reserved = 0;
-	ipv6_select_ident(fptr,
-			  rt ? &rt->rt6i_dst.addr : &ipv6_hdr(skb)->daddr);
+	ipv6_select_ident(fptr, (struct rt6_info *)skb_dst(skb));
 
 	/* Fragment the skb. ipv6 header and the remaining fields of the
 	 * fragment header are updated in ipv6_gso_segment()
@@ -1460,7 +1475,8 @@ static void udp6_sock_seq_show(struct seq_file *seq, struct sock *sp, int bucket
 		   sk_wmem_alloc_get(sp),
 		   sk_rmem_alloc_get(sp),
 		   0, 0L, 0,
-		   sock_i_uid(sp), 0,
+		   from_kuid_munged(seq_user_ns(seq), sock_i_uid(sp)),
+		   0,
 		   sock_i_ino(sp),
 		   atomic_read(&sp->sk_refcnt), sp,
 		   atomic_read(&sp->sk_drops));

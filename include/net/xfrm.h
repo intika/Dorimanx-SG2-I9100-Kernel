@@ -213,6 +213,9 @@ struct xfrm_state {
 	struct xfrm_lifetime_cur curlft;
 	struct tasklet_hrtimer	mtimer;
 
+	/* used to fix curlft->add_time when changing date */
+	long		saved_tmo;
+
 	/* Last used time */
 	unsigned long		lastused;
 
@@ -238,6 +241,7 @@ static inline struct net *xs_net(struct xfrm_state *x)
 
 /* xflags - make enum if more show up */
 #define XFRM_TIME_DEFER	1
+#define XFRM_SOFT_EXPIRE 2
 
 enum {
 	XFRM_STATE_VOID,
@@ -259,7 +263,7 @@ struct km_event {
 	} data;
 
 	u32	seq;
-	u32	pid;
+	u32	portid;
 	u32	event;
 	struct net *net;
 };
@@ -291,6 +295,8 @@ struct xfrm_policy_afinfo {
 						  struct flowi *fl,
 						  int reverse);
 	int			(*get_tos)(const struct flowi *fl);
+	void			(*init_dst)(struct net *net,
+					    struct xfrm_dst *dst);
 	int			(*init_path)(struct xfrm_dst *path,
 					     struct dst_entry *dst,
 					     int nfheader_len);
@@ -307,7 +313,7 @@ extern void km_state_notify(struct xfrm_state *x, const struct km_event *c);
 
 struct xfrm_tmpl;
 extern int km_query(struct xfrm_state *x, struct xfrm_tmpl *t, struct xfrm_policy *pol);
-extern void km_state_expired(struct xfrm_state *x, int hard, u32 pid);
+extern void km_state_expired(struct xfrm_state *x, int hard, u32 portid);
 extern int __xfrm_state_delete(struct xfrm_state *x);
 
 struct xfrm_state_afinfo {
@@ -570,7 +576,7 @@ struct xfrm_mgr {
 	struct list_head	list;
 	char			*id;
 	int			(*notify)(struct xfrm_state *x, const struct km_event *c);
-	int			(*acquire)(struct xfrm_state *x, struct xfrm_tmpl *, struct xfrm_policy *xp, int dir);
+	int			(*acquire)(struct xfrm_state *x, struct xfrm_tmpl *, struct xfrm_policy *xp);
 	struct xfrm_policy	*(*compile_policy)(struct sock *sk, int opt, u8 *data, int len, int *dir);
 	int			(*new_mapping)(struct xfrm_state *x, xfrm_address_t *ipaddr, __be16 sport);
 	int			(*notify_policy)(struct xfrm_policy *x, int dir, const struct km_event *c);
@@ -1479,6 +1485,8 @@ extern int xfrm4_output(struct sk_buff *skb);
 extern int xfrm4_output_finish(struct sk_buff *skb);
 extern int xfrm4_tunnel_register(struct xfrm_tunnel *handler, unsigned short family);
 extern int xfrm4_tunnel_deregister(struct xfrm_tunnel *handler, unsigned short family);
+extern int xfrm4_mode_tunnel_input_register(struct xfrm_tunnel *handler);
+extern int xfrm4_mode_tunnel_input_deregister(struct xfrm_tunnel *handler);
 extern int xfrm6_extract_header(struct sk_buff *skb);
 extern int xfrm6_extract_input(struct xfrm_state *x, struct sk_buff *skb);
 extern int xfrm6_rcv_spi(struct sk_buff *skb, int nexthdr, __be32 spi);
@@ -1550,7 +1558,7 @@ extern int xfrm_migrate(const struct xfrm_selector *sel, u8 dir, u8 type,
 #endif
 
 extern int km_new_mapping(struct xfrm_state *x, xfrm_address_t *ipaddr, __be16 sport);
-extern void km_policy_expired(struct xfrm_policy *pol, int dir, int hard, u32 pid);
+extern void km_policy_expired(struct xfrm_policy *pol, int dir, int hard, u32 portid);
 extern int km_report(struct net *net, u8 proto, struct xfrm_selector *sel, xfrm_address_t *addr);
 
 extern void xfrm_input_init(void);
@@ -1691,12 +1699,11 @@ static inline int xfrm_mark_get(struct nlattr **attrs, struct xfrm_mark *m)
 
 static inline int xfrm_mark_put(struct sk_buff *skb, const struct xfrm_mark *m)
 {
-	if (m->m | m->v)
-		NLA_PUT(skb, XFRMA_MARK, sizeof(struct xfrm_mark), m);
-	return 0;
+	int ret = 0;
 
-nla_put_failure:
-	return -1;
+	if (m->m | m->v)
+		ret = nla_put(skb, XFRMA_MARK, sizeof(struct xfrm_mark), m);
+	return ret;
 }
 
 #endif	/* _NET_XFRM_H */

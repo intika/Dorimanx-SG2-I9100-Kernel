@@ -41,6 +41,7 @@ struct gred_sched_data {
 	u8		prio;		/* the prio of this vq */
 
 	struct red_parms parms;
+	struct red_vars  vars;
 	struct red_stats stats;
 };
 
@@ -55,7 +56,7 @@ struct gred_sched {
 	u32		red_flags;
 	u32 		DPs;
 	u32 		def;
-	struct red_parms wred_set;
+	struct red_vars wred_set;
 };
 
 static inline int gred_wred_mode(struct gred_sched *table)
@@ -101,9 +102,8 @@ static inline int gred_wred_mode_check(struct Qdisc *sch)
 		if (q == NULL)
 			continue;
 
-		for (n = 0; n < table->DPs; n++)
-			if (table->tab[n] && table->tab[n] != q &&
-			    table->tab[n]->prio == q->prio)
+		for (n = i + 1; n < table->DPs; n++)
+			if (table->tab[n] && table->tab[n]->prio == q->prio)
 				return 1;
 	}
 
@@ -125,17 +125,18 @@ static inline u16 tc_index_to_dp(struct sk_buff *skb)
 	return skb->tc_index & GRED_VQ_MASK;
 }
 
-static inline void gred_load_wred_set(struct gred_sched *table,
+static inline void gred_load_wred_set(const struct gred_sched *table,
 				      struct gred_sched_data *q)
 {
-	q->parms.qavg = table->wred_set.qavg;
-	q->parms.qidlestart = table->wred_set.qidlestart;
+	q->vars.qavg = table->wred_set.qavg;
+	q->vars.qidlestart = table->wred_set.qidlestart;
 }
 
 static inline void gred_store_wred_set(struct gred_sched *table,
 				       struct gred_sched_data *q)
 {
-	table->wred_set.qavg = q->parms.qavg;
+	table->wred_set.qavg = q->vars.qavg;
+	table->wred_set.qidlestart = q->vars.qidlestart;
 }
 
 static inline int gred_use_ecn(struct gred_sched *t)
@@ -170,19 +171,19 @@ static int gred_enqueue(struct sk_buff *skb, struct Qdisc *sch)
 				goto drop;
 		}
 
-		/* fix tc_index? --could be controvesial but needed for
+		/* fix tc_index? --could be controversial but needed for
 		   requeueing */
 		skb->tc_index = (skb->tc_index & ~GRED_VQ_MASK) | dp;
 	}
 
-	/* sum up all the qaves of prios <= to ours to get the new qave */
+	/* sum up all the qaves of prios < ours to get the new qave */
 	if (!gred_wred_mode(t) && gred_rio_mode(t)) {
 		int i;
 
 		for (i = 0; i < t->DPs; i++) {
 			if (t->tab[i] && t->tab[i]->prio < q->prio &&
-			    !red_is_idling(&t->tab[i]->parms))
-				qavg += t->tab[i]->parms.qavg;
+			    !red_is_idling(&t->tab[i]->vars))
+				qavg += t->tab[i]->vars.qavg;
 		}
 
 	}
@@ -193,15 +194,17 @@ static int gred_enqueue(struct sk_buff *skb, struct Qdisc *sch)
 	if (gred_wred_mode(t))
 		gred_load_wred_set(t, q);
 
-	q->parms.qavg = red_calc_qavg(&q->parms, gred_backlog(t, q, sch));
+	q->vars.qavg = red_calc_qavg(&q->parms,
+				     &q->vars,
+				     gred_backlog(t, q, sch));
 
-	if (red_is_idling(&q->parms))
-		red_end_of_idle_period(&q->parms);
+	if (red_is_idling(&q->vars))
+		red_end_of_idle_period(&q->vars);
 
 	if (gred_wred_mode(t))
 		gred_store_wred_set(t, q);
 
-	switch (red_action(&q->parms, q->parms.qavg + qavg)) {
+	switch (red_action(&q->parms, &q->vars, q->vars.qavg + qavg)) {
 	case RED_DONT_MARK:
 		break;
 
@@ -257,15 +260,17 @@ static struct sk_buff *gred_dequeue(struct Qdisc *sch)
 		} else {
 			q->backlog -= qdisc_pkt_len(skb);
 
-			if (!q->backlog && !gred_wred_mode(t))
-				red_start_of_idle_period(&q->parms);
+			if (gred_wred_mode(t)) {
+				if (!sch->qstats.backlog)
+					red_start_of_idle_period(&t->wred_set);
+			} else {
+				if (!q->backlog)
+					red_start_of_idle_period(&q->vars);
+			}
 		}
 
 		return skb;
 	}
-
-	if (gred_wred_mode(t) && !red_is_idling(&t->wred_set))
-		red_start_of_idle_period(&t->wred_set);
 
 	return NULL;
 }
@@ -288,19 +293,20 @@ static unsigned int gred_drop(struct Qdisc *sch)
 			q->backlog -= len;
 			q->stats.other++;
 
-			if (!q->backlog && !gred_wred_mode(t))
-				red_start_of_idle_period(&q->parms);
+			if (gred_wred_mode(t)) {
+				if (!sch->qstats.backlog)
+					red_start_of_idle_period(&t->wred_set);
+			} else {
+				if (!q->backlog)
+					red_start_of_idle_period(&q->vars);
+			}
 		}
 
 		qdisc_drop(skb, sch);
 		return len;
 	}
 
-	if (gred_wred_mode(t) && !red_is_idling(&t->wred_set))
-		red_start_of_idle_period(&t->wred_set);
-
 	return 0;
-
 }
 
 static void gred_reset(struct Qdisc *sch)
@@ -316,7 +322,7 @@ static void gred_reset(struct Qdisc *sch)
 		if (!q)
 			continue;
 
-		red_restart(&q->parms);
+		red_restart(&q->vars);
 		q->backlog = 0;
 	}
 }
@@ -394,12 +400,12 @@ static inline int gred_change_vq(struct Qdisc *sch, int dp,
 	q->limit = ctl->limit;
 
 	if (q->backlog == 0)
-		red_end_of_idle_period(&q->parms);
+		red_end_of_idle_period(&q->vars);
 
 	red_set_parms(&q->parms,
 		      ctl->qth_min, ctl->qth_max, ctl->Wlog, ctl->Plog,
 		      ctl->Scell_log, stab, max_P);
-
+	red_set_vars(&q->vars);
 	return 0;
 }
 
@@ -532,6 +538,7 @@ static int gred_dump(struct Qdisc *sch, struct sk_buff *skb)
 	for (i = 0; i < MAX_DPs; i++) {
 		struct gred_sched_data *q = table->tab[i];
 		struct tc_gred_qopt opt;
+		unsigned long qavg;
 
 		memset(&opt, 0, sizeof(opt));
 
@@ -560,10 +567,15 @@ static int gred_dump(struct Qdisc *sch, struct sk_buff *skb)
 		opt.packets	= q->packetsin;
 		opt.bytesin	= q->bytesin;
 
-		if (gred_wred_mode(table))
-			gred_load_wred_set(table, q);
+		if (gred_wred_mode(table)) {
+			q->vars.qidlestart =
+				table->tab[table->def]->vars.qidlestart;
+			q->vars.qavg = table->tab[table->def]->vars.qavg;
+		}
 
-		opt.qave = red_calc_qavg(&q->parms, q->parms.qavg);
+		qavg = red_calc_qavg(&q->parms, &q->vars,
+				     q->vars.qavg >> q->parms.Wlog);
+		opt.qave = qavg >> q->parms.Wlog;
 
 append_opt:
 		if (nla_append(skb, sizeof(opt), &opt) < 0)

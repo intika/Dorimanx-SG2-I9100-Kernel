@@ -1920,7 +1920,6 @@ static __init int nozomi_init(void)
 	if (!ntty_driver)
 		return -ENOMEM;
 
-	ntty_driver->owner = THIS_MODULE;
 	ntty_driver->driver_name = NOZOMI_NAME_TTY;
 	ntty_driver->name = "noz";
 	ntty_driver->major = 0;

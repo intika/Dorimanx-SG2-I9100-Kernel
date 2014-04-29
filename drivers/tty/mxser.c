@@ -39,6 +39,7 @@
 #include <linux/pci.h>
 #include <linux/bitops.h>
 #include <linux/slab.h>
+#include <linux/ratelimit.h>
 
 #include <asm/io.h>
 #include <asm/irq.h>
@@ -642,7 +643,7 @@ static int mxser_change_speed(struct tty_struct *tty,
 	int ret = 0;
 	unsigned char status;
 
-	cflag = tty->termios->c_cflag;
+	cflag = tty->termios.c_cflag;
 	if (!info->ioaddr)
 		return ret;
 
@@ -1489,8 +1490,7 @@ static int mxser_ioctl_special(unsigned int cmd, void __user *argp)
 
 	switch (cmd) {
 	case MOXA_GET_MAJOR:
-		if (printk_ratelimit())
-			printk(KERN_WARNING "mxser: '%s' uses deprecated ioctl "
+		printk_ratelimited(KERN_WARNING "mxser: '%s' uses deprecated ioctl "
 					"%x (GET_MAJOR), fix your userspace\n",
 					current->comm, cmd);
 		return put_user(ttymajor, (int __user *)argp);
@@ -1522,10 +1522,10 @@ static int mxser_ioctl_special(unsigned int cmd, void __user *argp)
 				
 				tty = tty_port_tty_get(port);
 
-				if (!tty || !tty->termios)
+				if (!tty)
 					ms.cflag = ip->normal_termios.c_cflag;
 				else
-					ms.cflag = tty->termios->c_cflag;
+					ms.cflag = tty->termios.c_cflag;
 				tty_kref_put(tty);
 				spin_lock_irq(&ip->slock);
 				status = inb(ip->ioaddr + UART_MSR);
@@ -1591,13 +1591,13 @@ static int mxser_ioctl_special(unsigned int cmd, void __user *argp)
 
 				tty = tty_port_tty_get(&ip->port);
 
-				if (!tty || !tty->termios) {
+				if (!tty) {
 					cflag = ip->normal_termios.c_cflag;
 					iflag = ip->normal_termios.c_iflag;
 					me->baudrate[p] = tty_termios_baud_rate(&ip->normal_termios);
 				} else {
-					cflag = tty->termios->c_cflag;
-					iflag = tty->termios->c_iflag;
+					cflag = tty->termios.c_cflag;
+					iflag = tty->termios.c_iflag;
 					me->baudrate[p] = tty_get_baud_rate(tty);
 				}
 				tty_kref_put(tty);
@@ -1855,7 +1855,7 @@ static void mxser_stoprx(struct tty_struct *tty)
 		}
 	}
 
-	if (tty->termios->c_cflag & CRTSCTS) {
+	if (tty->termios.c_cflag & CRTSCTS) {
 		info->MCR &= ~UART_MCR_RTS;
 		outb(info->MCR, info->ioaddr + UART_MCR);
 	}
@@ -1892,7 +1892,7 @@ static void mxser_unthrottle(struct tty_struct *tty)
 		}
 	}
 
-	if (tty->termios->c_cflag & CRTSCTS) {
+	if (tty->termios.c_cflag & CRTSCTS) {
 		info->MCR |= UART_MCR_RTS;
 		outb(info->MCR, info->ioaddr + UART_MCR);
 	}
@@ -1941,14 +1941,14 @@ static void mxser_set_termios(struct tty_struct *tty, struct ktermios *old_termi
 	spin_unlock_irqrestore(&info->slock, flags);
 
 	if ((old_termios->c_cflag & CRTSCTS) &&
-			!(tty->termios->c_cflag & CRTSCTS)) {
+			!(tty->termios.c_cflag & CRTSCTS)) {
 		tty->hw_stopped = 0;
 		mxser_start(tty);
 	}
 
 	/* Handle sw stopped */
 	if ((old_termios->c_iflag & IXON) &&
-			!(tty->termios->c_iflag & IXON)) {
+			!(tty->termios.c_iflag & IXON)) {
 		tty->stopped = 0;
 
 		if (info->board->chip_flag) {
@@ -2668,12 +2668,9 @@ static int __init mxser_module_init(void)
 		MXSER_VERSION);
 
 	/* Initialize the tty_driver structure */
-	mxvar_sdriver->owner = THIS_MODULE;
-	mxvar_sdriver->magic = TTY_DRIVER_MAGIC;
 	mxvar_sdriver->name = "ttyMI";
 	mxvar_sdriver->major = ttymajor;
 	mxvar_sdriver->minor_start = 0;
-	mxvar_sdriver->num = MXSER_PORTS + 1;
 	mxvar_sdriver->type = TTY_DRIVER_TYPE_SERIAL;
 	mxvar_sdriver->subtype = SERIAL_TYPE_NORMAL;
 	mxvar_sdriver->init_termios = tty_std_termios;

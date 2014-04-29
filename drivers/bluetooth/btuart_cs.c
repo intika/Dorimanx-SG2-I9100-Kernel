@@ -140,9 +140,9 @@ static void btuart_write_wakeup(btuart_info_t *info)
 	}
 
 	do {
-		register unsigned int iobase = info->p_dev->resource[0]->start;
+		unsigned int iobase = info->p_dev->resource[0]->start;
 		register struct sk_buff *skb;
-		register int len;
+		int len;
 
 		clear_bit(XMIT_WAKEUP, &(info->tx_state));
 
@@ -506,8 +506,6 @@ static int btuart_open(btuart_info_t *info)
 	hdev->send     = btuart_hci_send_frame;
 	hdev->destruct = btuart_hci_destruct;
 	hdev->ioctl    = btuart_hci_ioctl;
-
-	hdev->owner = THIS_MODULE;
 
 	spin_lock_irqsave(&(info->lock), flags);
 

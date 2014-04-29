@@ -186,9 +186,9 @@ static void bt3c_write_wakeup(bt3c_info_t *info)
 		return;
 
 	do {
-		register unsigned int iobase = info->p_dev->resource[0]->start;
+		unsigned int iobase = info->p_dev->resource[0]->start;
 		register struct sk_buff *skb;
-		register int len;
+		int len;
 
 		if (!pcmcia_dev_present(info->p_dev))
 			break;
@@ -588,8 +588,6 @@ static int bt3c_open(bt3c_info_t *info)
 	hdev->send     = bt3c_hci_send_frame;
 	hdev->destruct = bt3c_hci_destruct;
 	hdev->ioctl    = bt3c_hci_ioctl;
-
-	hdev->owner = THIS_MODULE;
 
 	/* Load firmware */
 	err = request_firmware(&firmware, "BT3CPCC.bin", &info->p_dev->dev);

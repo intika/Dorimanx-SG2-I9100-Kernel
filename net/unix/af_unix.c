@@ -440,7 +440,7 @@ static void unix_release_sock(struct sock *sk, int embrion)
 	/* ---- Socket is dead now and most probably destroyed ---- */
 
 	/*
-	 * Fixme: BSD difference: In BSD all sockets connected to use get
+	 * Fixme: BSD difference: In BSD all sockets connected to us get
 	 *	  ECONNRESET and we die on the spot. In Linux we behave
 	 *	  like files and pipes do and wait for the last
 	 *	  dereference.
@@ -478,7 +478,6 @@ static int unix_listen(struct socket *sock, int backlog)
 	struct sock *sk = sock->sk;
 	struct unix_sock *u = unix_sk(sk);
 	struct pid *old_pid = NULL;
-	const struct cred *old_cred = NULL;
 
 	err = -EOPNOTSUPP;
 	if (sock->type != SOCK_STREAM && sock->type != SOCK_SEQPACKET)
@@ -500,8 +499,6 @@ static int unix_listen(struct socket *sock, int backlog)
 out_unlock:
 	unix_state_unlock(sk);
 	put_pid(old_pid);
-	if (old_cred)
-		put_cred(old_cred);
 out:
 	return err;
 }
@@ -821,6 +818,34 @@ fail:
 	return NULL;
 }
 
+static int unix_mknod(const char *sun_path, umode_t mode, struct path *res)
+{
+	struct dentry *dentry;
+	struct path path;
+	int err = 0;
+	/*
+	 * Get the parent directory, calculate the hash for last
+	 * component.
+	 */
+	dentry = kern_path_create(AT_FDCWD, sun_path, &path, 0);
+	err = PTR_ERR(dentry);
+	if (IS_ERR(dentry))
+		return err;
+
+	/*
+	 * All right, let's create it.
+	 */
+	err = security_path_mknod(&path, dentry, mode, 0);
+	if (!err) {
+		err = vfs_mknod(path.dentry->d_inode, dentry, mode, 0);
+		if (!err) {
+			res->mnt = mntget(path.mnt);
+			res->dentry = dget(dentry);
+		}
+	}
+	done_path_create(&path, dentry);
+	return err;
+}
 
 static int unix_bind(struct socket *sock, struct sockaddr *uaddr, int addr_len)
 {
@@ -829,8 +854,6 @@ static int unix_bind(struct socket *sock, struct sockaddr *uaddr, int addr_len)
 	struct unix_sock *u = unix_sk(sk);
 	struct sockaddr_un *sunaddr = (struct sockaddr_un *)uaddr;
 	char *sun_path = sunaddr->sun_path;
-	struct dentry *dentry = NULL;
-	struct path path;
 	int err;
 	unsigned int hash = 0;
 	struct unix_address *addr;
@@ -867,40 +890,23 @@ static int unix_bind(struct socket *sock, struct sockaddr *uaddr, int addr_len)
 	atomic_set(&addr->refcnt, 1);
 
 	if (sun_path[0]) {
-		umode_t mode;
-		err = 0;
-		/*
-		 * Get the parent directory, calculate the hash for last
-		 * component.
-		 */
-		dentry = kern_path_create(AT_FDCWD, sun_path, &path, 0);
-		err = PTR_ERR(dentry);
-		if (IS_ERR(dentry))
-			goto out_mknod_parent;
-
-		/*
-		 * All right, let's create it.
-		 */
-		mode = S_IFSOCK |
+		struct path path;
+		umode_t mode = S_IFSOCK |
 		       (SOCK_INODE(sock)->i_mode & ~current_umask());
-		err = security_path_mknod(&path, dentry, mode, 0);
-		if (err)
-			goto out_mknod_drop_write;
-		err = vfs_mknod(path.dentry->d_inode, dentry, mode, 0);
-out_mknod_drop_write:
-		if (err)
-			goto out_mknod_dput;
-		mntget(path.mnt);
-		dget(dentry);
-		done_path_create(&path, dentry);
-		path.dentry = dentry;
-
+		err = unix_mknod(sun_path, mode, &path);
+		if (err) {
+			if (err == -EEXIST)
+				err = -EADDRINUSE;
+			unix_release_addr(addr);
+			goto out_up;
+		}
 		addr->hash = UNIX_HASH_SIZE;
-	}
-
-	spin_lock(&unix_table_lock);
-
-	if (!sun_path[0]) {
+		hash = path.dentry->d_inode->i_ino & (UNIX_HASH_SIZE-1);
+		spin_lock(&unix_table_lock);
+		u->path = path;
+		list = &unix_socket_table[hash];
+	} else {
+		spin_lock(&unix_table_lock);
 		err = -EADDRINUSE;
 		if (__unix_find_socket_byname(net, sunaddr, addr_len,
 					      sk->sk_type, hash)) {
@@ -909,9 +915,6 @@ out_mknod_drop_write:
 		}
 
 		list = &unix_socket_table[addr->hash];
-	} else {
-		list = &unix_socket_table[dentry->d_inode->i_ino & (UNIX_HASH_SIZE-1)];
-		u->path = path;
 	}
 
 	err = 0;
@@ -925,14 +928,6 @@ out_up:
 	mutex_unlock(&u->readlock);
 out:
 	return err;
-
-out_mknod_dput:
-	done_path_create(&path, dentry);
-out_mknod_parent:
-	if (err == -EEXIST)
-		err = -EADDRINUSE;
-	unix_release_addr(addr);
-	goto out_up;
 }
 
 static void unix_state_double_lock(struct sock *sk1, struct sock *sk2)
@@ -2060,10 +2055,14 @@ static int unix_shutdown(struct socket *sock, int mode)
 	struct sock *sk = sock->sk;
 	struct sock *other;
 
-	mode = (mode+1)&(RCV_SHUTDOWN|SEND_SHUTDOWN);
-
-	if (!mode)
-		return 0;
+	if (mode < SHUT_RD || mode > SHUT_RDWR)
+		return -EINVAL;
+	/* This maps:
+	 * SHUT_RD   (0) -> RCV_SHUTDOWN  (1)
+	 * SHUT_WR   (1) -> SEND_SHUTDOWN (2)
+	 * SHUT_RDWR (2) -> SHUTDOWN_MASK (3)
+	 */
+	++mode;
 
 	unix_state_lock(sk);
 	sk->sk_shutdown |= mode;
@@ -2248,10 +2247,6 @@ static unsigned int unix_dgram_poll(struct file *file, struct socket *sock,
 #define get_offset(x) ((x) & ((1L << BUCKET_SPACE) - 1))
 #define set_bucket_offset(b, o) ((b) << BUCKET_SPACE | (o))
 
-struct unix_iter_state {
-	struct seq_net_private p;
-};
-
 static struct sock *unix_from_bucket(struct seq_file *seq, loff_t *pos)
 {
 	unsigned long offset = get_offset(*pos);
@@ -2376,7 +2371,7 @@ static const struct seq_operations unix_seq_ops = {
 static int unix_seq_open(struct inode *inode, struct file *file)
 {
 	return seq_open_net(inode, file, &unix_seq_ops,
-			    sizeof(struct unix_iter_state));
+			    sizeof(struct seq_net_private));
 }
 
 static const struct file_operations unix_seq_fops = {

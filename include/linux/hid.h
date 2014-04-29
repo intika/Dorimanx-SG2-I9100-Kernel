@@ -33,6 +33,8 @@
 #include <linux/timer.h>
 #include <linux/workqueue.h>
 #include <linux/input.h>
+#include <linux/semaphore.h>
+#include <linux/power_supply.h>
 #include <uapi/linux/hid.h>
 
 /*
@@ -152,6 +154,7 @@ struct hid_item {
 #define HID_UP_UNDEFINED	0x00000000
 #define HID_UP_GENDESK		0x00010000
 #define HID_UP_SIMULATION	0x00020000
+#define HID_UP_GENDEVCTRLS	0x00060000
 #define HID_UP_KEYBOARD		0x00070000
 #define HID_UP_LED		0x00080000
 #define HID_UP_BUTTON		0x00090000
@@ -200,6 +203,8 @@ struct hid_item {
 #define HID_GD_DOWN		0x00010091
 #define HID_GD_RIGHT		0x00010092
 #define HID_GD_LEFT		0x00010093
+
+#define HID_DC_BATTERYSTRENGTH	0x00060020
 
 #define HID_DG_DIGITIZER	0x000d0001
 #define HID_DG_PEN		0x000d0002
@@ -444,6 +449,18 @@ struct hid_device {							/* device report descriptor */
 	struct hid_driver *driver;
 	struct hid_ll_driver *ll_driver;
 
+#ifdef CONFIG_HID_BATTERY_STRENGTH
+	/*
+	 * Power supply information for HID devices which report
+	 * battery strength. power_supply is registered iff
+	 * battery.name is non-NULL.
+	 */
+	struct power_supply battery;
+	__s32 battery_min;
+	__s32 battery_max;
+	__s32 battery_val;
+#endif
+
 	unsigned int status;						/* see STAT flags above */
 	unsigned claimed;						/* Claimed by hidinput, hiddev? */
 	unsigned quirks;						/* Various quirks the device can pull on us */
@@ -523,12 +540,12 @@ struct hid_descriptor {
 	struct hid_class_descriptor desc[1];
 } __attribute__ ((packed));
 
-#define HID_DEVICE(b, ven, prod) \
-	.bus = (b), \
-	.vendor = (ven), .product = (prod)
-
-#define HID_USB_DEVICE(ven, prod)	HID_DEVICE(BUS_USB, ven, prod)
-#define HID_BLUETOOTH_DEVICE(ven, prod)	HID_DEVICE(BUS_BLUETOOTH, ven, prod)
+#define HID_DEVICE(b, g, ven, prod)					\
+	.bus = (b), .group = (g), .vendor = (ven), .product = (prod)
+#define HID_USB_DEVICE(ven, prod)				\
+	.bus = BUS_USB, .vendor = (ven), .product = (prod)
+#define HID_BLUETOOTH_DEVICE(ven, prod)					\
+	.bus = BUS_BLUETOOTH, .vendor = (ven), .product = (prod)
 
 #define HID_REPORT_ID(rep) \
 	.report_type = (rep)

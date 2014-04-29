@@ -46,6 +46,7 @@
 #include <linux/list_nulls.h>
 #include <linux/timer.h>
 #include <linux/cache.h>
+#include <linux/bitops.h>
 #include <linux/lockdep.h>
 #include <linux/netdevice.h>
 #include <linux/skbuff.h>	/* struct sk_buff */
@@ -198,6 +199,7 @@ struct cg_proto;
   *	@sk_lock:	synchronizer
   *	@sk_rcvbuf: size of receive buffer in bytes
   *	@sk_wq: sock wait queue and async head
+  *	@sk_rx_dst: receive input route used by early tcp demux
   *	@sk_dst_cache: destination cache
   *	@sk_dst_lock: destination cache lock
   *	@sk_policy: flow policy
@@ -247,8 +249,8 @@ struct cg_proto;
   *	@sk_stamp: time stamp of last packet received
   *	@sk_socket: Identd and reporting IO signals
   *	@sk_user_data: RPC layer private data
-  *	@sk_sndmsg_page: cached page for sendmsg
-  *	@sk_sndmsg_off: cached offset for sendmsg
+  *	@sk_frag: cached page frag
+  *	@sk_peek_off: current peek_offset value
   *	@sk_send_head: front of stuff to transmit
   *	@sk_security: used by security modules
   *	@sk_mark: generic packet mark
@@ -322,6 +324,7 @@ struct sock {
 	struct xfrm_policy	*sk_policy[2];
 #endif
 	unsigned long 		sk_flags;
+	struct dst_entry	*sk_rx_dst;
 	struct dst_entry	*sk_dst_cache;
 	spinlock_t		sk_dst_lock;
 	atomic_t		sk_wmem_alloc;
@@ -364,9 +367,8 @@ struct sock {
 	ktime_t			sk_stamp;
 	struct socket		*sk_socket;
 	void			*sk_user_data;
-	struct page		*sk_sndmsg_page;
+	struct page_frag	sk_frag;
 	struct sk_buff		*sk_send_head;
-	__u32			sk_sndmsg_off;
 	__s32			sk_peek_off;
 	int			sk_write_pending;
 #ifdef CONFIG_SECURITY
@@ -643,6 +645,7 @@ enum sock_flags {
 	SOCK_RCVTSTAMPNS, /* %SO_TIMESTAMPNS setting */
 	SOCK_LOCALROUTE, /* route locally only, %SO_DONTROUTE setting */
 	SOCK_QUEUE_SHRUNK, /* write queue has been shrunk recently */
+	SOCK_MEMALLOC, /* VM depends on this socket for swapping */
 	SOCK_TIMESTAMPING_TX_HARDWARE,  /* %SOF_TIMESTAMPING_TX_HARDWARE */
 	SOCK_TIMESTAMPING_TX_SOFTWARE,  /* %SOF_TIMESTAMPING_TX_SOFTWARE */
 	SOCK_TIMESTAMPING_RX_HARDWARE,  /* %SOF_TIMESTAMPING_RX_HARDWARE */
@@ -695,6 +698,10 @@ static inline int sk_memalloc_socks(void)
 
 #endif
 
+static inline gfp_t sk_gfp_atomic(struct sock *sk, gfp_t gfp_mask)
+{
+	return GFP_ATOMIC | (sk->sk_allocation & __GFP_MEMALLOC);
+}
 
 static inline void sk_acceptq_removed(struct sock *sk)
 {
@@ -771,8 +778,13 @@ static inline __must_check int sk_add_backlog(struct sock *sk, struct sk_buff *s
 	return 0;
 }
 
+extern int __sk_backlog_rcv(struct sock *sk, struct sk_buff *skb);
+
 static inline int sk_backlog_rcv(struct sock *sk, struct sk_buff *skb)
 {
+	if (sk_memalloc_socks() && skb_pfmemalloc(skb))
+		return __sk_backlog_rcv(sk, skb);
+
 	return sk->sk_backlog_rcv(sk, skb);
 }
 
@@ -836,6 +848,8 @@ extern int sk_stream_wait_memory(struct sock *sk, long *timeo_p);
 extern void sk_stream_wait_close(struct sock *sk, long timeo_p);
 extern int sk_stream_error(struct sock *sk, int flags, int err);
 extern void sk_stream_kill_queues(struct sock *sk);
+extern void sk_set_memalloc(struct sock *sk);
+extern void sk_clear_memalloc(struct sock *sk);
 
 extern int sk_wait_data(struct sock *sk, long *timeo);
 
@@ -908,6 +922,9 @@ struct proto {
 	int			(*backlog_rcv) (struct sock *sk,
 						struct sk_buff *skb);
 
+	void		(*release_cb)(struct sock *sk);
+	void		(*mtu_reduced)(struct sock *sk);
+
 	/* Keeping track of sk's, looking them up, and port selection methods. */
 	void			(*hash)(struct sock *sk);
 	void			(*unhash)(struct sock *sk);
@@ -974,12 +991,23 @@ struct proto {
 #endif
 };
 
+/*
+ * Bits in struct cg_proto.flags
+ */
+enum cg_proto_flags {
+	/* Currently active and new sockets should be assigned to cgroups */
+	MEMCG_SOCK_ACTIVE,
+	/* It was ever activated; we must disarm static keys on destruction */
+	MEMCG_SOCK_ACTIVATED,
+};
+
 struct cg_proto {
 	void			(*enter_memory_pressure)(struct sock *sk);
 	struct res_counter	*memory_allocated;	/* Current allocated memory. */
 	struct percpu_counter	*sockets_allocated;	/* Current number of sockets. */
 	int			*memory_pressure;
 	long			*sysctl_mem;
+	unsigned long		flags;
 	/*
 	 * memcg field is used to find which memcg we belong directly
 	 * Each memcg struct can hold more than one cg_proto, so container_of
@@ -994,6 +1022,16 @@ struct cg_proto {
 
 extern int proto_register(struct proto *prot, int alloc_slab);
 extern void proto_unregister(struct proto *prot);
+
+static inline bool memcg_proto_active(struct cg_proto *cg_proto)
+{
+	return test_bit(MEMCG_SOCK_ACTIVE, &cg_proto->flags);
+}
+
+static inline bool memcg_proto_activated(struct cg_proto *cg_proto)
+{
+	return test_bit(MEMCG_SOCK_ACTIVATED, &cg_proto->flags);
+}
 
 #ifdef SOCK_REFCNT_DEBUG
 static inline void sk_refcnt_debug_inc(struct sock *sk)
@@ -1327,12 +1365,14 @@ static inline bool sk_wmem_schedule(struct sock *sk, int size)
 		__sk_mem_schedule(sk, size, SK_MEM_SEND);
 }
 
-static inline bool sk_rmem_schedule(struct sock *sk, int size)
+static inline bool
+sk_rmem_schedule(struct sock *sk, struct sk_buff *skb, int size)
 {
 	if (!sk_has_account(sk))
 		return true;
-	return size <= sk->sk_forward_alloc ||
-		__sk_mem_schedule(sk, size, SK_MEM_RECV);
+	return size<= sk->sk_forward_alloc ||
+		__sk_mem_schedule(sk, size, SK_MEM_RECV) ||
+		skb_pfmemalloc(skb);
 }
 
 static inline void sk_mem_reclaim(struct sock *sk)
@@ -1457,6 +1497,7 @@ extern struct sk_buff		*sock_rmalloc(struct sock *sk,
 					      gfp_t priority);
 extern void			sock_wfree(struct sk_buff *skb);
 extern void			sock_rfree(struct sk_buff *skb);
+extern void			sock_edemux(struct sk_buff *skb);
 
 extern int			sock_setsockopt(struct socket *sock, int level,
 						int op, char __user *optval,
@@ -2008,17 +2049,22 @@ static inline void sk_stream_moderate_sndbuf(struct sock *sk)
 
 struct sk_buff *sk_stream_alloc_skb(struct sock *sk, int size, gfp_t gfp);
 
-static inline struct page *sk_stream_alloc_page(struct sock *sk)
+/**
+ * sk_page_frag - return an appropriate page_frag
+ * @sk: socket
+ *
+ * If socket allocation mode allows current thread to sleep, it means its
+ * safe to use the per task page_frag instead of the per socket one.
+ */
+static inline struct page_frag *sk_page_frag(struct sock *sk)
 {
-	struct page *page = NULL;
+	if (sk->sk_allocation & __GFP_WAIT)
+		return &current->task_frag;
 
-	page = alloc_pages(sk->sk_allocation, 0);
-	if (!page) {
-		sk_enter_memory_pressure(sk);
-		sk_stream_moderate_sndbuf(sk);
-	}
-	return page;
+	return &sk->sk_frag;
 }
+
+extern bool sk_page_frag_refill(struct sock *sk, struct page_frag *pfrag);
 
 /*
  *	Default write policy as shown to user space via poll/select/SIGIO
@@ -2172,7 +2218,7 @@ static inline void sk_change_net(struct sock *sk, struct net *net)
 
 static inline struct sock *skb_steal_sock(struct sk_buff *skb)
 {
-	if (unlikely(skb->sk)) {
+	if (skb->sk) {
 		struct sock *sk = skb->sk;
 
 		skb->destructor = NULL;

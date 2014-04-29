@@ -147,9 +147,9 @@ static void dtl1_write_wakeup(dtl1_info_t *info)
 	}
 
 	do {
-		register unsigned int iobase = info->p_dev->resource[0]->start;
+		unsigned int iobase = info->p_dev->resource[0]->start;
 		register struct sk_buff *skb;
-		register int len;
+		int len;
 
 		clear_bit(XMIT_WAKEUP, &(info->tx_state));
 
@@ -491,8 +491,6 @@ static int dtl1_open(dtl1_info_t *info)
 	hdev->send     = dtl1_hci_send_frame;
 	hdev->destruct = dtl1_hci_destruct;
 	hdev->ioctl    = dtl1_hci_ioctl;
-
-	hdev->owner = THIS_MODULE;
 
 	spin_lock_irqsave(&(info->lock), flags);
 

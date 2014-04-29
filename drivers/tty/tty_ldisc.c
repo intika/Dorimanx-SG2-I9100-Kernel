@@ -429,7 +429,7 @@ EXPORT_SYMBOL_GPL(tty_ldisc_flush);
 static void tty_set_termios_ldisc(struct tty_struct *tty, int num)
 {
 	mutex_lock(&tty->termios_mutex);
-	tty->termios->c_line = num;
+	tty->termios.c_line = num;
 	mutex_unlock(&tty->termios_mutex);
 }
 
@@ -450,7 +450,6 @@ static int tty_ldisc_open(struct tty_struct *tty, struct tty_ldisc *ld)
 	if (ld->ops->open) {
 		int ret;
                 /* BTM here locks versus a hangup event */
-		WARN_ON(!tty_locked());
 		ret = ld->ops->open(tty);
 		if (ret)
 			clear_bit(TTY_LDISC_OPEN, &tty->flags);
@@ -741,9 +740,9 @@ enable:
 static void tty_reset_termios(struct tty_struct *tty)
 {
 	mutex_lock(&tty->termios_mutex);
-	*tty->termios = tty->driver->init_termios;
-	tty->termios->c_ispeed = tty_termios_input_baud_rate(tty->termios);
-	tty->termios->c_ospeed = tty_termios_baud_rate(tty->termios);
+	tty->termios = tty->driver->init_termios;
+	tty->termios.c_ispeed = tty_termios_input_baud_rate(&tty->termios);
+	tty->termios.c_ospeed = tty_termios_baud_rate(&tty->termios);
 	mutex_unlock(&tty->termios_mutex);
 }
 
@@ -865,7 +864,7 @@ retry:
 
 		if (reset == 0) {
 
-			if (!tty_ldisc_reinit(tty, tty->termios->c_line))
+			if (!tty_ldisc_reinit(tty, tty->termios.c_line))
 				err = tty_ldisc_open(tty, tty->ldisc);
 			else
 				err = 1;

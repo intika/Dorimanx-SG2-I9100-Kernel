@@ -243,6 +243,7 @@ static int ip_vs_ftp_out(struct ip_vs_app *app, struct ip_vs_conn *cp,
 			 * packet.
 			 */
 			ret = nf_nat_mangle_tcp_packet(skb, ct, ctinfo,
+						       iph->ihl * 4,
 						       start-data, end-start,
 						       buf, buf_len);
 			if (ret) {
@@ -416,16 +417,10 @@ static int __net_init __ip_vs_ftp_init(struct net *net)
 
 	if (!ipvs)
 		return -ENOENT;
-	app = kmemdup(&ip_vs_ftp, sizeof(struct ip_vs_app), GFP_KERNEL);
-	if (!app)
-		return -ENOMEM;
-	INIT_LIST_HEAD(&app->a_list);
-	INIT_LIST_HEAD(&app->incs_list);
-	ipvs->ftp_app = app;
 
-	ret = register_ip_vs_app(net, app);
-	if (ret)
-		goto err_exit;
+	app = register_ip_vs_app(net, &ip_vs_ftp);
+	if (IS_ERR(app))
+		return PTR_ERR(app);
 
 	for (i=0; i<IP_VS_APP_MAX_PORTS; i++) {
 		if (!ports[i])
@@ -439,9 +434,7 @@ static int __net_init __ip_vs_ftp_init(struct net *net)
 	return 0;
 
 err_unreg:
-	unregister_ip_vs_app(net, app);
-err_exit:
-	kfree(ipvs->ftp_app);
+	unregister_ip_vs_app(net, &ip_vs_ftp);
 	return ret;
 }
 /*
@@ -449,10 +442,7 @@ err_exit:
  */
 static void __ip_vs_ftp_exit(struct net *net)
 {
-	struct netns_ipvs *ipvs = net_ipvs(net);
-
-	unregister_ip_vs_app(net, ipvs->ftp_app);
-	kfree(ipvs->ftp_app);
+	unregister_ip_vs_app(net, &ip_vs_ftp);
 }
 
 static struct pernet_operations ip_vs_ftp_ops = {

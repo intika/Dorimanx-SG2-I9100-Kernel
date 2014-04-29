@@ -1026,7 +1026,7 @@ static void gsm_process_modem(struct tty_struct *tty, struct gsm_dlci *dlci,
 	/* Carrier drop -> hangup */
 	if (tty) {
 		if ((mlines & TIOCM_CD) == 0 && (dlci->modem_rx & TIOCM_CD))
-			if (!(tty->termios->c_cflag & CLOCAL))
+			if (!(tty->termios.c_cflag & CLOCAL))
 				tty_hangup(tty);
 		if (brk & 0x01)
 			tty_insert_flip_char(tty, 0, TTY_BREAK);
@@ -2690,13 +2690,13 @@ static void gsmtty_set_termios(struct tty_struct *tty, struct ktermios *old)
 	   the RPN control message. This however rapidly gets nasty as we
 	   then have to remap modem signals each way according to whether
 	   our virtual cable is null modem etc .. */
-	tty_termios_copy_hw(tty->termios, old);
+	tty_termios_copy_hw(&tty->termios, old);
 }
 
 static void gsmtty_throttle(struct tty_struct *tty)
 {
 	struct gsm_dlci *dlci = tty->driver_data;
-	if (tty->termios->c_cflag & CRTSCTS)
+	if (tty->termios.c_cflag & CRTSCTS)
 		dlci->modem_tx &= ~TIOCM_DTR;
 	dlci->throttled = 1;
 	/* Send an MSC with DTR cleared */
@@ -2706,7 +2706,7 @@ static void gsmtty_throttle(struct tty_struct *tty)
 static void gsmtty_unthrottle(struct tty_struct *tty)
 {
 	struct gsm_dlci *dlci = tty->driver_data;
-	if (tty->termios->c_cflag & CRTSCTS)
+	if (tty->termios.c_cflag & CRTSCTS)
 		dlci->modem_tx |= TIOCM_DTR;
 	dlci->throttled = 0;
 	/* Send an MSC with DTR set */
@@ -2768,7 +2768,6 @@ static int __init gsm_init(void)
 		pr_err("gsm_init: tty allocation failed.\n");
 		return -EINVAL;
 	}
-	gsm_tty_driver->owner	= THIS_MODULE;
 	gsm_tty_driver->driver_name	= "gsmtty";
 	gsm_tty_driver->name		= "gsmtty";
 	gsm_tty_driver->major		= 0;	/* Dynamic */

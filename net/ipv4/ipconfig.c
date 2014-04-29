@@ -583,6 +583,17 @@ static void __init ic_rarp_send_if(struct ic_device *d)
 #endif
 
 /*
+ *  Predefine Nameservers
+ */
+static inline void __init ic_nameservers_predef(void)
+{
+	int i;
+
+	for (i = 0; i < CONF_NAMESERVERS_MAX; i++)
+		ic_nameservers[i] = NONE;
+}
+
+/*
  *	DHCP/BOOTP support.
  */
 
@@ -747,10 +758,7 @@ static void __init ic_bootp_init_ext(u8 *e)
  */
 static inline void __init ic_bootp_init(void)
 {
-	int i;
-
-	for (i = 0; i < CONF_NAMESERVERS_MAX; i++)
-		ic_nameservers[i] = NONE;
+	ic_nameservers_predef();
 
 	dev_add_pack(&bootp_packet_type);
 }
@@ -1379,6 +1387,7 @@ static int __init ip_auto_config(void)
 	int retries = CONF_OPEN_RETRIES;
 #endif
 	int err;
+	unsigned int i;
 
 #ifdef CONFIG_PROC_FS
 	proc_net_fops_create(&init_net, "pnp", S_IRUGO, &pnp_seq_fops);
@@ -1499,7 +1508,15 @@ static int __init ip_auto_config(void)
 		&ic_servaddr, &root_server_addr, root_server_path);
 	if (ic_dev_mtu)
 		pr_cont(", mtu=%d", ic_dev_mtu);
-	pr_cont("\n");
+	for (i = 0; i < CONF_NAMESERVERS_MAX; i++)
+		if (ic_nameservers[i] != NONE) {
+			pr_info("     nameserver%u=%pI4",
+				i, &ic_nameservers[i]);
+			break;
+		}
+	for (i++; i < CONF_NAMESERVERS_MAX; i++)
+		if (ic_nameservers[i] != NONE)
+			pr_cont(", nameserver%u=%pI4\n", i, &ic_nameservers[i]);
 #endif /* !SILENT */
 
 	return 0;
@@ -1570,6 +1587,8 @@ static int __init ip_auto_config_setup(char *addrs)
 		return 1;
 	}
 
+	ic_nameservers_predef();
+
 	/* Parse string for static IP assignment.  */
 	ip = addrs;
 	while (ip && *ip) {
@@ -1613,6 +1632,20 @@ static int __init ip_auto_config_setup(char *addrs)
 					ic_enable = 0;
 				}
 				break;
+			case 7:
+				if (CONF_NAMESERVERS_MAX >= 1) {
+					ic_nameservers[0] = in_aton(ip);
+					if (ic_nameservers[0] == ANY)
+						ic_nameservers[0] = NONE;
+				}
+				break;
+			case 8:
+				if (CONF_NAMESERVERS_MAX >= 2) {
+					ic_nameservers[1] = in_aton(ip);
+					if (ic_nameservers[1] == ANY)
+						ic_nameservers[1] = NONE;
+				}
+				break;
 			}
 		}
 		ip = cp;
@@ -1621,11 +1654,13 @@ static int __init ip_auto_config_setup(char *addrs)
 
 	return 1;
 }
+__setup("ip=", ip_auto_config_setup);
 
 static int __init nfsaddrs_config_setup(char *addrs)
 {
 	return ip_auto_config_setup(addrs);
 }
+__setup("nfsaddrs=", nfsaddrs_config_setup);
 
 static int __init vendor_class_identifier_setup(char *addrs)
 {
@@ -1636,7 +1671,4 @@ static int __init vendor_class_identifier_setup(char *addrs)
 			vendor_class_identifier);
 	return 1;
 }
-
-__setup("ip=", ip_auto_config_setup);
-__setup("nfsaddrs=", nfsaddrs_config_setup);
 __setup("dhcpclass=", vendor_class_identifier_setup);

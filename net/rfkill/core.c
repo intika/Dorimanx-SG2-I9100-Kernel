@@ -150,6 +150,20 @@ static void rfkill_led_trigger_activate(struct led_classdev *led)
 	rfkill_led_trigger_event(rfkill);
 }
 
+const char *rfkill_get_led_trigger_name(struct rfkill *rfkill)
+{
+	return rfkill->led_trigger.name;
+}
+EXPORT_SYMBOL(rfkill_get_led_trigger_name);
+
+void rfkill_set_led_trigger_name(struct rfkill *rfkill, const char *name)
+{
+	BUG_ON(!rfkill);
+
+	rfkill->ledtrigname = name;
+}
+EXPORT_SYMBOL(rfkill_set_led_trigger_name);
+
 static int rfkill_led_trigger_register(struct rfkill *rfkill)
 {
 	rfkill->led_trigger.name = rfkill->ledtrigname
@@ -303,10 +317,10 @@ static void rfkill_set_block(struct rfkill *rfkill, bool blocked)
 	rfkill->state &= ~RFKILL_BLOCK_SW_SETCALL;
 	rfkill->state &= ~RFKILL_BLOCK_SW_PREV;
 	curr = rfkill->state & RFKILL_BLOCK_SW;
-
 	spin_unlock_irqrestore(&rfkill->lock, flags);
 
 	rfkill_led_trigger_event(rfkill);
+
 	if (prev != curr)
 		rfkill_event(rfkill);
 }
@@ -331,7 +345,7 @@ static void __rfkill_switch_all(const enum rfkill_type type, bool blocked)
 
 	rfkill_global_states[type].cur = blocked;
 	list_for_each_entry(rfkill, &rfkill_list, node) {
-		if (rfkill->type != type)
+		if (rfkill->type != type && type != RFKILL_TYPE_ALL)
 			continue;
 
 		rfkill_set_block(rfkill, blocked);
