@@ -317,7 +317,8 @@ static void serial_close(struct tty_struct *tty, struct file *filp)
  * Do the resource freeing and refcount dropping for the port.
  * Avoid freeing the console.
  *
- * Called asynchronously after the last tty kref is dropped.
+ * Called asynchronously after the last tty kref is dropped,
+ * and the tty layer has already done the tty_shutdown(tty);
  */
 static void serial_cleanup(struct tty_struct *tty)
 {
