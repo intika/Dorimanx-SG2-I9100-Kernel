@@ -717,6 +717,9 @@ static int mmc_read_ext_csd(struct mmc_card *card, u8 *ext_csd)
 		card->ext_csd.data_sector_size = 512;
 	}
 
+	if ((card->cid.manfid == 0x15) && (ext_csd[64] & 0x01))
+		card->ext_csd.feature_support |= MMC_DISCARD_FEATURE;
+
 out:
 	return err;
 }
