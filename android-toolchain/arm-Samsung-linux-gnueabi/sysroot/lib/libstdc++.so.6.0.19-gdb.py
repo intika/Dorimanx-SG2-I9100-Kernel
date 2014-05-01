@@ -19,8 +19,8 @@ import gdb
 import os
 import os.path
 
-pythondir = '/android-kernel/ICS/crosstool-ng/builds/arm-Samsung-linux-gnueabi/share/gcc-4.8.3/python'
-libdir = '/android-kernel/ICS/crosstool-ng/builds/arm-Samsung-linux-gnueabi/arm-Samsung-linux-gnueabi/lib'
+pythondir = '/android-kernel/crosstool-ng/builds/arm-Samsung-linux-gnueabi/share/gcc-4.8.3/python'
+libdir = '/android-kernel/crosstool-ng/builds/arm-Samsung-linux-gnueabi/arm-Samsung-linux-gnueabi/lib'
 
 # This file might be loaded when there is no current objfile.  This
 # can happen if the user loads it manually.  In this case we don't

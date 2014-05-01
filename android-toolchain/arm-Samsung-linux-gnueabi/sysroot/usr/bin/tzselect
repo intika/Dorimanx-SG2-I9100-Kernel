@@ -1,6 +1,6 @@
 #!/bin/bash
 
-PKGVERSION="(crosstool-NG hg+default-86a8d1d467c8 - LINARO CORE) "
+PKGVERSION="(crosstool-NG hg+default-db3f7ffabdc8 - LINARO CORE) "
 TZVERSION="2.19"
 REPORT_BUGS_TO="<http://www.eglibc.org/issues/>"
 
