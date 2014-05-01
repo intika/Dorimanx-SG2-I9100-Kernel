@@ -333,7 +333,6 @@
 #define HAVE_mulv4si3addv4si_neon (TARGET_NEON && (!false || flag_unsafe_math_optimizations))
 #define HAVE_mulv2sf3addv2sf_neon (TARGET_NEON && (!true || flag_unsafe_math_optimizations))
 #define HAVE_mulv4sf3addv4sf_neon (TARGET_NEON && (!true || flag_unsafe_math_optimizations))
-#define HAVE_mulv2di3addv2di_neon (TARGET_NEON && (!false || flag_unsafe_math_optimizations))
 #define HAVE_mulv8qi3negv8qiaddv8qi_neon (TARGET_NEON && (!false || flag_unsafe_math_optimizations))
 #define HAVE_mulv16qi3negv16qiaddv16qi_neon (TARGET_NEON && (!false || flag_unsafe_math_optimizations))
 #define HAVE_mulv4hi3negv4hiaddv4hi_neon (TARGET_NEON && (!false || flag_unsafe_math_optimizations))
@@ -342,7 +341,6 @@
 #define HAVE_mulv4si3negv4siaddv4si_neon (TARGET_NEON && (!false || flag_unsafe_math_optimizations))
 #define HAVE_mulv2sf3negv2sfaddv2sf_neon (TARGET_NEON && (!true || flag_unsafe_math_optimizations))
 #define HAVE_mulv4sf3negv4sfaddv4sf_neon (TARGET_NEON && (!true || flag_unsafe_math_optimizations))
-#define HAVE_mulv2di3negv2diaddv2di_neon (TARGET_NEON && (!false || flag_unsafe_math_optimizations))
 #define HAVE_fmav2sf4 (TARGET_NEON && TARGET_FMA && flag_unsafe_math_optimizations)
 #define HAVE_fmav4sf4 (TARGET_NEON && TARGET_FMA && flag_unsafe_math_optimizations)
 #define HAVE_fmav2sf4_intrinsic (TARGET_NEON && TARGET_FMA)
@@ -571,7 +569,6 @@
 #define HAVE_neon_vmlav4si_unspec (TARGET_NEON)
 #define HAVE_neon_vmlav2sf_unspec (TARGET_NEON)
 #define HAVE_neon_vmlav4sf_unspec (TARGET_NEON)
-#define HAVE_neon_vmlav2di_unspec (TARGET_NEON)
 #define HAVE_neon_vmlalv8qi (TARGET_NEON)
 #define HAVE_neon_vmlalv4hi (TARGET_NEON)
 #define HAVE_neon_vmlalv2si (TARGET_NEON)
@@ -583,7 +580,6 @@
 #define HAVE_neon_vmlsv4si_unspec (TARGET_NEON)
 #define HAVE_neon_vmlsv2sf_unspec (TARGET_NEON)
 #define HAVE_neon_vmlsv4sf_unspec (TARGET_NEON)
-#define HAVE_neon_vmlsv2di_unspec (TARGET_NEON)
 #define HAVE_neon_vmlslv8qi (TARGET_NEON)
 #define HAVE_neon_vmlslv4hi (TARGET_NEON)
 #define HAVE_neon_vmlslv2si (TARGET_NEON)
@@ -2783,7 +2779,6 @@ extern rtx        gen_mulv2si3addv2si_neon              (rtx, rtx, rtx, rtx);
 extern rtx        gen_mulv4si3addv4si_neon              (rtx, rtx, rtx, rtx);
 extern rtx        gen_mulv2sf3addv2sf_neon              (rtx, rtx, rtx, rtx);
 extern rtx        gen_mulv4sf3addv4sf_neon              (rtx, rtx, rtx, rtx);
-extern rtx        gen_mulv2di3addv2di_neon              (rtx, rtx, rtx, rtx);
 extern rtx        gen_mulv8qi3negv8qiaddv8qi_neon       (rtx, rtx, rtx, rtx);
 extern rtx        gen_mulv16qi3negv16qiaddv16qi_neon    (rtx, rtx, rtx, rtx);
 extern rtx        gen_mulv4hi3negv4hiaddv4hi_neon       (rtx, rtx, rtx, rtx);
@@ -2792,7 +2787,6 @@ extern rtx        gen_mulv2si3negv2siaddv2si_neon       (rtx, rtx, rtx, rtx);
 extern rtx        gen_mulv4si3negv4siaddv4si_neon       (rtx, rtx, rtx, rtx);
 extern rtx        gen_mulv2sf3negv2sfaddv2sf_neon       (rtx, rtx, rtx, rtx);
 extern rtx        gen_mulv4sf3negv4sfaddv4sf_neon       (rtx, rtx, rtx, rtx);
-extern rtx        gen_mulv2di3negv2diaddv2di_neon       (rtx, rtx, rtx, rtx);
 extern rtx        gen_fmav2sf4                          (rtx, rtx, rtx, rtx);
 extern rtx        gen_fmav4sf4                          (rtx, rtx, rtx, rtx);
 extern rtx        gen_fmav2sf4_intrinsic                (rtx, rtx, rtx, rtx);
@@ -3017,7 +3011,6 @@ extern rtx        gen_neon_vmlav2si_unspec              (rtx, rtx, rtx, rtx);
 extern rtx        gen_neon_vmlav4si_unspec              (rtx, rtx, rtx, rtx);
 extern rtx        gen_neon_vmlav2sf_unspec              (rtx, rtx, rtx, rtx);
 extern rtx        gen_neon_vmlav4sf_unspec              (rtx, rtx, rtx, rtx);
-extern rtx        gen_neon_vmlav2di_unspec              (rtx, rtx, rtx, rtx);
 extern rtx        gen_neon_vmlalv8qi                    (rtx, rtx, rtx, rtx, rtx);
 extern rtx        gen_neon_vmlalv4hi                    (rtx, rtx, rtx, rtx, rtx);
 extern rtx        gen_neon_vmlalv2si                    (rtx, rtx, rtx, rtx, rtx);
@@ -3029,7 +3022,6 @@ extern rtx        gen_neon_vmlsv2si_unspec              (rtx, rtx, rtx, rtx);
 extern rtx        gen_neon_vmlsv4si_unspec              (rtx, rtx, rtx, rtx);
 extern rtx        gen_neon_vmlsv2sf_unspec              (rtx, rtx, rtx, rtx);
 extern rtx        gen_neon_vmlsv4sf_unspec              (rtx, rtx, rtx, rtx);
-extern rtx        gen_neon_vmlsv2di_unspec              (rtx, rtx, rtx, rtx);
 extern rtx        gen_neon_vmlslv8qi                    (rtx, rtx, rtx, rtx, rtx);
 extern rtx        gen_neon_vmlslv4hi                    (rtx, rtx, rtx, rtx, rtx);
 extern rtx        gen_neon_vmlslv2si                    (rtx, rtx, rtx, rtx, rtx);
