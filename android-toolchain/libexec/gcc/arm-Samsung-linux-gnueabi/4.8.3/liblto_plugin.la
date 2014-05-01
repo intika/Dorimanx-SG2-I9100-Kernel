@@ -38,4 +38,4 @@ dlopen=''
 dlpreopen=''
 
 # Directory that this library needs to be installed in:
-libdir='/android-kernel/ICS/crosstool-ng/builds/arm-Samsung-linux-gnueabi/libexec/gcc/arm-Samsung-linux-gnueabi/4.8.3'
+libdir='/android-kernel/crosstool-ng/builds/arm-Samsung-linux-gnueabi/libexec/gcc/arm-Samsung-linux-gnueabi/4.8.3'

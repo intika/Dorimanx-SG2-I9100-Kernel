@@ -4,9 +4,9 @@
 ;;; Don't parse this file wihout knowing GCC gengtype internals.
 ;;; This file should be parsed by the same gengtype which wrote it.
 
-(!version  "4.8.3 20140303 (prerelease)")
+(!version  "4.8.3 20140401 (prerelease)")
 
-(!srcdir  "/android-kernel/ICS/crosstool-ng/.build/src/gcc-linaro-4.8-2014.03/gcc")
+(!srcdir  "/android-kernel/crosstool-ng/.build/src/gcc-linaro-4.8-2014.04/gcc")
 
 (!languages 9 ada c cp fortran go java lto objc objcp)
 
@@ -335,12 +335,12 @@ nil )
 (!srcfileloc  "tree.h" 437)
 nil )
 (!pair  "u"
-(!type union 12 nil  gc_unused "anonymous:/android-kernel/ICS/crosstool-ng/.build/src/gcc-linaro-4.8-2014.03/gcc/tree.h:439"
+(!type union 12 nil  gc_unused "anonymous:/android-kernel/crosstool-ng/.build/src/gcc-linaro-4.8-2014.04/gcc/tree.h:439"
 (!srcfileloc  "tree.h" 472)
 
 (!fields 3 
 (!pair  "bits"
-(!type struct 13 nil  gc_unused "anonymous:/android-kernel/ICS/crosstool-ng/.build/src/gcc-linaro-4.8-2014.03/gcc/tree.h:442"
+(!type struct 13 nil  gc_unused "anonymous:/android-kernel/crosstool-ng/.build/src/gcc-linaro-4.8-2014.04/gcc/tree.h:442"
 (!srcfileloc  "tree.h" 464)
 
 (!fields 15 
@@ -8070,7 +8070,7 @@ nil )
 (!srcfileloc  "gimple.h" 281)
 nil )
 (!pair  "u"
-(!type union 323 nil  gc_used "anonymous:/android-kernel/ICS/crosstool-ng/.build/src/gcc-linaro-4.8-2014.03/gcc/gimple.h:284"
+(!type union 323 nil  gc_used "anonymous:/android-kernel/crosstool-ng/.build/src/gcc-linaro-4.8-2014.04/gcc/gimple.h:284"
 (!srcfileloc  "gimple.h" 287)
 
 (!fields 2 
@@ -8341,7 +8341,7 @@ nil )
 )
 )
 (!pair  "loc"
-(!type union 336 nil  gc_unused "anonymous:/android-kernel/ICS/crosstool-ng/.build/src/gcc-linaro-4.8-2014.03/gcc/tree.h:1960"
+(!type union 336 nil  gc_unused "anonymous:/android-kernel/crosstool-ng/.build/src/gcc-linaro-4.8-2014.04/gcc/tree.h:1960"
 (!srcfileloc  "tree.h" 1960)
 
 (!fields 2 
@@ -8988,7 +8988,7 @@ nil 511 nil )
 )
 )
 (!pair  "x"
-(!type struct 361 nil  gc_used "anonymous:/android-kernel/ICS/crosstool-ng/.build/src/gcc-linaro-4.8-2014.03/gcc/basic-block.h:199"
+(!type struct 361 nil  gc_used "anonymous:/android-kernel/crosstool-ng/.build/src/gcc-linaro-4.8-2014.04/gcc/basic-block.h:199"
 (!srcfileloc  "basic-block.h" 202)
 
 (!fields 2 
@@ -15764,7 +15764,7 @@ nil )
 
 (!fields 11 
 (!pair  "u"
-(!type union 586 nil  gc_used "anonymous:/android-kernel/ICS/crosstool-ng/.build/src/gcc-linaro-4.8-2014.03/gcc/c/c-decl.c:188"
+(!type union 586 nil  gc_used "anonymous:/android-kernel/crosstool-ng/.build/src/gcc-linaro-4.8-2014.04/gcc/c/c-decl.c:188"
 (!srcfileloc  "c/c-decl.c" 191)
 
 (!fields 2 
@@ -17004,7 +17004,7 @@ nil 0 nil )
 (!fields 0 )
 nil 0 nil )
 
-(!type struct 649 nil  gc_unused "anonymous:/android-kernel/ICS/crosstool-ng/.build/src/gcc-linaro-4.8-2014.03/gcc/java/expr.c:2058"nil 
+(!type struct 649 nil  gc_unused "anonymous:/android-kernel/crosstool-ng/.build/src/gcc-linaro-4.8-2014.04/gcc/java/expr.c:2058"nil 
 (!fields 0 )
 nil 0 nil )
 
@@ -17141,11 +17141,11 @@ nil )
 nil ))
 nil 8 nil )
 
-(!type struct 659 nil  gc_unused "anonymous:/android-kernel/ICS/crosstool-ng/.build/src/gcc-linaro-4.8-2014.03/gcc/fortran/trans.h:334"nil 
+(!type struct 659 nil  gc_unused "anonymous:/android-kernel/crosstool-ng/.build/src/gcc-linaro-4.8-2014.04/gcc/fortran/trans.h:334"nil 
 (!fields 0 )
 nil 0 nil )
 
-(!type struct 660 nil  gc_unused "anonymous:/android-kernel/ICS/crosstool-ng/.build/src/gcc-linaro-4.8-2014.03/gcc/fortran/trans.h:322"nil 
+(!type struct 660 nil  gc_unused "anonymous:/android-kernel/crosstool-ng/.build/src/gcc-linaro-4.8-2014.04/gcc/fortran/trans.h:322"nil 
 (!fields 0 )
 nil 0 nil )
 
@@ -17169,7 +17169,7 @@ nil 0 nil )
 (!fields 0 )
 nil 0 nil )
 
-(!type struct 666 nil  gc_unused "anonymous:/android-kernel/ICS/crosstool-ng/.build/src/gcc-linaro-4.8-2014.03/gcc/fortran/trans.h:31"nil 
+(!type struct 666 nil  gc_unused "anonymous:/android-kernel/crosstool-ng/.build/src/gcc-linaro-4.8-2014.04/gcc/fortran/trans.h:31"nil 
 (!fields 0 )
 nil 0 nil )
 
@@ -18506,7 +18506,7 @@ nil ))
 
 (!type already_seen 112)
 
-(!type struct 755 nil  gc_unused "anonymous:/android-kernel/ICS/crosstool-ng/.build/src/gcc-linaro-4.8-2014.03/gcc/c/c-parser.c:5589"nil 
+(!type struct 755 nil  gc_unused "anonymous:/android-kernel/crosstool-ng/.build/src/gcc-linaro-4.8-2014.04/gcc/c/c-parser.c:5589"nil 
 (!fields 0 )
 nil 0 nil )
 
@@ -18617,7 +18617,7 @@ nil 130 nil )
 (!fields 0 )
 nil 0 nil )
 
-(!type struct 761 nil  gc_unused "anonymous:/android-kernel/ICS/crosstool-ng/.build/src/gcc-linaro-4.8-2014.03/gcc/c-family/c-pragma.c:1153"nil 
+(!type struct 761 nil  gc_unused "anonymous:/android-kernel/crosstool-ng/.build/src/gcc-linaro-4.8-2014.04/gcc/c-family/c-pragma.c:1153"nil 
 (!fields 0 )
 nil 0 nil )
 
@@ -18807,18 +18807,18 @@ nil 0 nil )
 (!type already_seen 777)
 )
  gc_pointed_to "vec<tree_gc_vec,va_gc>"
-(!srcfileloc  "c-family/c-common.c" 11246)
+(!srcfileloc  "c-family/c-common.c" 11241)
 
 (!fields 2 
 (!pair  "va_gc"
 (!type already_seen 3)
 
-(!srcfileloc  "c-family/c-common.c" 11246)
+(!srcfileloc  "c-family/c-common.c" 11241)
 nil )
 (!pair  "tree_gc_vec"
 (!type already_seen 45)
 
-(!srcfileloc  "c-family/c-common.c" 11246)
+(!srcfileloc  "c-family/c-common.c" 11241)
 nil ))
 )
 
@@ -18833,18 +18833,18 @@ nil 0 nil )
 (!type already_seen 780)
 )
  gc_pointed_to "vec<const_char_p,va_gc>"
-(!srcfileloc  "c-family/c-common.c" 8798)
+(!srcfileloc  "c-family/c-common.c" 8793)
 
 (!fields 2 
 (!pair  "va_gc"
 (!type already_seen 3)
 
-(!srcfileloc  "c-family/c-common.c" 8798)
+(!srcfileloc  "c-family/c-common.c" 8793)
 nil )
 (!pair  "const_char_p"
 (!type already_seen 36)
 
-(!srcfileloc  "c-family/c-common.c" 8798)
+(!srcfileloc  "c-family/c-common.c" 8793)
 nil ))
 )
 
@@ -19190,7 +19190,7 @@ nil ))
 (!fields 0 )
 nil 0 nil )
 
-(!type struct 817 nil  gc_unused "anonymous:/android-kernel/ICS/crosstool-ng/.build/src/gcc-linaro-4.8-2014.03/gcc/ada/gcc-interface/decl.c:172"nil 
+(!type struct 817 nil  gc_unused "anonymous:/android-kernel/crosstool-ng/.build/src/gcc-linaro-4.8-2014.04/gcc/ada/gcc-interface/decl.c:172"nil 
 (!fields 0 )
 nil 0 nil )
 
@@ -19893,7 +19893,7 @@ nil 0 nil )
 nil ))
 nil 511 nil )
 
-(!type struct 895 nil  gc_unused "anonymous:/android-kernel/ICS/crosstool-ng/.build/src/gcc-linaro-4.8-2014.03/gcc/lto-streamer.h:451"nil 
+(!type struct 895 nil  gc_unused "anonymous:/android-kernel/crosstool-ng/.build/src/gcc-linaro-4.8-2014.04/gcc/lto-streamer.h:451"nil 
 (!fields 0 )
 nil 0 nil )
 
@@ -19905,7 +19905,7 @@ nil 0 nil )
 (!fields 0 )
 nil 0 nil )
 
-(!type struct 898 nil  gc_unused "anonymous:/android-kernel/ICS/crosstool-ng/.build/src/gcc-linaro-4.8-2014.03/gcc/lto-streamer.h:426"nil 
+(!type struct 898 nil  gc_unused "anonymous:/android-kernel/crosstool-ng/.build/src/gcc-linaro-4.8-2014.04/gcc/lto-streamer.h:426"nil 
 (!fields 0 )
 nil 0 nil )
 
@@ -21278,7 +21278,7 @@ nil 0 nil )
 (!fields 0 )
 nil 0 nil )
 
-(!type struct 992 nil  gc_unused "anonymous:/android-kernel/ICS/crosstool-ng/.build/src/gcc-linaro-4.8-2014.03/gcc/config/arm/arm.c:27068"nil 
+(!type struct 992 nil  gc_unused "anonymous:/android-kernel/crosstool-ng/.build/src/gcc-linaro-4.8-2014.04/gcc/config/arm/arm.c:26855"nil 
 (!fields 0 )
 nil 0 nil )
 
@@ -21286,15 +21286,15 @@ nil 0 nil )
 (!fields 0 )
 nil 0 nil )
 
-(!type struct 994 nil  gc_unused "anonymous:/android-kernel/ICS/crosstool-ng/.build/src/gcc-linaro-4.8-2014.03/gcc/config/arm/arm.c:20352"nil 
+(!type struct 994 nil  gc_unused "anonymous:/android-kernel/crosstool-ng/.build/src/gcc-linaro-4.8-2014.04/gcc/config/arm/arm.c:20377"nil 
 (!fields 0 )
 nil 0 nil )
 
-(!type struct 995 nil  gc_unused "anonymous:/android-kernel/ICS/crosstool-ng/.build/src/gcc-linaro-4.8-2014.03/gcc/config/arm/arm.c:2208"nil 
+(!type struct 995 nil  gc_unused "anonymous:/android-kernel/crosstool-ng/.build/src/gcc-linaro-4.8-2014.04/gcc/config/arm/arm.c:2208"nil 
 (!fields 0 )
 nil 0 nil )
 
-(!type struct 996 nil  gc_unused "anonymous:/android-kernel/ICS/crosstool-ng/.build/src/gcc-linaro-4.8-2014.03/gcc/config/arm/arm.c:1231"nil 
+(!type struct 996 nil  gc_unused "anonymous:/android-kernel/crosstool-ng/.build/src/gcc-linaro-4.8-2014.04/gcc/config/arm/arm.c:1231"nil 
 (!fields 0 )
 nil 0 nil )
 
@@ -21522,7 +21522,7 @@ nil 0 nil )
 (!fields 0 )
 nil 0 nil )
 
-(!type union 1036 nil  gc_unused "anonymous:/android-kernel/ICS/crosstool-ng/.build/src/gcc-linaro-4.8-2014.03/gcc/tree-eh.c:41"nil 
+(!type union 1036 nil  gc_unused "anonymous:/android-kernel/crosstool-ng/.build/src/gcc-linaro-4.8-2014.04/gcc/tree-eh.c:41"nil 
 (!fields 0 )
 nil 0 nil )
 
@@ -21534,7 +21534,7 @@ nil 0 nil )
 (!fields 0 )
 nil 0 nil )
 
-(!type struct 1039 nil  gc_unused "anonymous:/android-kernel/ICS/crosstool-ng/.build/src/gcc-linaro-4.8-2014.03/gcc/tree-flow.h:571"nil 
+(!type struct 1039 nil  gc_unused "anonymous:/android-kernel/crosstool-ng/.build/src/gcc-linaro-4.8-2014.04/gcc/tree-flow.h:571"nil 
 (!fields 0 )
 nil 0 nil )
 
@@ -21583,7 +21583,7 @@ nil 0 nil )
 (!fields 0 )
 nil 0 nil )
 
-(!type struct 1047 nil  gc_unused "anonymous:/android-kernel/ICS/crosstool-ng/.build/src/gcc-linaro-4.8-2014.03/gcc/tree-flow.h:103"nil 
+(!type struct 1047 nil  gc_unused "anonymous:/android-kernel/crosstool-ng/.build/src/gcc-linaro-4.8-2014.04/gcc/tree-flow.h:103"nil 
 (!fields 0 )
 nil 0 nil )
 
@@ -21690,11 +21690,11 @@ nil ))
 (!fields 0 )
 nil 0 nil )
 
-(!type struct 1055 nil  gc_unused "anonymous:/android-kernel/ICS/crosstool-ng/.build/src/gcc-linaro-4.8-2014.03/gcc/varasm.c:4712"nil 
+(!type struct 1055 nil  gc_unused "anonymous:/android-kernel/crosstool-ng/.build/src/gcc-linaro-4.8-2014.04/gcc/varasm.c:4712"nil 
 (!fields 0 )
 nil 0 nil )
 
-(!type struct 1056 nil  gc_unused "anonymous:/android-kernel/ICS/crosstool-ng/.build/src/gcc-linaro-4.8-2014.03/gcc/varasm.c:4464"nil 
+(!type struct 1056 nil  gc_unused "anonymous:/android-kernel/crosstool-ng/.build/src/gcc-linaro-4.8-2014.04/gcc/varasm.c:4464"nil 
 (!fields 0 )
 nil 0 nil )
 
@@ -21787,7 +21787,7 @@ nil 0 nil )
 (!fields 0 )
 nil 0 nil )
 
-(!type union 1070 nil  gc_unused "anonymous:/android-kernel/ICS/crosstool-ng/.build/src/gcc-linaro-4.8-2014.03/gcc/mcf.c:344"nil 
+(!type union 1070 nil  gc_unused "anonymous:/android-kernel/crosstool-ng/.build/src/gcc-linaro-4.8-2014.04/gcc/mcf.c:344"nil 
 (!fields 0 )
 nil 0 nil )
 
@@ -22610,7 +22610,7 @@ nil ))
 (!fields 0 )
 nil 0 nil )
 
-(!type struct 1162 nil  gc_unused "anonymous:/android-kernel/ICS/crosstool-ng/.build/src/gcc-linaro-4.8-2014.03/gcc/dwarf2cfi.c:192"nil 
+(!type struct 1162 nil  gc_unused "anonymous:/android-kernel/crosstool-ng/.build/src/gcc-linaro-4.8-2014.04/gcc/dwarf2cfi.c:192"nil 
 (!fields 0 )
 nil 0 nil )
 
@@ -22618,7 +22618,7 @@ nil 0 nil )
 (!type pointer 1164 nil  gc_unused
 (!type already_seen 1163)
 )
- gc_unused "anonymous:/android-kernel/ICS/crosstool-ng/.build/src/gcc-linaro-4.8-2014.03/gcc/dwarf2cfi.c:98"nil 
+ gc_unused "anonymous:/android-kernel/crosstool-ng/.build/src/gcc-linaro-4.8-2014.04/gcc/dwarf2cfi.c:98"nil 
 (!fields 0 )
 nil 0 nil )
 
@@ -22876,13 +22876,13 @@ nil 0 nil )
 (!type already_seen 1199)
 )
  gc_pointed_to "vec<alias_set_entry,va_gc>"
-(!srcfileloc  "alias.c" 262)
+(!srcfileloc  "alias.c" 264)
 
 (!fields 2 
 (!pair  "va_gc"
 (!type already_seen 3)
 
-(!srcfileloc  "alias.c" 262)
+(!srcfileloc  "alias.c" 264)
 nil )
 (!pair  "alias_set_entry"
 (!type pointer 1201 nil  gc_used
@@ -23025,7 +23025,7 @@ nil nil nil nil nil nil nil nil )
 nil 511 nil )
 )
 
-(!srcfileloc  "alias.c" 262)
+(!srcfileloc  "alias.c" 264)
 nil ))
 )
 
@@ -23117,11 +23117,11 @@ nil 511 nil )
 
 (!type already_seen 932)
 
-(!type struct 1221 nil  gc_unused "anonymous:/android-kernel/ICS/crosstool-ng/.build/src/gcc-linaro-4.8-2014.03/gcc/cgraph.h:363"nil 
+(!type struct 1221 nil  gc_unused "anonymous:/android-kernel/crosstool-ng/.build/src/gcc-linaro-4.8-2014.04/gcc/cgraph.h:363"nil 
 (!fields 0 )
 nil 0 nil )
 
-(!type struct 1222 nil  gc_unused "anonymous:/android-kernel/ICS/crosstool-ng/.build/src/gcc-linaro-4.8-2014.03/gcc/cgraph.h:356"nil 
+(!type struct 1222 nil  gc_unused "anonymous:/android-kernel/crosstool-ng/.build/src/gcc-linaro-4.8-2014.04/gcc/cgraph.h:356"nil 
 (!fields 0 )
 nil 0 nil )
 
@@ -23207,7 +23207,7 @@ nil 511 nil )
 
 (!type already_seen 912)
 
-(!type struct 1229 nil  gc_unused "anonymous:/android-kernel/ICS/crosstool-ng/.build/src/gcc-linaro-4.8-2014.03/gcc/basic-block.h:574"nil 
+(!type struct 1229 nil  gc_unused "anonymous:/android-kernel/crosstool-ng/.build/src/gcc-linaro-4.8-2014.04/gcc/basic-block.h:574"nil 
 (!fields 0 )
 nil 0 nil )
 
@@ -23255,7 +23255,7 @@ nil 0 nil )
 
 (!type already_seen 870)
 
-(!type struct 1237 nil  gc_unused "anonymous:/android-kernel/ICS/crosstool-ng/.build/src/gcc-linaro-4.8-2014.03/gcc/cfgloop.h:544"nil 
+(!type struct 1237 nil  gc_unused "anonymous:/android-kernel/crosstool-ng/.build/src/gcc-linaro-4.8-2014.04/gcc/cfgloop.h:544"nil 
 (!fields 0 )
 nil 0 nil )
 
@@ -24174,7 +24174,7 @@ nil 511 nil )
 (!fields 0 )
 nil 0 nil )
 
-(!type struct 1287 nil  gc_unused "anonymous:/android-kernel/ICS/crosstool-ng/.build/src/gcc-linaro-4.8-2014.03/gcc/tree.h:5523"nil 
+(!type struct 1287 nil  gc_unused "anonymous:/android-kernel/crosstool-ng/.build/src/gcc-linaro-4.8-2014.04/gcc/tree.h:5523"nil 
 (!fields 0 )
 nil 0 nil )
 
@@ -24731,7 +24731,7 @@ nil 511 nil )
 
 (!type already_seen 259)
 
-(!type struct 1306 nil  gc_unused "anonymous:/android-kernel/ICS/crosstool-ng/.build/src/gcc-linaro-4.8-2014.03/gcc/rtl.h:116"nil 
+(!type struct 1306 nil  gc_unused "anonymous:/android-kernel/crosstool-ng/.build/src/gcc-linaro-4.8-2014.04/gcc/rtl.h:116"nil 
 (!fields 0 )
 nil 0 nil )
 
@@ -24789,7 +24789,7 @@ nil ))
 )
 511 nil )
 
-(!type struct 1312 nil  gc_unused "anonymous:/android-kernel/ICS/crosstool-ng/.build/src/gcc-linaro-4.8-2014.03/gcc/bitmap.h:316"nil 
+(!type struct 1312 nil  gc_unused "anonymous:/android-kernel/crosstool-ng/.build/src/gcc-linaro-4.8-2014.04/gcc/bitmap.h:316"nil 
 (!fields 0 )
 nil 0 nil )
 
@@ -24803,7 +24803,7 @@ nil 0 nil )
 
 (!type already_seen 1208)
 
-(!type struct 1313 nil  gc_unused "anonymous:/android-kernel/ICS/crosstool-ng/.build/src/gcc-linaro-4.8-2014.03/gcc/config/arm/arm.h:1557"nil 
+(!type struct 1313 nil  gc_unused "anonymous:/android-kernel/crosstool-ng/.build/src/gcc-linaro-4.8-2014.04/gcc/config/arm/arm.h:1557"nil 
 (!fields 0 )
 nil 0 nil )
 
@@ -24883,11 +24883,11 @@ nil 0 nil )
 (!fields 0 )
 nil 0 nil )
 
-(!type struct 1327 nil  gc_unused "anonymous:/android-kernel/ICS/crosstool-ng/.build/src/gcc-linaro-4.8-2014.03/gcc/../libcpp/include/cpplib.h:984"nil 
+(!type struct 1327 nil  gc_unused "anonymous:/android-kernel/crosstool-ng/.build/src/gcc-linaro-4.8-2014.04/gcc/../libcpp/include/cpplib.h:984"nil 
 (!fields 0 )
 nil 0 nil )
 
-(!type struct 1328 nil  gc_unused "anonymous:/android-kernel/ICS/crosstool-ng/.build/src/gcc-linaro-4.8-2014.03/gcc/../libcpp/include/cpplib.h:973"nil 
+(!type struct 1328 nil  gc_unused "anonymous:/android-kernel/crosstool-ng/.build/src/gcc-linaro-4.8-2014.04/gcc/../libcpp/include/cpplib.h:973"nil 
 (!fields 0 )
 nil 0 nil )
 
@@ -24941,7 +24941,7 @@ nil 0 nil )
 (!fields 0 )
 nil 0 nil )
 
-(!type struct 1337 nil  gc_unused "anonymous:/android-kernel/ICS/crosstool-ng/.build/src/gcc-linaro-4.8-2014.03/gcc/../libcpp/include/line-map.h:627"nil 
+(!type struct 1337 nil  gc_unused "anonymous:/android-kernel/crosstool-ng/.build/src/gcc-linaro-4.8-2014.04/gcc/../libcpp/include/line-map.h:627"nil 
 (!fields 0 )
 nil 0 nil )
 
@@ -26117,27 +26117,27 @@ nil )
 (!pair  "vec<tree_gc_vec,va_gc>"
 (!type already_seen 777)
 
-(!srcfileloc  "c-family/c-common.c" 11246)
+(!srcfileloc  "c-family/c-common.c" 11241)
 nil )
 (!pair  "tree_gc_vec"
 (!type already_seen 45)
 
-(!srcfileloc  "c-family/c-common.c" 11245)
+(!srcfileloc  "c-family/c-common.c" 11240)
 nil )
 (!pair  "vec<const_char_p,va_gc>"
 (!type already_seen 780)
 
-(!srcfileloc  "c-family/c-common.c" 8798)
+(!srcfileloc  "c-family/c-common.c" 8793)
 nil )
 (!pair  "const_char_p"
 (!type already_seen 29)
 
-(!srcfileloc  "c-family/c-common.c" 8797)
+(!srcfileloc  "c-family/c-common.c" 8792)
 nil )
 (!pair  "disabled_builtin"
 (!type already_seen 782)
 
-(!srcfileloc  "c-family/c-common.c" 5658)
+(!srcfileloc  "c-family/c-common.c" 5653)
 nil )
 (!pair  "c_binding_ptr"
 (!type already_seen 584)
@@ -26462,27 +26462,27 @@ nil )
 (!pair  "arm_mangle_map_entry"
 (!type already_seen 992)
 
-(!srcfileloc  "config/arm/arm.c" 27072)
+(!srcfileloc  "config/arm/arm.c" 26859)
 nil )
 (!pair  "builtin_arg"
 (!type already_seen 9)
 
-(!srcfileloc  "config/arm/arm.c" 22267)
+(!srcfileloc  "config/arm/arm.c" 22292)
 nil )
 (!pair  "neon_builtin_datum"
 (!type already_seen 994)
 
-(!srcfileloc  "config/arm/arm.c" 20358)
+(!srcfileloc  "config/arm/arm.c" 20383)
 nil )
 (!pair  "neon_itype"
 (!type already_seen 9)
 
-(!srcfileloc  "config/arm/arm.c" 20350)
+(!srcfileloc  "config/arm/arm.c" 20375)
 nil )
 (!pair  "neon_builtin_type_mode"
 (!type already_seen 9)
 
-(!srcfileloc  "config/arm/arm.c" 20281)
+(!srcfileloc  "config/arm/arm.c" 20306)
 nil )
 (!pair  "arm_pragma_enum"
 (!type already_seen 9)
@@ -27092,7 +27092,7 @@ nil )
 (!pair  "vec<alias_set_entry,va_gc>"
 (!type already_seen 1199)
 
-(!srcfileloc  "alias.c" 262)
+(!srcfileloc  "alias.c" 264)
 nil )
 (!pair  "alias_set_entry"
 (!type already_seen 1201)
@@ -29443,7 +29443,7 @@ nil )
 (!pair  "module_htab"
 (!type already_seen 1357)
 
-(!srcfileloc  "fortran/trans-decl.c" 3943)
+(!srcfileloc  "fortran/trans-decl.c" 3947)
 
 (!options 
 (!option param_is type 
@@ -29973,7 +29973,7 @@ nil )
 (!pair  "tree_vector_cache"
 (!type already_seen 778)
 
-(!srcfileloc  "c-family/c-common.c" 11246)
+(!srcfileloc  "c-family/c-common.c" 11241)
 
 (!options 
 (!option deletable string  "")
@@ -29982,24 +29982,24 @@ nil )
 (!pair  "optimize_args"
 (!type already_seen 781)
 
-(!srcfileloc  "c-family/c-common.c" 8798)
+(!srcfileloc  "c-family/c-common.c" 8793)
 nil )
 (!pair  "compound_literal_number"
 (!type already_seen 9)
 
-(!srcfileloc  "c-family/c-common.c" 5629)
+(!srcfileloc  "c-family/c-common.c" 5624)
 nil )
 (!pair  "built_in_attributes"
 (!type array 1451 nil  gc_used "(int) ATTR_LAST" 
 (!type already_seen 5)
 )
 
-(!srcfileloc  "c-family/c-common.c" 5006)
+(!srcfileloc  "c-family/c-common.c" 5001)
 nil )
 (!pair  "type_hash_table"
 (!type already_seen 53)
 
-(!srcfileloc  "c-family/c-common.c" 4735)
+(!srcfileloc  "c-family/c-common.c" 4730)
 
 (!options 
 (!option param_is type 
@@ -30010,7 +30010,7 @@ nil )
 (!pair  "registered_builtin_types"
 (!type already_seen 5)
 
-(!srcfileloc  "c-family/c-common.c" 3395)
+(!srcfileloc  "c-family/c-common.c" 3390)
 nil )
 (!pair  "ext_block"
 (!type already_seen 5)
@@ -30073,7 +30073,7 @@ nil )
 (!pair  "gnat_eh_personality_decl"
 (!type already_seen 5)
 
-(!srcfileloc  "ada/gcc-interface/misc.c" 800)
+(!srcfileloc  "ada/gcc-interface/misc.c" 799)
 nil )
 (!pair  "built_in_attributes"
 (!type array 1452 nil  gc_used "(int) ATTR_LAST" 
@@ -30392,7 +30392,7 @@ nil )
 (!type already_seen 5)
 )
 
-(!srcfileloc  "config/arm/arm.c" 20739)
+(!srcfileloc  "config/arm/arm.c" 20764)
 nil )
 (!pair  "tls_get_addr_libfunc"
 (!type already_seen 136)
@@ -31684,27 +31684,27 @@ nil )
 (!pair  "frame_set"
 (!type already_seen 9)
 
-(!srcfileloc  "alias.c" 978)
+(!srcfileloc  "alias.c" 980)
 nil )
 (!pair  "varargs_set"
 (!type already_seen 9)
 
-(!srcfileloc  "alias.c" 956)
+(!srcfileloc  "alias.c" 958)
 nil )
 (!pair  "alias_sets"
 (!type already_seen 1200)
 
-(!srcfileloc  "alias.c" 262)
+(!srcfileloc  "alias.c" 264)
 nil )
 (!pair  "reg_known_value"
 (!type already_seen 251)
 
-(!srcfileloc  "alias.c" 240)
+(!srcfileloc  "alias.c" 242)
 nil )
 (!pair  "old_reg_base_value"
 (!type already_seen 251)
 
-(!srcfileloc  "alias.c" 221)
+(!srcfileloc  "alias.c" 223)
 
 (!options 
 (!option deletable string  "")
@@ -31713,12 +31713,12 @@ nil )
 (!pair  "arg_base_value"
 (!type already_seen 136)
 
-(!srcfileloc  "alias.c" 213)
+(!srcfileloc  "alias.c" 215)
 nil )
 (!pair  "reg_base_value"
 (!type already_seen 251)
 
-(!srcfileloc  "alias.c" 208)
+(!srcfileloc  "alias.c" 210)
 nil )
 (!pair  "assembler_name_hash"
 (!type already_seen 1413)
@@ -31971,7 +31971,7 @@ nil )
 (!pair  "stack_limit_rtx"
 (!type already_seen 136)
 
-(!srcfileloc  "rtl.h" 2727)
+(!srcfileloc  "rtl.h" 2729)
 nil )
 (!pair  "default_target_rtl"
 (!type already_seen 850)

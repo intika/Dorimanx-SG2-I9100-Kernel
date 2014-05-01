@@ -1,11 +1,11 @@
-#!/bin/bash
+#!/usr/bin/bash
 
 # NON-CONFIGURABLE STUFF!
 export LC_ALL=C
-version="hg+default-86a8d1d467c8"
+version="hg+default-db3f7ffabdc8"
 bits="32"
-sed="${SED:-/bin/sed}"
-grep="${GREP:-/bin/grep}"
+sed="${SED:-/usr/bin/sed}"
+grep="${GREP:-/usr/bin/grep}"
 
 my_name="$( basename "${0}" )"
 prefix="${0%-ldd}"
