@@ -547,6 +547,8 @@ static void get_prompt_str(struct gstr *r, struct property *prop,
 	struct menu *submenu[8], *menu, *location = NULL;
 	struct jump_key *jump;
 
+	jump = xmalloc(sizeof(struct jump_key));
+
 	str_printf(r, _("Prompt: %s\n"), _(prop->text));
 	menu = prop->menu->parent;
 	for (i = 0; menu != &rootmenu && i < 8; menu = menu->parent) {
@@ -557,8 +559,6 @@ static void get_prompt_str(struct gstr *r, struct property *prop,
 			location = menu;
 	}
 	if (head && location) {
-		jump = xmalloc(sizeof(struct jump_key));
-
 		if (menu_is_visible(prop->menu)) {
 			/*
 			 * There is not enough room to put the hint at the
