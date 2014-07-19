@@ -15,6 +15,11 @@
 
 #define MMC_CMD_RETRIES        3
 
+#define MMC_SAMSUNG_MANFID      21
+#define CMD_SEQ_MOD		255
+#define CMD_SEQ_ORIGINAL	32
+#define NO_SAMSUNG		0
+
 struct mmc_bus_ops {
 	int (*awake)(struct mmc_host *);
 	int (*sleep)(struct mmc_host *);
@@ -66,6 +71,9 @@ int _mmc_detect_card_removed(struct mmc_host *host);
 int mmc_attach_mmc(struct mmc_host *host);
 int mmc_attach_sd(struct mmc_host *host);
 int mmc_attach_sdio(struct mmc_host *host);
+
+int mmc_samsung_p17_apply(struct mmc_card *card);
+int mmc_samsung_p17_verify(struct mmc_card *card);
 
 /* Module parameters */
 extern bool use_spi_crc;
