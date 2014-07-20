@@ -30,7 +30,6 @@ set_perm(0, 0, 0777, "/tmp/flash_image");
 set_perm(0, 0, 0755, "/system/xbin/ntfs-3g");
 set_perm(0, 0, 0755, "/system/bin/e2fsck");
 set_perm(0, 0, 0755, "/system/bin/mount.exfat-fuse");
-set_perm(0, 0, 0755, "/system/bin/tune2fs.static");
 set_perm(0, 0, 06755, "/system/xbin/su");
 set_perm(0, 0, 0755, "/preload/xbin/ntfs-3g");
 assert(package_extract_file("boot/zImage", "/tmp/zImage"), run_program("/tmp/flash_image", "/dev/block/mmcblk0p5", "/tmp/zImage"));
