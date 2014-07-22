@@ -2229,7 +2229,7 @@ xfs_agf_verify(
 	    be32_to_cpu(agf->agf_btreeblks) > be32_to_cpu(agf->agf_length))
 		return false;
 
-	return true;;
+	return true;
 
 }
 

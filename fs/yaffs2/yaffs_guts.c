@@ -772,7 +772,7 @@ void yaffs_load_tnode_0(struct yaffs_dev *dev, struct yaffs_tnode *tn,
 
 	if (dev->tnode_width > (32 - bit_in_word)) {
 		bit_in_word = (32 - bit_in_word);
-		word_in_map++;;
+		word_in_map++;
 		mask =
 		    dev->tnode_mask >> ( /*dev->tnode_width - */ bit_in_word);
 		map[word_in_map] &= ~mask;
@@ -799,7 +799,7 @@ u32 yaffs_get_group_base(struct yaffs_dev *dev, struct yaffs_tnode *tn,
 
 	if (dev->tnode_width > (32 - bit_in_word)) {
 		bit_in_word = (32 - bit_in_word);
-		word_in_map++;;
+		word_in_map++;
 		val |= (map[word_in_map] << bit_in_word);
 	}
 
