@@ -291,7 +291,7 @@ out:
 static int clk_debug_create_subtree(struct clk *clk, struct dentry *pdentry)
 {
 	struct clk *child;
-	int ret = -EINVAL;;
+	int ret = -EINVAL;
 
 	if (!clk || !pdentry)
 		goto out;

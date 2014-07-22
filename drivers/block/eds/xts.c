@@ -63,7 +63,7 @@ void gf_mulx(void *x)
 
 #   define GF_MASK  li_32(80000000) 
 #   define GF_XOR   li_32(00000087) 
-    uint_32t _tt = ((UPTR_CAST(x,32)[3] & GF_MASK) ? GF_XOR : 0);;
+    uint_32t _tt = ((UPTR_CAST(x,32)[3] & GF_MASK) ? GF_XOR : 0);
     UPTR_CAST(x,32)[3] = (UPTR_CAST(x,32)[3] << 1) | (UPTR_CAST(x,32)[2] & GF_MASK ? 1 : 0);
     UPTR_CAST(x,32)[2] = (UPTR_CAST(x,32)[2] << 1) | (UPTR_CAST(x,32)[1] & GF_MASK ? 1 : 0);
     UPTR_CAST(x,32)[1] = (UPTR_CAST(x,32)[1] << 1) | (UPTR_CAST(x,32)[0] & GF_MASK ? 1 : 0);

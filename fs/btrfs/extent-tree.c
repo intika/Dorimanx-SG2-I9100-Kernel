@@ -2289,7 +2289,7 @@ static noinline struct btrfs_delayed_ref_node *
 select_delayed_ref(struct btrfs_delayed_ref_head *head)
 {
 	struct rb_node *node;
-	struct btrfs_delayed_ref_node *ref, *last = NULL;;
+	struct btrfs_delayed_ref_node *ref, *last = NULL;
 
 	/*
 	 * select delayed ref of type BTRFS_ADD_DELAYED_REF first.

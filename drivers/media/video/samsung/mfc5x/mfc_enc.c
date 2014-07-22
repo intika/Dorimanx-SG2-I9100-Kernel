@@ -163,7 +163,7 @@ int h263_get_init_arg(struct mfc_inst_ctx *ctx, void *arg)
 	struct mfc_enc_init_h263_arg *init_h263_arg;
 	unsigned int reg;
 	unsigned int shm;
-	struct mfc_enc_ctx *enc_ctx = (struct mfc_enc_ctx *)ctx->c_priv;;
+	struct mfc_enc_ctx *enc_ctx = (struct mfc_enc_ctx *)ctx->c_priv;
 
 	get_init_arg(ctx, arg);
 

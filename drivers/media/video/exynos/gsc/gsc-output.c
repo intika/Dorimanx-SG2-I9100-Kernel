@@ -1008,7 +1008,7 @@ int gsc_register_output_device(struct gsc_dev *gsc)
 	q->io_modes = VB2_MMAP | VB2_USERPTR;
 	q->drv_priv = gsc->out.ctx;
 	q->ops = &gsc_output_qops;
-	q->mem_ops = gsc->vb2->ops;;
+	q->mem_ops = gsc->vb2->ops;
 	q->buf_struct_size = sizeof(struct gsc_input_buf);
 
 	vb2_queue_init(q);
