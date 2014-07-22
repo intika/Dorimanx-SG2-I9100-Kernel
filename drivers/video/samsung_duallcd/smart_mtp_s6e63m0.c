@@ -184,7 +184,7 @@ int V171_adjustment(struct SMART_DIM *pSmart)
 	do_div(result_2, V171_denominator);
 	result_3 = (result_1 * result_2) >> BIT_SHIFT;
 	result_4 = (pSmart->RGB_OUTPUT.B_VOLTAGE.level_1) - result_3;
-	pSmart->RGB_OUTPUT.B_VOLTAGE.level_171 = result_4;;
+	pSmart->RGB_OUTPUT.B_VOLTAGE.level_171 = result_4;
 
 	#ifdef SMART_DIMMING_DEBUG
 	printk("%s V171 RED:%d GREEN:%d BLUE:%d\n", __func__,

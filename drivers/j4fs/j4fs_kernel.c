@@ -937,7 +937,7 @@ struct inode *j4fs_new_inode(struct inode *dir, struct dentry *dentry, int mode)
 			// There are no files in this partition or this first j4fs_header is crashed. So, this case should not happen and/or should be repaired.
 			if(offset==device_info.j4fs_offset) {
 				j4fs_panic("There are no files in this partition or this first j4fs_header is crashed. So, this case should not happen and/or should be repaired.");
-				goto error1;;
+				goto error1;
 			}
 
 			// This j4fs partition is crashed by some abnormal cause. This should not happen and should be repaired.
