@@ -474,7 +474,7 @@ static int pnv_pci_ioda_dma_set_mask(struct pnv_phb *phb,
 	bool bypass = false;
 
 	if (WARN_ON(!pdn || pdn->pe_number == IODA_INVALID_PE))
-		return -ENODEV;;
+		return -ENODEV;
 
 	pe = &phb->ioda.pe_array[pdn->pe_number];
 	if (pe->tce_bypass_enabled) {

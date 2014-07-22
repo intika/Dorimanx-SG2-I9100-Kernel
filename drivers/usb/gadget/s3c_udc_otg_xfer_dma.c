@@ -185,7 +185,7 @@ static int setdma_tx(struct s3c_ep *ep, struct s3c_request *req)
 #ifdef DED_TX_FIFO
 	/* Write the FIFO number to be used for this endpoint */
 	ctrl = __raw_readl(udc->regs + S3C_UDC_OTG_DIEPCTL(ep_num));
-	ctrl &= ~DEPCTL_TXFNUM_MASK;;
+	ctrl &= ~DEPCTL_TXFNUM_MASK;
 	ctrl |= (ep_num << DEPCTL_TXFNUM_BIT);
 	__raw_writel(ctrl , udc->regs + S3C_UDC_OTG_DIEPCTL(ep_num));
 #endif

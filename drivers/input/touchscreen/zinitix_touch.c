@@ -348,7 +348,7 @@ inline s32 ts_write_data(struct i2c_client *client, u16 reg, u8 *values, u16 len
 inline s32 ts_write_reg(struct i2c_client *client, u16 reg, u16 value)
 {
 	if(ts_write_data(client, reg, (u8*)&value, 2) < 0)		return -1;
-	return I2C_SUCCESS;;
+	return I2C_SUCCESS;
 }
 
 inline s32 ts_write_cmd(struct i2c_client *client, u16 reg)
