@@ -660,7 +660,7 @@ static int sec_jack_probe(struct platform_device *pdev)
 
 	jack_dev = device_create(jack_class, NULL, 0, hi, JACK_DEV_NAME);
 	if (IS_ERR(jack_dev))
-		pr_err("Failed to create device(sec_jack)!= %ld\n",
+		pr_err("Failed to create device(sec_jack)!= %d\n",
 			IS_ERR(jack_dev));
 
 	if (device_create_file(jack_dev, &dev_attr_select_jack) < 0)
@@ -670,7 +670,7 @@ static int sec_jack_probe(struct platform_device *pdev)
 	jack_reselector = device_create(jack_class, NULL, 0, hi,
 		JACK_RESELECTOR_NAME);
 	if (IS_ERR(jack_reselector))
-		pr_err("Failed to create device(sec_jack)!= %ld\n",
+		pr_err("Failed to create device(sec_jack)!= %d\n",
 			IS_ERR(jack_reselector));
 
 	if (device_create_file(jack_reselector, &dev_attr_reselect_jack) < 0)
