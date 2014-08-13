@@ -1,6 +1,6 @@
 #
 # Automatically generated file; DO NOT EDIT.
-# Linux/arm 3.14.0 Kernel Configuration
+# Linux/arm 3.15.0-rc1 Kernel Configuration
 #
 CONFIG_ARM=y
 CONFIG_GENERIC_GPIO=y
@@ -1426,7 +1426,6 @@ CONFIG_SCSI_MULTI_LUN=y
 # CONFIG_SCSI_CONSTANTS is not set
 # CONFIG_SCSI_LOGGING is not set
 # CONFIG_SCSI_SCAN_ASYNC is not set
-CONFIG_SCSI_WAIT_SCAN=m
 
 #
 # SCSI Transports
@@ -1456,6 +1455,7 @@ CONFIG_DM_CRYPT=y
 # CONFIG_DM_SNAPSHOT is not set
 # CONFIG_DM_THIN_PROVISIONING is not set
 # CONFIG_DM_CACHE is not set
+# CONFIG_DM_ERA is not set
 # CONFIG_DM_MIRROR is not set
 # CONFIG_DM_RAID is not set
 # CONFIG_DM_ZERO is not set
