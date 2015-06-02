@@ -149,7 +149,7 @@ choice
 		bool "fifo"
 		
 	config DEFAULT_FIOPS
-		bool "fiops"
+		bool "fiops" if IOSCHED_FIOPS=y
 		
         config DEFAULT_TRIPNDROID
 		bool "tripndroid" if IOSCHED_TRIPNDROID=y
