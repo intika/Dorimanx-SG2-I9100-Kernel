@@ -143,13 +143,13 @@ choice
 		bool "ZEN" if IOSCHED_ZEN=y
 
 	config DEFAULT_NOOP
-		bool "No-op" 
+		bool "No-op"
 
 	config DEFAULT_FIFO
 		bool "fifo"
 		
 	config DEFAULT_FIOPS
-		bool "fiops" 
+		bool "fiops"
 		
         config DEFAULT_TRIPNDROID
 		bool "tripndroid" if IOSCHED_TRIPNDROID=y
