@@ -417,8 +417,8 @@ extern struct cpufreq_governor cpufreq_gov_conservative;
 extern struct cpufreq_governor cpufreq_gov_pegasusq;
 #define CPUFREQ_DEFAULT_GOVERNOR	(&cpufreq_gov_pegasusq)
 #elif defined(CONFIG_CPU_FREQ_DEFAULT_GOV_ZZMANX)
-extern struct cpufreq_governor cpufreq_gov_zzmanx;
-#define CPUFREQ_DEFAULT_GOVERNOR	(&cpufreq_gov_zzmanx)
+extern struct cpufreq_governor cpufreq_gov_zzmanX;
+#define CPUFREQ_DEFAULT_GOVERNOR	(&cpufreq_gov_zzmanX)
 #elif defined(CONFIG_CPU_FREQ_DEFAULT_GOV_HYPER)
 extern struct cpufreq_governor cpufreq_gov_HYPER;
 #define CPUFREQ_DEFAULT_GOVERNOR	(&cpufreq_gov_HYPER)
