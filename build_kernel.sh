@@ -228,7 +228,7 @@ if [ -e $KERNELDIR/arch/arm/boot/zImage ]; then
 	cp $KERNELDIR/zImage /$KERNELDIR/READY-JB/boot/;
 
 	# create zip-file
-	cd $KERNELDIR/READY-JB/ && zip -r Kernel_${GETVER}-`date +"[%H-%M]-[%d-%m]-JB-SGII-UBER-TRIM"`.zip .;
+	cd $KERNELDIR/READY-JB/ && zip -r Kernel_${GETVER}-`date +"[%H-%M]-[%d-%m]-KK-SGII-UBER-TRIM"`.zip .;
 
 	# push to android
 	ADB_STATUS=`adb get-state`;
