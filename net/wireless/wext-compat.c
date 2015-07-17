@@ -8,7 +8,6 @@
  * Copyright 2008-2009	Johannes Berg <johannes@sipsolutions.net>
  */
 
-#include <linux/export.h>
 #include <linux/wireless.h>
 #include <linux/nl80211.h>
 #include <linux/if_arp.h>
@@ -16,7 +15,6 @@
 #include <linux/slab.h>
 #include <net/iw_handler.h>
 #include <net/cfg80211.h>
-#include <net/cfg80211-wext.h>
 #include "wext-compat.h"
 #include "core.h"
 
@@ -800,15 +798,7 @@ int cfg80211_wext_siwfreq(struct net_device *dev,
 	case NL80211_IFTYPE_ADHOC:
 		return cfg80211_ibss_wext_siwfreq(dev, info, wextfreq, extra);
 	case NL80211_IFTYPE_MONITOR:
-		freq = cfg80211_wext_freq(wdev->wiphy, wextfreq);
-		if (freq < 0)
-			return freq;
-		if (freq == 0)
-			return -EINVAL;
-		mutex_lock(&rdev->devlist_mtx);
-		err = cfg80211_set_monitor_channel(rdev, freq, NL80211_CHAN_NO_HT);
-		mutex_unlock(&rdev->devlist_mtx);
-		return err;
+	case NL80211_IFTYPE_WDS:
 	case NL80211_IFTYPE_MESH_POINT:
 		freq = cfg80211_wext_freq(wdev->wiphy, wextfreq);
 		if (freq < 0)
@@ -816,8 +806,9 @@ int cfg80211_wext_siwfreq(struct net_device *dev,
 		if (freq == 0)
 			return -EINVAL;
 		mutex_lock(&rdev->devlist_mtx);
-		err = cfg80211_set_mesh_freq(rdev, wdev, freq,
-					     NL80211_CHAN_NO_HT);
+		wdev_lock(wdev);
+		err = cfg80211_set_freq(rdev, wdev, freq, NL80211_CHAN_NO_HT);
+		wdev_unlock(wdev);
 		mutex_unlock(&rdev->devlist_mtx);
 		return err;
 	default:
@@ -831,9 +822,6 @@ int cfg80211_wext_giwfreq(struct net_device *dev,
 			  struct iw_freq *freq, char *extra)
 {
 	struct wireless_dev *wdev = dev->ieee80211_ptr;
-	struct cfg80211_registered_device *rdev = wiphy_to_dev(wdev->wiphy);
-	struct ieee80211_channel *chan;
-	enum nl80211_channel_type channel_type;
 
 	switch (wdev->iftype) {
 	case NL80211_IFTYPE_STATION:
@@ -841,18 +829,12 @@ int cfg80211_wext_giwfreq(struct net_device *dev,
 		return cfg80211_mgd_wext_giwfreq(dev, info, freq, extra);
 	case NL80211_IFTYPE_ADHOC:
 		return cfg80211_ibss_wext_giwfreq(dev, info, freq, extra);
-	case NL80211_IFTYPE_MONITOR:
-		if (!rdev->ops->get_channel)
+	default:
+		if (!wdev->channel)
 			return -EINVAL;
-
-		chan = rdev->ops->get_channel(wdev->wiphy, wdev, &channel_type);
-		if (!chan)
-			return -EINVAL;
-		freq->m = chan->center_freq;
+		freq->m = wdev->channel->center_freq;
 		freq->e = 6;
 		return 0;
-	default:
-		return -EINVAL;
 	}
 }
 EXPORT_SYMBOL_GPL(cfg80211_wext_giwfreq);

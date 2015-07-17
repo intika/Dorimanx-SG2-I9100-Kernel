@@ -77,6 +77,8 @@ static void *lib80211_ccmp_init(int key_idx)
 
 	priv->tfm = crypto_alloc_cipher("aes", 0, CRYPTO_ALG_ASYNC);
 	if (IS_ERR(priv->tfm)) {
+		printk(KERN_DEBUG "lib80211_crypt_ccmp: could not allocate "
+		       "crypto API aes\n");
 		priv->tfm = NULL;
 		goto fail;
 	}
@@ -304,8 +306,10 @@ static int lib80211_ccmp_decrypt(struct sk_buff *skb, int hdr_len, void *priv)
 	pos = skb->data + hdr_len;
 	keyidx = pos[3];
 	if (!(keyidx & (1 << 5))) {
-		net_dbg_ratelimited("CCMP: received packet without ExtIV flag from %pM\n",
-				    hdr->addr2);
+		if (net_ratelimit()) {
+			printk(KERN_DEBUG "CCMP: received packet without ExtIV"
+			       " flag from %pM\n", hdr->addr2);
+		}
 		key->dot11RSNAStatsCCMPFormatErrors++;
 		return -2;
 	}
@@ -316,8 +320,11 @@ static int lib80211_ccmp_decrypt(struct sk_buff *skb, int hdr_len, void *priv)
 		return -6;
 	}
 	if (!key->key_set) {
-		net_dbg_ratelimited("CCMP: received packet from %pM with keyid=%d that does not have a configured key\n",
-				    hdr->addr2, keyidx);
+		if (net_ratelimit()) {
+			printk(KERN_DEBUG "CCMP: received packet from %pM"
+			       " with keyid=%d that does not have a configured"
+			       " key\n", hdr->addr2, keyidx);
+		}
 		return -3;
 	}
 
@@ -331,11 +338,15 @@ static int lib80211_ccmp_decrypt(struct sk_buff *skb, int hdr_len, void *priv)
 
 	if (ccmp_replay_check(pn, key->rx_pn)) {
 #ifdef CONFIG_LIB80211_DEBUG
-		net_dbg_ratelimited("CCMP: replay detected: STA=%pM previous PN %02x%02x%02x%02x%02x%02x received PN %02x%02x%02x%02x%02x%02x\n",
-				    hdr->addr2,
-				    key->rx_pn[0], key->rx_pn[1], key->rx_pn[2],
-				    key->rx_pn[3], key->rx_pn[4], key->rx_pn[5],
-				    pn[0], pn[1], pn[2], pn[3], pn[4], pn[5]);
+		if (net_ratelimit()) {
+			printk(KERN_DEBUG "CCMP: replay detected: STA=%pM "
+				 "previous PN %02x%02x%02x%02x%02x%02x "
+				 "received PN %02x%02x%02x%02x%02x%02x\n",
+				 hdr->addr2,
+				 key->rx_pn[0], key->rx_pn[1], key->rx_pn[2],
+				 key->rx_pn[3], key->rx_pn[4], key->rx_pn[5],
+				 pn[0], pn[1], pn[2], pn[3], pn[4], pn[5]);
+		}
 #endif
 		key->dot11RSNAStatsCCMPReplays++;
 		return -4;
@@ -361,8 +372,10 @@ static int lib80211_ccmp_decrypt(struct sk_buff *skb, int hdr_len, void *priv)
 	}
 
 	if (memcmp(mic, a, CCMP_MIC_LEN) != 0) {
-		net_dbg_ratelimited("CCMP: decrypt failed: STA=%pM\n",
-				    hdr->addr2);
+		if (net_ratelimit()) {
+			printk(KERN_DEBUG "CCMP: decrypt failed: STA="
+			       "%pM\n", hdr->addr2);
+		}
 		key->dot11RSNAStatsCCMPDecryptErrors++;
 		return -5;
 	}
