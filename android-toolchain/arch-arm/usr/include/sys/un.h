@@ -28,7 +28,8 @@
 #ifndef _SYS_UN_H_
 #define _SYS_UN_H_
 
-typedef unsigned short sa_family_t;
+#include <sys/_types.h>
+typedef __sa_family_t sa_family_t;
 
 #include <linux/un.h>
 

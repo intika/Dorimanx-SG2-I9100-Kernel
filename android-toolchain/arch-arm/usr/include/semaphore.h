@@ -33,13 +33,10 @@
 __BEGIN_DECLS
 
 typedef struct {
-  volatile unsigned int count;
-#ifdef __LP64__
-  int __reserved[3];
-#endif
+    volatile unsigned int  count;
 } sem_t;
 
-#define SEM_FAILED NULL
+#define  SEM_FAILED  NULL
 
 extern int sem_init(sem_t *sem, int pshared, unsigned int value);
 

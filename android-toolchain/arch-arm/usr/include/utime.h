@@ -25,7 +25,6 @@
  * OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  */
-
 #ifndef _UTIME_H_
 #define _UTIME_H_
 
@@ -35,8 +34,9 @@
 
 __BEGIN_DECLS
 
-extern int utime(const char*, const struct utimbuf*);
+extern int  utime(const char *, const struct utimbuf *);
 
 __END_DECLS
 
 #endif /* _UTIME_H_ */
+

@@ -37,23 +37,19 @@
 #include <netinet/in.h>
 
 __BEGIN_DECLS
-#pragma GCC visibility push(default)
 
 struct res_state;
 
 extern struct __res_state *__res_state(void);
 #define _res (*__res_state())
 
-#define b64_ntop __b64_ntop
-#define b64_pton __b64_pton
-extern int b64_ntop(u_char const*, size_t, char*, size_t);
-extern int b64_pton(char const*, u_char*, size_t);
+/* Base-64 functions - because some code expects it there */
 
-#define dn_comp __dn_comp
-extern int dn_comp(const char*, u_char*, int, u_char**, u_char**);
-extern int dn_expand(const u_char*, const u_char*, const u_char*, char*, int);
+#define b64_ntop        __b64_ntop
+#define b64_pton        __b64_pton
+extern int   b64_ntop(u_char const *, size_t, char *, size_t);
+extern int   b64_pton(char const *, u_char *, size_t);
 
-#pragma GCC visibility pop
 __END_DECLS
 
 #endif /* _RESOLV_H_ */

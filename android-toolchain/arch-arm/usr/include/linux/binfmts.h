@@ -7,22 +7,17 @@
  ***   structures, and macros generated from the original header, and thus,
  ***   contains no copyrightable information.
  ***
- ***   To edit the content of this header, modify the corresponding
- ***   source file (e.g. under external/kernel-headers/original/) then
- ***   run bionic/libc/kernel/tools/update_all.py
- ***
- ***   Any manual change here will be lost the next time this script will
- ***   be run. You've been warned!
- ***
  ****************************************************************************
  ****************************************************************************/
-#ifndef _UAPI_LINUX_BINFMTS_H
-#define _UAPI_LINUX_BINFMTS_H
+#ifndef _LINUX_BINFMTS_H
+#define _LINUX_BINFMTS_H
+
 #include <linux/capability.h>
+
 struct pt_regs;
-/* WARNING: DO NOT EDIT, AUTO-GENERATED CODE - SEE TOP FOR INSTRUCTIONS */
-#define MAX_ARG_STRLEN (PAGE_SIZE * 32)
-#define MAX_ARG_STRINGS 0x7FFFFFFF
+
+#define MAX_ARG_PAGES 32
+
 #define BINPRM_BUF_SIZE 128
+
 #endif
-/* WARNING: DO NOT EDIT, AUTO-GENERATED CODE - SEE TOP FOR INSTRUCTIONS */

@@ -50,6 +50,7 @@ __BEGIN_DECLS
 
 int     _setjmp(jmp_buf);
 void    _longjmp(jmp_buf, int);
+void    longjmperror(void);
 
 int     setjmp(jmp_buf);
 void    longjmp(jmp_buf, int);

@@ -29,13 +29,11 @@
 #define _NETINET_IN_H_
 
 #include <endian.h>
-#include <netinet/in6.h>
-#include <sys/cdefs.h>
-#include <sys/socket.h>
-
+#include <linux/socket.h>
 #include <linux/in.h>
 #include <linux/in6.h>
 #include <linux/ipv6.h>
+#include <netinet/in6.h>
 
 __BEGIN_DECLS
 

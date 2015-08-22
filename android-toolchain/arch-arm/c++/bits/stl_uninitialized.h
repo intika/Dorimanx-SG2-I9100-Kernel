@@ -1,6 +1,6 @@
 // Raw memory manipulators -*- C++ -*-
 
-// Copyright (C) 2001-2014 Free Software Foundation, Inc.
+// Copyright (C) 2001-2013 Free Software Foundation, Inc.
 //
 // This file is part of the GNU ISO C++ Library.  This library is free
 // software; you can redistribute it and/or modify it under the
@@ -111,18 +111,9 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
 	_ValueType1;
       typedef typename iterator_traits<_ForwardIterator>::value_type
 	_ValueType2;
-#if __cplusplus < 201103L
-      const bool __assignable = true;
-#else
-      // trivial types can have deleted assignment
-      typedef typename iterator_traits<_InputIterator>::reference _RefType1;
-      typedef typename iterator_traits<_ForwardIterator>::reference _RefType2;
-      const bool __assignable = is_assignable<_RefType2, _RefType1>::value;
-#endif
 
-      return std::__uninitialized_copy<__is_trivial(_ValueType1)
-				       && __is_trivial(_ValueType2)
-				       && __assignable>::
+      return std::__uninitialized_copy<(__is_trivial(_ValueType1)
+					&& __is_trivial(_ValueType2))>::
 	__uninit_copy(__first, __last, __result);
     }
 
@@ -175,14 +166,8 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
     {
       typedef typename iterator_traits<_ForwardIterator>::value_type
 	_ValueType;
-#if __cplusplus < 201103L
-      const bool __assignable = true;
-#else
-      // trivial types can have deleted assignment
-      const bool __assignable = is_copy_assignable<_ValueType>::value;
-#endif
 
-      std::__uninitialized_fill<__is_trivial(_ValueType) && __assignable>::
+      std::__uninitialized_fill<__is_trivial(_ValueType)>::
 	__uninit_fill(__first, __last, __x);
     }
 
@@ -234,14 +219,8 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
     {
       typedef typename iterator_traits<_ForwardIterator>::value_type
 	_ValueType;
-#if __cplusplus < 201103L
-      const bool __assignable = true;
-#else
-      // trivial types can have deleted assignment
-      const bool __assignable = is_copy_assignable<_ValueType>::value;
-#endif
 
-      std::__uninitialized_fill_n<__is_trivial(_ValueType) && __assignable>::
+      std::__uninitialized_fill_n<__is_trivial(_ValueType)>::
 	__uninit_fill_n(__first, __n, __x);
     }
 
@@ -547,11 +526,8 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
     {
       typedef typename iterator_traits<_ForwardIterator>::value_type
 	_ValueType;
-      // trivial types can have deleted assignment
-      const bool __assignable = is_copy_assignable<_ValueType>::value;
 
-      std::__uninitialized_default_1<__is_trivial(_ValueType)
-				     && __assignable>::
+      std::__uninitialized_default_1<__is_trivial(_ValueType)>::
 	__uninit_default(__first, __last);
     }
 
@@ -563,11 +539,8 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
     {
       typedef typename iterator_traits<_ForwardIterator>::value_type
 	_ValueType;
-      // trivial types can have deleted assignment
-      const bool __assignable = is_copy_assignable<_ValueType>::value;
 
-      std::__uninitialized_default_n_1<__is_trivial(_ValueType)
-				       && __assignable>::
+      std::__uninitialized_default_n_1<__is_trivial(_ValueType)>::
 	__uninit_default_n(__first, __n);
     }
 

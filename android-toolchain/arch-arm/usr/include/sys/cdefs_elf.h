@@ -38,10 +38,20 @@
 #define _C_LABEL_STRING(x)	x
 #endif
 
+#if __STDC__
 #define	___RENAME(x)	__asm__(___STRING(_C_LABEL(x)))
+#else
+#ifdef __LEADING_UNDERSCORE
+#define	___RENAME(x)	____RENAME(_/**/x)
+#define	____RENAME(x)	__asm__(___STRING(x))
+#else
+#define	___RENAME(x)	__asm__(___STRING(x))
+#endif
+#endif
 
 #define	__indr_reference(sym,alias)	/* nada, since we do weak refs */
 
+#if __STDC__
 #define	__strong_alias(alias,sym)	       				\
     __asm__(".global " _C_LABEL_STRING(#alias) "\n"			\
 	    _C_LABEL_STRING(#alias) " = " _C_LABEL_STRING(#sym));
@@ -51,28 +61,43 @@
 	    _C_LABEL_STRING(#alias) " = " _C_LABEL_STRING(#sym));
 #define	__weak_extern(sym)						\
     __asm__(".weak " _C_LABEL_STRING(#sym));
-
-/* We use __warnattr instead of __warn_references.
- * TODO: remove this and put an empty definition in one of the upstream-* compatibility headers.
- */
 #define	__warn_references(sym,msg)					\
-    /*__asm__(".section .gnu.warning." #sym "\n\t.ascii \"" msg "\"\n\t.text");*/
+    __asm__(".section .gnu.warning." #sym "\n\t.ascii \"" msg "\"\n\t.text");
 
+#else /* !__STDC__ */
+
+#ifdef __LEADING_UNDERSCORE
+#define __weak_alias(alias,sym) ___weak_alias(_/**/alias,_/**/sym)
+#define	___weak_alias(alias,sym)					\
+    __asm__(".weak alias\nalias = sym");
+#else
+#define	__weak_alias(alias,sym)						\
+    __asm__(".weak alias\nalias = sym");
+#endif
+#ifdef __LEADING_UNDERSCORE
+#define __weak_extern(sym) ___weak_extern(_/**/sym)
+#define	___weak_extern(sym)						\
+    __asm__(".weak sym");
+#else
+#define	__weak_extern(sym)						\
+    __asm__(".weak sym");
+#endif
+#define	__warn_references(sym,msg)					\
+    __asm__(".section .gnu.warning.sym\n\t.ascii msg ; .text");
+
+#endif /* !__STDC__ */
+
+#if __STDC__
 #define	__SECTIONSTRING(_sec, _str)					\
 	__asm__(".section " #_sec "\n\t.asciz \"" _str "\"\n\t.previous")
-
-/* Used to tag non-static symbols that are private and never exposed by the shared library. */
-#define __LIBC_HIDDEN__ __attribute__((visibility ("hidden")))
-
-/* Like __LIBC_HIDDEN__, but preserves binary compatibility for LP32. */
-#ifdef __LP64__
-#define __LIBC64_HIDDEN__ __LIBC_HIDDEN__
 #else
-#define __LIBC64_HIDDEN__ __LIBC_ABI_PUBLIC__
+#define	__SECTIONSTRING(_sec, _str)					\
+	__asm__(".section _sec\n\t.asciz _str\n\t.previous")
 #endif
 
-/* Used to tag non-static symbols that are public and exposed by the shared library. */
-#define __LIBC_ABI_PUBLIC__ __attribute__((visibility ("default")))
+/* GCC visibility helper macro */
+#define __LIBC_HIDDEN__							\
+	__attribute__ ((visibility ("hidden")))
 
 #define	__IDSTRING(_n,_s)		__SECTIONSTRING(.ident,_s)
 

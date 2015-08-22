@@ -21,7 +21,7 @@ END-INFO-DIR-ENTRY
    This file documents the GNU debugger GDB.
 
    This is the Tenth Edition, of 'Debugging with GDB: the GNU
-Source-Level Debugger' for GDB (UBERTC-4.9.4) Version
+Source-Level Debugger' for GDB (UBERTC-4.8.5) Version
 7.9.90.20150715-cvs.
 
    Copyright (C) 1988-2015 Free Software Foundation, Inc.
@@ -45,7 +45,7 @@ Debugging with GDB
 
 This file describes GDB, the GNU symbolic debugger.
 
-   This is the Tenth Edition, for GDB (UBERTC-4.9.4) Version
+   This is the Tenth Edition, for GDB (UBERTC-4.8.5) Version
 7.9.90.20150715-cvs.
 
    Copyright (C) 1988-2015 Free Software Foundation, Inc.

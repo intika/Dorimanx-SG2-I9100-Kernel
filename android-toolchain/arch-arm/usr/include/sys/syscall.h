@@ -33,11 +33,9 @@
 #include <sys/types.h>
 #include <asm/unistd.h>
 
-#include <sys/glibc-syscalls.h> /* glibc-compatible SYS_* aliases for our __NR_* names. */
-
 __BEGIN_DECLS
 
-long syscall(long number, ...);
+int syscall(int number, ...);
 
 __END_DECLS
 
