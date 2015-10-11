@@ -778,6 +778,7 @@ const char * const vmstat_text[] = {
 	"workingset_activate",
 	"workingset_nodereclaim",
 	"nr_anon_transparent_hugepages",
+	"nr_swapcache",
 #ifdef CONFIG_DMA_CMA
 	"nr_free_cma",
 #endif
