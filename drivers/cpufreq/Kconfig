@@ -153,6 +153,12 @@ config CPU_FREQ_DEFAULT_GOV_NEOX
 	bool "NeoX"
 	select CPU_FREQ_GOV_NeoX
 
+config CPU_FREQ_DEFAULT_GOV_LIONHEART
+	bool "lionheart"
+	select CPU_FREQ_GOV_LIONHEART
+	help
+	  Use the CPUFreq governor 'Lionheart' as default.
+
 endchoice
 
 config CPU_FREQ_GOV_PERFORMANCE
@@ -265,6 +271,12 @@ config CPU_FREQ_GOV_ZZMOOVE
 	  % frequency steps to get smooth up/downscaling dependant on CPU load.
 
 	  If in doubt, say N.
+
+config CPU_FREQ_GOV_LIONHEART
+	tristate "'lionheart' cpufreq governor"
+	depends on CPU_FREQ
+	help
+	  'Lionheart' - A brave and agile conservative-based governor.
 
 config CPU_FREQ_GOV_NEOX
 	tristate "'NeoX' cpufreq governor"
