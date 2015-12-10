@@ -2029,7 +2029,7 @@ dhd_rx_frame(dhd_pub_t *dhdp, int ifidx, void *pktbuf, int numpkt, uint8 chan)
 			skb_mac_header(skb),
 #else
 			skb->mac.raw,
-#endif
+#endif /* LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 22) */
             len - 2,
 			&event,
 			&data);
