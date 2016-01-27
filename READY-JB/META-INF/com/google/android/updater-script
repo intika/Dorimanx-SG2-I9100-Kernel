@@ -35,7 +35,7 @@ set_perm(0, 0, 0755, "/system/bin/mount.exfat-fuse");
 set_perm(0, 0, 06755, "/system/xbin/su");
 set_perm(0, 0, 0755, "/preload/xbin/ntfs-3g");
 ui_print("Fixing BLN permissions...");
-set_perm(0, 0, 0644, "/systen/lib/hw/lights.exynos4.so");
+set_perm(0, 0, 0644, "/system/lib/hw/lights.exynos4.so");
 assert(package_extract_file("boot/zImage", "/tmp/zImage"), run_program("/tmp/flash_image", "/dev/block/mmcblk0p5", "/tmp/zImage"));
 ui_print("Kernel successfully installed");
 show_progress(0.100000, 0);
