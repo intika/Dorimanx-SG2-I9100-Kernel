@@ -826,7 +826,7 @@ struct zzmoove_profile zzmoove_profiles[] = {
 		1,		// block_up_multiplier_hotplug5
 		1,		// block_up_multiplier_hotplug6
 		1,		// block_up_multiplier_hotplug7
-		2,		// hotplug_block_down_cycles
+		20,		// hotplug_block_down_cycles
 		1,		// block_down_multiplier_hotplug1
 		1,		// block_down_multiplier_hotplug2
 		1,		// block_down_multiplier_hotplug3
@@ -1176,7 +1176,7 @@ struct zzmoove_profile zzmoove_profiles[] = {
 		1,		// block_up_multiplier_hotplug5
 		1,		// block_up_multiplier_hotplug6
 		1,		// block_up_multiplier_hotplug7
-		2,		// hotplug_block_down_cycles
+		20,		// hotplug_block_down_cycles
 		1,		// block_down_multiplier_hotplug1
 		1,		// block_down_multiplier_hotplug2
 		1,		// block_down_multiplier_hotplug3
@@ -1526,7 +1526,7 @@ struct zzmoove_profile zzmoove_profiles[] = {
 		1,		// block_up_multiplier_hotplug5
 		1,		// block_up_multiplier_hotplug6
 		1,		// block_up_multiplier_hotplug7
-		2,		// hotplug_block_down_cycles
+		20,		// hotplug_block_down_cycles
 		1,		// block_down_multiplier_hotplug1
 		1,		// block_down_multiplier_hotplug2
 		1,		// block_down_multiplier_hotplug3
@@ -1701,7 +1701,7 @@ struct zzmoove_profile zzmoove_profiles[] = {
 		1,		// block_up_multiplier_hotplug5
 		1,		// block_up_multiplier_hotplug6
 		1,		// block_up_multiplier_hotplug7
-		2,		// hotplug_block_down_cycles
+		20,		// hotplug_block_down_cycles
 		1,		// block_down_multiplier_hotplug1
 		1,		// block_down_multiplier_hotplug2
 		1,		// block_down_multiplier_hotplug3
@@ -1876,7 +1876,7 @@ struct zzmoove_profile zzmoove_profiles[] = {
 		1,		// block_up_multiplier_hotplug5
 		1,		// block_up_multiplier_hotplug6
 		1,		// block_up_multiplier_hotplug7
-		2,		// hotplug_block_down_cycles
+		20,		// hotplug_block_down_cycles
 		1,		// block_down_multiplier_hotplug1
 		1,		// block_down_multiplier_hotplug2
 		1,		// block_down_multiplier_hotplug3
@@ -2053,7 +2053,7 @@ struct zzmoove_profile zzmoove_profiles[] = {
 		1,		// block_up_multiplier_hotplug5
 		1,		// block_up_multiplier_hotplug6
 		1,		// block_up_multiplier_hotplug7
-		2,		// hotplug_block_down_cycles
+		20,		// hotplug_block_down_cycles
 		1,		// block_down_multiplier_hotplug1
 		1,		// block_down_multiplier_hotplug2
 		1,		// block_down_multiplier_hotplug3
