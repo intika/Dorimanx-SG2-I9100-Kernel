@@ -358,6 +358,55 @@ static ssize_t store_freq_for_responsiveness(struct kobject *a,
 	return count;
 }
 
+static ssize_t store_boost_mincpus(struct kobject *a, struct attribute *b,
+				const char *buf, size_t count)
+{
+	unsigned int input;
+	int ret;
+
+	ret = sscanf(buf, "%u", &input);
+	if (ret != 1)
+		return -EINVAL;
+
+	dbs_tuners_ins.boost_mincpus = min(input, 4u);
+	return count;
+}
+static ssize_t store_boost_lock_time(struct kobject *a, struct attribute *b,
+				const char *buf, size_t count)
+{
+	long input;
+	int ret;
+    ktime_t time;
+	ret = sscanf(buf, "%ld", &input);
+	if (ret != 1 || input < -1)
+		return -EINVAL;
+    mutex_lock(&boost_mutex);
+	if (input != 0) {
+		if (boost_timer.function != NULL) {
+			// ensure last boost is cancelled
+			hrtimer_cancel(&boost_timer);
+		}
+		is_boosting = 1;
+		if (input != -1) {
+			time = ktime_set(0, (unsigned long)input);
+			hrtimer_init(&boost_timer, CLOCK_MONOTONIC, HRTIMER_MODE_REL);
+			boost_timer.function = &end_boost;
+			hrtimer_start(&boost_timer, time, HRTIMER_MODE_REL);
+		}
+	} else {
+		if (boost_timer.function != NULL) {
+			hrtimer_cancel(&boost_timer);
+		}
+		is_boosting = 0;
+	}
+	mutex_unlock(&boost_mutex);
+
+
+	return count;
+}
+#endif
+
+
 define_one_global_rw(sampling_rate);
 define_one_global_rw(io_is_busy);
 define_one_global_rw(up_threshold);
