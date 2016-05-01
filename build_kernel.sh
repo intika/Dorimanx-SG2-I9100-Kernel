@@ -237,8 +237,12 @@ if [ -e $KERNELDIR/arch/arm/boot/zImage ]; then
 	stat $KERNELDIR/zImage || exit 1;
 	cp $KERNELDIR/zImage /$KERNELDIR/READY-JB/boot/;
 
-	# create zip-file
-	cd $KERNELDIR/READY-JB/ && zip -r Kernel_${GETVER}-`date +"[%H-%M]-[%d-%m]-LP-SGII-GSSTUDIOS-TRIM"`.zip .;
+	# create zip-file (uncomment for selected toolchain)
+	# zip name with default linaro toolchain
+	cd $KERNELDIR/READY-JB/ && zip -r Kernel_${GETVER}-`date +"[%H-%M]-[%d-%m]-LP-SGII-GSSTUDIOS-LINARO-TRIM"`.zip .;
+
+	# zip name with UBER 5.3 toolchain
+	#cd $KERNELDIR/READY-JB/ && zip -r Kernel_${GETVER}-`date +"[%H-%M]-[%d-%m]-LP-SGII-GSSTUDIOS-UBER-5.3-TRIM"`.zip .;
 
 	# push to android
 	ADB_STATUS=`adb get-state`;
