@@ -239,7 +239,7 @@ if [ -e $KERNELDIR/arch/arm/boot/zImage ]; then
 
 	# create zip-file (uncomment for selected toolchain)
 	# zip name with default linaro toolchain
-	cd $KERNELDIR/READY-JB/ && zip -r Kernel_${GETVER}-`date +"[%H-%M]-[%d-%m]-LP-SGII-GSSTUDIOS-LINARO-TRIM"`.zip .;
+	cd $KERNELDIR/READY-JB/ && zip -r Kernel_${GETVER}-`date +"[%H-%M]-[%d-%m]-LP-SGII-GSSTUDIOS-LINARO-4.9-TRIM"`.zip .;
 
 	# zip name with UBER 5.3 toolchain
 	#cd $KERNELDIR/READY-JB/ && zip -r Kernel_${GETVER}-`date +"[%H-%M]-[%d-%m]-LP-SGII-GSSTUDIOS-UBER-5.3-TRIM"`.zip .;
