@@ -104,6 +104,7 @@ static bool avoid_to_kill(uid_t uid)
 	return 0;
 }
 
+#if 0 /* LP draning RAM, We need to trigger OOM on protected_apps/system for now */
 static bool protected_apps(char *comm)
 {
 	if (strcmp(comm, "d.process.acore") == 0 ||
@@ -113,6 +114,7 @@ static bool protected_apps(char *comm)
 	}
 	return 0;
 }
+#endif
 
 static unsigned long lowmem_count(struct shrinker *s,
 				  struct shrink_control *sc)
@@ -208,17 +210,22 @@ static unsigned long lowmem_scan(struct shrinker *s, struct shrink_control *sc)
 		pcred = __task_cred(p);
 		uid = pcred->uid;
 
+#if 0 /* LP draning RAM, We need to trigger OOM on protected_apps for now */
 		if (avoid_to_kill(uid) || protected_apps(p->comm)) {
+#else
+		if (avoid_to_kill(uid)) {
 			if (tasksize * (long)(PAGE_SIZE / 1024) >= 80000) {
 				selected = p;
 				selected_tasksize = tasksize;
 				selected_oom_score_adj = oom_score_adj;
-			lowmem_print(2, "select '%s' (%d), adj %hd, size %ldkB, to kill\n",
+				lowmem_print(2, "select '%s' (%d), adj %hd, size %ldkB, to kill\n",
 					p->comm, p->pid, oom_score_adj, tasksize * (long)(PAGE_SIZE / 1024));
 			} else
 				lowmem_print(2, "selected skipped %s' (%d), adj %hd, size %ldkB, not kill\n",
 					p->comm, p->pid, oom_score_adj, tasksize * (long)(PAGE_SIZE / 1024));
-		} else {
+		} else
+#endif 
+		{
 			selected = p;
 			selected_tasksize = tasksize;
 			selected_oom_score_adj = oom_score_adj;
