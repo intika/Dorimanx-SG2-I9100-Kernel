@@ -240,21 +240,31 @@ if [ -e $KERNELDIR/arch/arm/boot/zImage ]; then
 	stat $KERNELDIR/zImage || exit 1;
 	cp $KERNELDIR/zImage /$KERNELDIR/READY-JB/boot/;
 
-	# create zip-file
-	cd $KERNELDIR/READY-JB/ && zip -r Kernel_${GETVER}-`date +"[%H-%M]-[%d-%m]-KK-SGII-GSSTUDIOS-TRIM"`.zip .;
+	# create zip-file for kernel
+	# kernel zip name is based on toolchain used, modify to however you like
+	if [ "a$GCCVERSION" == "a0409" ]; then
+		cd $KERNELDIR/READY-JB/ && zip -r Kernel_${GETVER}-`date +"[%H-%M]-[%d-%m]-KK-SGII-GSSTUDIOS-LINARO-4.9-TRIM"`.zip .;
+	elif [ "a$GCCVERSION" == "a0503" ]; then
+		cd $KERNELDIR/READY-JB/ && zip -r Kernel_${GETVER}-`date +"[%H-%M]-[%d-%m]-KK-SGII-GSSTUDIOS-UBER-5.3-TRIM"`.zip .;
+	elif [ "a$GCCVERSION" == "a0600" ]; then
+		cd $KERNELDIR/READY-JB/ && zip -r Kernel_${GETVER}-`date +"[%H-%M]-[%d-%m]-KK-SGII-GSSTUDIOS-UBER-6.0-TRIM"`.zip .;
+	else
+		cd $KERNELDIR/READY-JB/ && zip -r Kernel_${GETVER}-`date +"[%H-%M]-[%d-%m]-KK-SGII-GSSTUDIOS-TRIM"`.zip .;
+	fi;
 
 	# push to android
-	ADB_STATUS=`adb get-state`;
-	if [ "$ADB_STATUS" == "device" ]; then
-		read -t 3 -p "push kernel to android, 3sec timeout (y/n)?";
-		if [ "$REPLY" == "y" ]; then
-			adb push $KERNELDIR/READY-JB/Kernel_*JB*.zip /sdcard/;
-			read -t 3 -p "reboot to recovery, 3sec timeout (y/n)?";
-			if [ "$REPLY" == "y" ]; then
-				adb reboot recovery;
-			fi;
-		fi;
-	fi;
+#	ADB_STATUS=`adb get-state`;
+#	if [ "$ADB_STATUS" == "device" ]; then
+#		read -t 3 -p "push kernel to android, 3sec timeout (y/n)?";
+#		if [ "$REPLY" == "y" ]; then
+#			adb push $KERNELDIR/READY-JB/Kernel_*JB*.zip /sdcard/;
+#			read -t 3 -p "reboot to recovery, 3sec timeout (y/n)?";
+#			if [ "$REPLY" == "y" ]; then
+#				adb reboot recovery;
+#			fi;
+#		fi;
+#	fi;
+
 else
 	# with red-color
 	echo -e "\e[1;31mKernel STUCK in BUILD! no zImage exist\e[m"
