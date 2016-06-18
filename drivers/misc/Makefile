@@ -84,6 +84,7 @@ obj-$(CONFIG_MACH_M0_CTC)   += cw_tty.o
 
 # Secure OS Mobicore Interface
 obj-$(CONFIG_MOBICORE_SUPPORT)  += tzic.o
+obj-$(CONFIG_UID_CPUTIME) += uid_cputime.o
 obj-$(CONFIG_USB_SWITCH_FSA9480) += fsa9480.o
 obj-$(CONFIG_CPU_UNDERVOLTING)	+= cpu_undervolting.o
 obj-$(CONFIG_MALI_CONTROL)	+= mali_control.o

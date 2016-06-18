@@ -133,6 +133,7 @@ struct tun_struct {
 	struct socket_wq	wq;
 
 	int			vnet_hdr_sz;
+	void 			*security;
 
 #ifdef TUN_DEBUG
 	int debug;
@@ -1072,7 +1073,7 @@ static int tun_set_iff(struct net *net, struct file *file, struct ifreq *ifr)
 		     (tun->group != -1 && !in_egroup_p(tun->group))) &&
 		    !capable(CAP_NET_ADMIN))
 			return -EPERM;
-		err = security_tun_dev_attach(tun->socket.sk);
+		err = security_tun_dev_attach(tun->socket.sk, tun->security);
 		if (err < 0)
 			return err;
 
@@ -1135,7 +1136,9 @@ static int tun_set_iff(struct net *net, struct file *file, struct ifreq *ifr)
 
 		tun_sk(sk)->tun = tun;
 
-		security_tun_dev_post_create(sk);
+		err = security_tun_dev_alloc_security(&tun->security);
+		if (err < 0)
+			goto err_free_dev;
 
 		tun_net_init(dev);
 

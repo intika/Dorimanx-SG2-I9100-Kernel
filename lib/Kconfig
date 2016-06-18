@@ -391,4 +391,24 @@ config SNAPPY
           Add the snappy compressor. This is a reasonable compressor that
 	  compresses and decompresses extremly fast.
 
+config CLZ_TAB
+	bool
+
+config MPILIB
+	tristate
+	select CLZ_TAB
+	help
+	  Multiprecision maths library from GnuPG.
+	  It is used to implement RSA digital signature verification,
+	  which is used by IMA/EVM digital signature extension.
+
+#
+# libfdt files, only selected if needed.
+#
+
+config OID_REGISTRY
+	tristate
+	help
+	  Enable fast lookup object identifier registry.
+
 endmenu

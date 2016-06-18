@@ -1621,7 +1621,7 @@ static void audit_log_exit(struct audit_context *context, struct task_struct *ts
 		  " a0=%lx a1=%lx a2=%lx a3=%lx items=%d"
 		  " ppid=%d pid=%d auid=%u uid=%u gid=%u"
 		  " euid=%u suid=%u fsuid=%u"
-		  " egid=%u sgid=%u fsgid=%u tty=%s ses=%u",
+		  " egid=%u sgid=%u fsgid=%u ses=%u",
 		  context->argv[0],
 		  context->argv[1],
 		  context->argv[2],
@@ -1638,7 +1638,6 @@ static void audit_log_exit(struct audit_context *context, struct task_struct *ts
 		  from_kgid(&init_user_ns, context->egid),
 		  from_kgid(&init_user_ns, context->sgid),
 		  from_kgid(&init_user_ns, context->fsgid),
-		  tty,
 		  tsk->sessionid);
 
 
