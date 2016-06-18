@@ -91,6 +91,9 @@ elif [ "a$GCCVERSION" == "a0502" ]; then
 elif [ "a$GCCVERSION" == "a0503" ]; then
 	cp $KERNELDIR/arch/arm/boot/compressed/Makefile_linaro $KERNELDIR/arch/arm/boot/compressed/Makefile;
 	echo "GCC 5.3.x Compiler Detected, building";
+elif [ "a$GCCVERSION" == "a0504" ]; then
+	cp $KERNELDIR/arch/arm/boot/compressed/Makefile_linaro $KERNELDIR/arch/arm/boot/compressed/Makefile;
+	echo "GCC 5.4.x Compiler Detected, building";
 elif [ "a$GCCVERSION" == "a0600" ]; then
 	cp $KERNELDIR/arch/arm/boot/compressed/Makefile_linaro $KERNELDIR/arch/arm/boot/compressed/Makefile;
 	echo "GCC 6.0.x Compiler Detected, building";
@@ -123,7 +126,7 @@ fi;
 . $KERNELDIR/.config;
 
 # get version from config
-GETVER=`grep 'Siyah-.*-V' .config |sed 's/Siyah-//g' | sed 's/.*".//g' | sed 's/-J.*//g'`;
+GETVER=`grep 'Siyah-.*-V' .config |sed 's/Siyah-//g' | sed 's/.*".//g' | sed 's/-M.*//g'`;
 
 # remove previous zImage files
 if [ -e $KERNELDIR/zImage ]; then
@@ -234,23 +237,25 @@ if [ -e $KERNELDIR/arch/arm/boot/zImage ]; then
 	cp $KERNELDIR/arch/arm/boot/zImage $KERNELDIR/;
 
 	# clean old files ...
-	rm $KERNELDIR/READY-JB/boot/zImage;
-	rm $KERNELDIR/READY-JB/Kernel_*;
+	rm $KERNELDIR/READY/boot/zImage;
+	rm $KERNELDIR/READY/Kernel_*;
 
 	# copy all needed to ready kernel folder
-	cp $KERNELDIR/.config $KERNELDIR/READY-JB/;
+	cp $KERNELDIR/.config $KERNELDIR/READY/;
 #	echo "Kernel size after payload merge!";
 	stat $KERNELDIR/zImage || exit 1;
-	cp $KERNELDIR/zImage /$KERNELDIR/READY-JB/boot/;
+	cp $KERNELDIR/zImage /$KERNELDIR/READY/boot/;
 
 	# create zip-file for kernel
 	# kernel zip name is based on toolchain used, modify to however you like
 	if [ "a$GCCVERSION" == "a0409" ]; then
-		cd $KERNELDIR/READY-JB/ && zip -r Kernel_${GETVER}-`date +"[%H-%M]-[%d-%m]-MM-SGII-GSSTUDIOS-LINARO-4.9-TRIM"`.zip .;
+		cd $KERNELDIR/READY/ && zip -r Kernel_${GETVER}-`date +"[%H-%M]-[%d-%m]-MM-LP-SGII-GSSTUDIOS-LINARO-4.9-TRIM"`.zip .;
+	elif [ "a$GCCVERSION" == "a0504" ]; then
+		cd $KERNELDIR/READY/ && zip -r Kernel_${GETVER}-`date +"[%H-%M]-[%d-%m]-MM-LP-SGII-GSSTUDIOS-UBER-5.4-TRIM"`.zip .;
 	elif [ "a$GCCVERSION" == "a0601" ]; then
-		cd $KERNELDIR/READY-JB/ && zip -r Kernel_${GETVER}-`date +"[%H-%M]-[%d-%m]-MM-SGII-GSSTUDIOS-UBER-6.1-TRIM"`.zip .;
+		cd $KERNELDIR/READY/ && zip -r Kernel_${GETVER}-`date +"[%H-%M]-[%d-%m]-MM-LP-SGII-GSSTUDIOS-UBER-6.1-TRIM"`.zip .;
 	else
-		cd $KERNELDIR/READY-JB/ && zip -r Kernel_${GETVER}-`date +"[%H-%M]-[%d-%m]-MM-SGII-GSSTUDIOS-TRIM"`.zip .;
+		cd $KERNELDIR/READY/ && zip -r Kernel_${GETVER}-`date +"[%H-%M]-[%d-%m]-MM-LP-SGII-GSSTUDIOS-TRIM"`.zip .;
 	fi;
 
 	# push to android
@@ -258,7 +263,7 @@ if [ -e $KERNELDIR/arch/arm/boot/zImage ]; then
 #	if [ "$ADB_STATUS" == "device" ]; then
 #		read -t 3 -p "push kernel to android, 3sec timeout (y/n)?";
 #		if [ "$REPLY" == "y" ]; then
-#			adb push $KERNELDIR/READY-JB/Kernel_*JB*.zip /sdcard/;
+#			adb push $KERNELDIR/READY/Kernel_*JB*.zip /sdcard/;
 #			read -t 3 -p "reboot to recovery, 3sec timeout (y/n)?";
 #			if [ "$REPLY" == "y" ]; then
 #				adb reboot recovery;

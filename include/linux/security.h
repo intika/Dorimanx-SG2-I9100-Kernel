@@ -1506,7 +1506,7 @@ struct security_operations {
 	int (*inode_alloc_security) (struct inode *inode);
 	void (*inode_free_security) (struct inode *inode);
 	int (*inode_init_security) (struct inode *inode, struct inode *dir,
-				    const struct qstr *qstr, char **name,
+				    const struct qstr *qstr, const char **name,
 				    void **value, size_t *len);
 	int (*inode_create) (struct inode *dir,
 			     struct dentry *dentry, umode_t mode);
@@ -1523,7 +1523,7 @@ struct security_operations {
 			     struct inode *new_dir, struct dentry *new_dentry);
 	int (*inode_readlink) (struct dentry *dentry);
 	int (*inode_follow_link) (struct dentry *dentry, struct nameidata *nd);
-	int (*inode_permission) (struct inode *inode, int mask, unsigned flags);
+	int (*inode_permission) (struct inode *inode, int mask);
 	int (*inode_setattr)	(struct dentry *dentry, struct iattr *attr);
 	int (*inode_getattr) (struct vfsmount *mnt, struct dentry *dentry);
 	int (*inode_setxattr) (struct dentry *dentry, const char *name,
@@ -1790,7 +1790,7 @@ int security_inode_init_security(struct inode *inode, struct inode *dir,
 				 const struct qstr *qstr,
 				 initxattrs initxattrs, void *fs_data);
 int security_old_inode_init_security(struct inode *inode, struct inode *dir,
-				     const struct qstr *qstr, char **name,
+				     const struct qstr *qstr, const char **name,
 				     void **value, size_t *len);
 int security_inode_create(struct inode *dir, struct dentry *dentry, umode_t mode);
 int security_inode_link(struct dentry *old_dentry, struct inode *dir,
@@ -2131,8 +2131,8 @@ static inline int security_inode_init_security(struct inode *inode,
 static inline int security_old_inode_init_security(struct inode *inode,
 						   struct inode *dir,
 						   const struct qstr *qstr,
-						   char **name, void **value,
-						   size_t *len)
+						   const char **name,
+						   void **value, size_t *len)
 {
 	return -EOPNOTSUPP;
 }
@@ -2682,11 +2682,8 @@ int security_tun_dev_alloc_security(void **security);
 void security_tun_dev_free_security(void *security);
 int security_tun_dev_create(void);
 int security_tun_dev_attach_queue(void *security);
-int security_tun_dev_attach(struct sock *sk);
+int security_tun_dev_attach(struct sock *sk, void *security);
 int security_tun_dev_open(void *security);
-
-void security_skb_owned_by(struct sk_buff *skb, struct sock *sk);
-void security_tun_dev_post_create(struct sock *sk);
 
 #else	/* CONFIG_SECURITY_NETWORK */
 static inline int security_unix_stream_connect(struct sock *sock,
@@ -2870,7 +2867,7 @@ static inline int security_tun_dev_attach_queue(void *security)
 	return 0;
 }
 
-static inline int security_tun_dev_attach(struct sock *sk)
+static inline int security_tun_dev_attach(struct sock *sk, void *security)
 {
 	return 0;
 }
@@ -2878,14 +2875,6 @@ static inline int security_tun_dev_attach(struct sock *sk)
 static inline int security_tun_dev_open(void *security)
 {
 	return 0;
-}
-
-static inline void security_skb_owned_by(struct sk_buff *skb, struct sock *sk)
-{
-}
-
-static inline void security_tun_dev_post_create(struct sock *sk)
-{
 }
 
 #endif	/* CONFIG_SECURITY_NETWORK */
