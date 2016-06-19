@@ -90,7 +90,7 @@ static int cap_sb_pivotroot(struct path *old_path, struct path *new_path)
 	return 0;
 }
 
-  static int cap_sb_set_mnt_opts(struct super_block *sb,
+static int cap_sb_set_mnt_opts(struct super_block *sb,
 			       struct security_mnt_opts *opts,
 			       unsigned long kern_flags,
 			       unsigned long *set_kern_flags)
@@ -1080,7 +1080,7 @@ void __init security_fixup_ops(struct security_operations *ops)
 	set_to_cap_if_null(ops, secmark_refcount_inc);
 	set_to_cap_if_null(ops, secmark_refcount_dec);
 	set_to_cap_if_null(ops, req_classify_flow);
- 	set_to_cap_if_null(ops, tun_dev_alloc_security);
+	set_to_cap_if_null(ops, tun_dev_alloc_security);
 	set_to_cap_if_null(ops, tun_dev_free_security);
 	set_to_cap_if_null(ops, tun_dev_create);
 	set_to_cap_if_null(ops, tun_dev_open);
