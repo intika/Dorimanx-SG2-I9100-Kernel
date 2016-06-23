@@ -1518,9 +1518,9 @@ __ip_vs_dev_reset(struct ip_vs_dest *dest, struct net_device *dev)
  * a device that is "unregister" it must be released.
  */
 static int ip_vs_dst_event(struct notifier_block *this, unsigned long event,
-			   void *ptr)
+			    void *ptr)
 {
-	struct net_device *dev = netdev_notifier_info_to_dev(ptr);
+	struct net_device *dev = ptr;
 	struct net *net = dev_net(dev);
 	struct netns_ipvs *ipvs = net_ipvs(net);
 	struct ip_vs_service *svc;
