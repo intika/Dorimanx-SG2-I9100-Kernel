@@ -119,7 +119,7 @@ static unsigned int ipv4_helper(const struct nf_hook_ops *ops,
 	ret = helper->help(skb, skb_network_offset(skb) + ip_hdrlen(skb),
 			   ct, ctinfo);
 	if (ret != NF_ACCEPT && (ret & NF_VERDICT_MASK) != NF_QUEUE) {
-		nf_log_packet(NFPROTO_IPV4, hooknum, skb, in, out, NULL,
+		nf_log_packet(NFPROTO_IPV4, ops->hooknum, skb, in, out, NULL,
 			      "nf_ct_%s: dropping packet", helper->name);
 	}
 	return ret;

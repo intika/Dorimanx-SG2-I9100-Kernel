@@ -131,7 +131,7 @@ static unsigned int ipv6_helper(const struct nf_hook_ops *ops,
 
 	ret = helper->help(skb, protoff, ct, ctinfo);
 	if (ret != NF_ACCEPT && (ret & NF_VERDICT_MASK) != NF_QUEUE) {
-		nf_log_packet(NFPROTO_IPV6, hooknum, skb, in, out, NULL,
+		nf_log_packet(NFPROTO_IPV6, ops->hooknum, skb, in, out, NULL,
 			      "nf_ct_%s: dropping packet", helper->name);
 	}
 	return ret;
