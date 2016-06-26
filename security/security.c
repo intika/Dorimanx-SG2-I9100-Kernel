@@ -12,6 +12,7 @@
  */
 
 #include <linux/capability.h>
+#include <linux/dcache.h>
 #include <linux/module.h>
 #include <linux/init.h>
 #include <linux/kernel.h>
@@ -139,17 +140,20 @@ int security_binder_set_context_mgr(struct task_struct *mgr)
 	return security_ops->binder_set_context_mgr(mgr);
 }
 
-int security_binder_transaction(struct task_struct *from, struct task_struct *to)
+int security_binder_transaction(struct task_struct *from,
+				struct task_struct *to)
 {
 	return security_ops->binder_transaction(from, to);
 }
 
-int security_binder_transfer_binder(struct task_struct *from, struct task_struct *to)
+int security_binder_transfer_binder(struct task_struct *from,
+				    struct task_struct *to)
 {
 	return security_ops->binder_transfer_binder(from, to);
 }
 
-int security_binder_transfer_file(struct task_struct *from, struct task_struct *to, struct file *file)
+int security_binder_transfer_file(struct task_struct *from,
+				  struct task_struct *to, struct file *file)
 {
 	return security_ops->binder_transfer_file(from, to, file);
 }
@@ -347,6 +351,15 @@ void security_inode_free(struct inode *inode)
 	security_ops->inode_free_security(inode);
 }
 
+int security_dentry_init_security(struct dentry *dentry, int mode,
+					struct qstr *name, void **ctx,
+					u32 *ctxlen)
+{
+	return security_ops->dentry_init_security(dentry, mode, name,
+							ctx, ctxlen);
+}
+EXPORT_SYMBOL(security_dentry_init_security);
+
 int security_inode_init_security(struct inode *inode, struct inode *dir,
 				 const struct qstr *qstr,
 				 const initxattrs initxattrs, void *fs_data)
@@ -376,9 +389,8 @@ int security_inode_init_security(struct inode *inode, struct inode *dir,
 		goto out;
 	ret = initxattrs(inode, new_xattrs, fs_data);
 out:
-	for (xattr = new_xattrs; xattr->value != NULL; xattr++) {
+	for (xattr = new_xattrs; xattr->value != NULL; xattr++)
 		kfree(xattr->value);
-	}
 	return (ret == -EOPNOTSUPP) ? 0 : ret;
 }
 EXPORT_SYMBOL(security_inode_init_security);
@@ -687,6 +699,7 @@ int security_inode_listsecurity(struct inode *inode, char *buffer, size_t buffer
 		return 0;
 	return security_ops->inode_listsecurity(inode, buffer, buffer_size);
 }
+EXPORT_SYMBOL(security_inode_listsecurity);
 
 void security_inode_getsecid(const struct inode *inode, u32 *secid)
 {
@@ -1087,6 +1100,12 @@ int security_netlink_send(struct sock *sk, struct sk_buff *skb)
 	return security_ops->netlink_send(sk, skb);
 }
 
+int security_ismaclabel(const char *name)
+{
+	return security_ops->ismaclabel(name);
+}
+EXPORT_SYMBOL(security_ismaclabel);
+
 int security_secid_to_secctx(u32 secid, char **secdata, u32 *seclen)
 {
 	return security_ops->secid_to_secctx(secid, secdata, seclen);
@@ -1429,7 +1448,7 @@ void security_key_free(struct key *key)
 }
 
 int security_key_permission(key_ref_t key_ref,
-			    const struct cred *cred, key_perm_t perm)
+			    const struct cred *cred, unsigned perm)
 {
 	return security_ops->key_permission(key_ref, cred, perm);
 }
