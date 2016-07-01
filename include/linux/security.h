@@ -1002,29 +1002,17 @@ static inline void security_free_mnt_opts(struct security_mnt_opts *opts)
  *	tells the LSM to decrement the number of secmark labeling rules loaded
  * @req_classify_flow:
  *	Sets the flow's sid to the openreq sid.
- * @tun_dev_alloc_security:
- *	This hook allows a module to allocate a security structure for a TUN
- *	device.
- *	@security pointer to a security structure pointer.
- *	Returns a zero on success, negative values on failure.
- * @tun_dev_free_security:
- *	This hook allows a module to free the security structure for a TUN
- *	device.
- *	@security pointer to the TUN device's security structure
  * @tun_dev_create:
  *	Check permissions prior to creating a new TUN device.
- * @tun_dev_attach_queue:
- *	Check permissions prior to attaching to a TUN device queue.
- *	@security pointer to the TUN device's security structure.
+ * @tun_dev_post_create:
+ *	This hook allows a module to update or allocate a per-socket security
+ *	structure.
+ *	@sk contains the newly created sock structure.
  * @tun_dev_attach:
- *	This hook can be used by the module to update any security state
+ *	Check permissions prior to attaching to a persistent TUN device.  This
+ *	hook can also be used by the module to update any security state
  *	associated with the TUN device's sock structure.
  *	@sk contains the existing sock structure.
- *	@security pointer to the TUN device's security structure.
- * @tun_dev_open:
- *	This hook can be used by the module to update any security state
- *	associated with the TUN device's security structure.
- *	@security pointer to the TUN devices's security structure.
  * @skb_owned_by:
  *	This hook sets the packet's owning sock.
  *	@skb is the packet.
@@ -1700,12 +1688,9 @@ struct security_operations {
 	void (*secmark_refcount_inc) (void);
 	void (*secmark_refcount_dec) (void);
 	void (*req_classify_flow) (const struct request_sock *req, struct flowi *fl);
-	int (*tun_dev_alloc_security) (void **security);
-	void (*tun_dev_free_security) (void *security);
-	int (*tun_dev_create) (void);
-	int (*tun_dev_attach_queue) (void *security);
-	int (*tun_dev_attach) (struct sock *sk, void *security);
-	int (*tun_dev_open) (void *security);
+	int (*tun_dev_create)(void);
+	void (*tun_dev_post_create)(struct sock *sk);
+	int (*tun_dev_attach)(struct sock *sk);
 	void (*skb_owned_by) (struct sk_buff *skb, struct sock *sk);
 #endif	/* CONFIG_SECURITY_NETWORK */
 
@@ -2707,12 +2692,11 @@ void security_inet_conn_established(struct sock *sk,
 int security_secmark_relabel_packet(u32 secid);
 void security_secmark_refcount_inc(void);
 void security_secmark_refcount_dec(void);
-int security_tun_dev_alloc_security(void **security);
-void security_tun_dev_free_security(void *security);
 int security_tun_dev_create(void);
-int security_tun_dev_attach_queue(void *security);
-int security_tun_dev_attach(struct sock *sk, void *security);
-int security_tun_dev_open(void *security);
+void security_tun_dev_post_create(struct sock *sk);
+int security_tun_dev_attach(struct sock *sk);
+
+void security_skb_owned_by(struct sk_buff *skb, struct sock *sk);
 
 #else	/* CONFIG_SECURITY_NETWORK */
 static inline int security_unix_stream_connect(struct sock *sock,
@@ -2877,33 +2861,22 @@ static inline void security_secmark_refcount_dec(void)
 {
 }
 
-static inline int security_tun_dev_alloc_security(void **security)
-{
-	return 0;
-}
-
-static inline void security_tun_dev_free_security(void *security)
-{
-}
-
 static inline int security_tun_dev_create(void)
 {
 	return 0;
 }
 
-static inline int security_tun_dev_attach_queue(void *security)
+static inline void security_tun_dev_post_create(struct sock *sk)
+{
+}
+
+static inline int security_tun_dev_attach(struct sock *sk)
 {
 	return 0;
 }
 
-static inline int security_tun_dev_attach(struct sock *sk, void *security)
+static inline void security_skb_owned_by(struct sk_buff *skb, struct sock *sk)
 {
-	return 0;
-}
-
-static inline int security_tun_dev_open(void *security)
-{
-	return 0;
 }
 
 #endif	/* CONFIG_SECURITY_NETWORK */

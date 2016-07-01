@@ -1313,41 +1313,23 @@ void security_secmark_refcount_dec(void)
 }
 EXPORT_SYMBOL(security_secmark_refcount_dec);
 
-int security_tun_dev_alloc_security(void **security)
-{
-	return security_ops->tun_dev_alloc_security(security);
-}
-EXPORT_SYMBOL(security_tun_dev_alloc_security);
-
-void security_tun_dev_free_security(void *security)
-{
-	security_ops->tun_dev_free_security(security);
-}
-EXPORT_SYMBOL(security_tun_dev_free_security);
-
 int security_tun_dev_create(void)
 {
 	return security_ops->tun_dev_create();
 }
 EXPORT_SYMBOL(security_tun_dev_create);
 
-int security_tun_dev_attach_queue(void *security)
+void security_tun_dev_post_create(struct sock *sk)
 {
-	return security_ops->tun_dev_attach_queue(security);
+	return security_ops->tun_dev_post_create(sk);
 }
-EXPORT_SYMBOL(security_tun_dev_attach_queue);
+EXPORT_SYMBOL(security_tun_dev_post_create);
 
-int security_tun_dev_attach(struct sock *sk, void *security)
+int security_tun_dev_attach(struct sock *sk)
 {
-	return security_ops->tun_dev_attach(sk, security);
+	return security_ops->tun_dev_attach(sk);
 }
 EXPORT_SYMBOL(security_tun_dev_attach);
-
-int security_tun_dev_open(void *security)
-{
-	return security_ops->tun_dev_open(security);
-}
-EXPORT_SYMBOL(security_tun_dev_open);
 
 void security_skb_owned_by(struct sk_buff *skb, struct sock *sk)
 {

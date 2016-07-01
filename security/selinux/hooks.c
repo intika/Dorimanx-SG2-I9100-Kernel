@@ -4676,24 +4676,6 @@ static void selinux_req_classify_flow(const struct request_sock *req,
 	fl->flowi_secid = req->secid;
 }
 
-static int selinux_tun_dev_alloc_security(void **security)
-{
-	struct tun_security_struct *tunsec;
-
-	tunsec = kzalloc(sizeof(*tunsec), GFP_KERNEL);
-	if (!tunsec)
-		return -ENOMEM;
-	tunsec->sid = current_sid();
-
-	*security = tunsec;
-	return 0;
-}
-
-static void selinux_tun_dev_free_security(void *security)
-{
-	kfree(security);
-}
-
 static int selinux_tun_dev_create(void)
 {
 	u32 sid = current_sid();
@@ -4709,17 +4691,8 @@ static int selinux_tun_dev_create(void)
 			    NULL);
 }
 
-static int selinux_tun_dev_attach_queue(void *security)
+static void selinux_tun_dev_post_create(struct sock *sk)
 {
-	struct tun_security_struct *tunsec = security;
-
-	return avc_has_perm(current_sid(), tunsec->sid, SECCLASS_TUN_SOCKET,
-			    TUN_SOCKET__ATTACH_QUEUE, NULL);
-}
-
-static int selinux_tun_dev_attach(struct sock *sk, void *security)
-{
-	struct tun_security_struct *tunsec = security;
 	struct sk_security_struct *sksec = sk->sk_security;
 
 	/* we don't currently perform any NetLabel based labeling here and it
@@ -4729,19 +4702,20 @@ static int selinux_tun_dev_attach(struct sock *sk, void *security)
 	 * cause confusion to the TUN user that had no idea network labeling
 	 * protocols were being used */
 
-	sksec->sid = tunsec->sid;
-	sksec->sclass = SECCLASS_TUN_SOCKET;
+	/* see the comments in selinux_tun_dev_create() about why we don't use
+	 * the sockcreate SID here */
 
-	return 0;
+	sksec->sid = current_sid();
+	sksec->sclass = SECCLASS_TUN_SOCKET;
 }
 
-static int selinux_tun_dev_open(void *security)
+static int selinux_tun_dev_attach(struct sock *sk)
 {
-	struct tun_security_struct *tunsec = security;
+	struct sk_security_struct *sksec = sk->sk_security;
 	u32 sid = current_sid();
 	int err;
 
-	err = avc_has_perm(sid, tunsec->sid, SECCLASS_TUN_SOCKET,
+	err = avc_has_perm(sid, sksec->sid, SECCLASS_TUN_SOCKET,
 			   TUN_SOCKET__RELABELFROM, NULL);
 	if (err)
 		return err;
@@ -4749,7 +4723,8 @@ static int selinux_tun_dev_open(void *security)
 			   TUN_SOCKET__RELABELTO, NULL);
 	if (err)
 		return err;
-	tunsec->sid = sid;
+
+	sksec->sid = sid;
 
 	return 0;
 }
@@ -6023,12 +5998,9 @@ static struct security_operations selinux_ops = {
 	.secmark_refcount_inc =		selinux_secmark_refcount_inc,
 	.secmark_refcount_dec =		selinux_secmark_refcount_dec,
 	.req_classify_flow =		selinux_req_classify_flow,
-	.tun_dev_alloc_security =	selinux_tun_dev_alloc_security,
-	.tun_dev_free_security =	selinux_tun_dev_free_security,
 	.tun_dev_create =		selinux_tun_dev_create,
-	.tun_dev_attach_queue =		selinux_tun_dev_attach_queue,
+	.tun_dev_post_create = 		selinux_tun_dev_post_create,
 	.tun_dev_attach =		selinux_tun_dev_attach,
-	.tun_dev_open =			selinux_tun_dev_open,
 	.skb_owned_by =			selinux_skb_owned_by,
 
 #ifdef CONFIG_SECURITY_NETWORK_XFRM
