@@ -1137,54 +1137,6 @@ inline int avc_has_perm_noaudit(u32 ssid, u32 tsid,
 }
 
 /**
- * avc_has_perm_noaudit - Check permissions but perform no auditing.
- * @ssid: source security identifier
- * @tsid: target security identifier
- * @tclass: target security class
- * @requested: requested permissions, interpreted based on @tclass
- * @flags:  AVC_STRICT or 0
- * @avd: access vector decisions
- *
- * Check the AVC to determine whether the @requested permissions are granted
- * for the SID pair (@ssid, @tsid), interpreting the permissions
- * based on @tclass, and call the security server on a cache miss to obtain
- * a new decision and add it to the cache.  Return a copy of the decisions
- * in @avd.  Return %0 if all @requested permissions are granted,
- * -%EACCES if any permissions are denied, or another -errno upon
- * other errors.  This function is typically called by avc_has_perm(),
- * but may also be called directly to separate permission checking from
- * auditing, e.g. in cases where a lock must be held for the check but
- * should be released for the auditing.
- */
-inline int avc_has_perm_noaudit(u32 ssid, u32 tsid,
-			 u16 tclass, u32 requested,
-			 unsigned flags,
-			 struct av_decision *avd)
-{
-	struct avc_node *node;
-	struct avc_xperms_node xp_node;
-	int rc = 0;
-	u32 denied;
-
-	BUG_ON(!requested);
-
-	rcu_read_lock();
-
-	node = avc_lookup(ssid, tsid, tclass);
-	if (unlikely(!node))
-		node = avc_compute_av(ssid, tsid, tclass, avd, &xp_node);
-	else
-		memcpy(avd, &node->ae.avd, sizeof(*avd));
-
-	denied = requested & ~(avd->allowed);
-	if (unlikely(denied))
-		rc = avc_denied(ssid, tsid, tclass, requested, 0, 0, flags, avd);
-
-	rcu_read_unlock();
-	return rc;
-}
-
-/**
  * avc_has_perm - Check permissions and perform any appropriate auditing.
  * @ssid: source security identifier
  * @tsid: target security identifier
