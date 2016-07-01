@@ -126,7 +126,7 @@ fi;
 . $KERNELDIR/.config;
 
 # get version from config
-GETVER=`grep 'Siyah-.*-V' .config |sed 's/Siyah-//g' | sed 's/.*".//g' | sed 's/-M.*//g'`;
+GETVER=`grep 'Siyah-.*-V' .config |sed 's/Siyah-//g' | sed 's/.*".//g' | sed 's/-L.*//g'`;
 
 # remove previous zImage files
 if [ -e $KERNELDIR/zImage ]; then
@@ -249,13 +249,13 @@ if [ -e $KERNELDIR/arch/arm/boot/zImage ]; then
 	# create zip-file for kernel
 	# kernel zip name is based on toolchain used, modify to however you like
 	if [ "a$GCCVERSION" == "a0409" ]; then
-		cd $KERNELDIR/READY/ && zip -r Kernel_${GETVER}-`date +"[%H-%M]-[%d-%m]-MM-LP-SGII-GSSTUDIOS-LINARO-4.9-TRIM"`.zip .;
+		cd $KERNELDIR/READY/ && zip -r Kernel_${GETVER}-`date +"[%H-%M]-[%d-%m]-LP-SGII-GSSTUDIOS-LINARO-4.9-TRIM"`.zip .;
 	elif [ "a$GCCVERSION" == "a0504" ]; then
-		cd $KERNELDIR/READY/ && zip -r Kernel_${GETVER}-`date +"[%H-%M]-[%d-%m]-MM-LP-SGII-GSSTUDIOS-UBER-5.4-TRIM"`.zip .;
+		cd $KERNELDIR/READY/ && zip -r Kernel_${GETVER}-`date +"[%H-%M]-[%d-%m]-LP-SGII-GSSTUDIOS-UBER-5.4-TRIM"`.zip .;
 	elif [ "a$GCCVERSION" == "a0601" ]; then
-		cd $KERNELDIR/READY/ && zip -r Kernel_${GETVER}-`date +"[%H-%M]-[%d-%m]-MM-LP-SGII-GSSTUDIOS-UBER-6.1-TRIM"`.zip .;
+		cd $KERNELDIR/READY/ && zip -r Kernel_${GETVER}-`date +"[%H-%M]-[%d-%m]-LP-SGII-GSSTUDIOS-UBER-6.1-TRIM"`.zip .;
 	else
-		cd $KERNELDIR/READY/ && zip -r Kernel_${GETVER}-`date +"[%H-%M]-[%d-%m]-MM-LP-SGII-GSSTUDIOS-TRIM"`.zip .;
+		cd $KERNELDIR/READY/ && zip -r Kernel_${GETVER}-`date +"[%H-%M]-[%d-%m]-LP-SGII-GSSTUDIOS-TRIM"`.zip .;
 	fi;
 
 	# push to android
@@ -263,7 +263,7 @@ if [ -e $KERNELDIR/arch/arm/boot/zImage ]; then
 #	if [ "$ADB_STATUS" == "device" ]; then
 #		read -t 3 -p "push kernel to android, 3sec timeout (y/n)?";
 #		if [ "$REPLY" == "y" ]; then
-#			adb push $KERNELDIR/READY/Kernel_*MM-LP*.zip /sdcard/;
+#			adb push $KERNELDIR/READY/Kernel_*LP*.zip /sdcard/;
 #			read -t 3 -p "reboot to recovery, 3sec timeout (y/n)?";
 #			if [ "$REPLY" == "y" ]; then
 #				adb reboot recovery;
