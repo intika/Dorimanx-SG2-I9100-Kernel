@@ -162,7 +162,7 @@ cp -dxPR $INITRAMFS_SOURCE $INITRAMFS_TMP;
 echo "0" > $TMPFILE;
 #if [ "$REPLY" == "y" ]; then
 	(
-		./mod_logo_build.sh;
+		./kernel_logo_mm.sh;
 	)&
 #else
 #	echo "1" > $TMPFILE;
