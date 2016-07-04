@@ -10,7 +10,6 @@
 #include <linux/wireless.h>
 #include <linux/netdevice.h>
 #include <linux/etherdevice.h>
-#include <linux/export.h>
 #include <net/iw_handler.h>
 #include <net/arp.h>
 #include <net/wext.h>
@@ -203,7 +202,7 @@ void wireless_spy_update(struct net_device *	dev,
 
 	/* Update all records that match */
 	for (i = 0; i < spydata->spy_number; i++)
-		if (ether_addr_equal(address, spydata->spy_address[i])) {
+		if (!compare_ether_addr(address, spydata->spy_address[i])) {
 			memcpy(&(spydata->spy_stat[i]), wstats,
 			       sizeof(struct iw_quality));
 			match = i;
