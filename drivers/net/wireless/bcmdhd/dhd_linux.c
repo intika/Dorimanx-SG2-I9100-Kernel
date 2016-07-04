@@ -6178,7 +6178,7 @@ int dhd_os_wake_lock_timeout(dhd_pub_t *pub)
 			wake_lock_timeout(dhd->wl_rxwake,
 				msecs_to_jiffies(dhd->wakelock_rx_timeout_enable)/4);
 		if (dhd->wakelock_ctrl_timeout_enable)
-			wake_lock_timeout(dhd->wl_ctrlwake,
+			wake_lock_timeout(&dhd->wl_ctrlwake,
 				msecs_to_jiffies(dhd->wakelock_ctrl_timeout_enable)/4);
 #endif
 		dhd->wakelock_rx_timeout_enable = 0;
