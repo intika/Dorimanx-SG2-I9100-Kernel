@@ -32,7 +32,7 @@ export INITRAMFS_TMP=/tmp/initramfs_source;
 # kernel
 export ARCH=arm;
 export USE_SEC_FIPS_MODE=true;
-export KERNEL_CONFIG=dorimanx_marshmallow_defconfig;
+export KERNEL_CONFIG=dorimanx_defconfig;
 
 # build script
 export USER=`whoami`;
@@ -162,7 +162,7 @@ cp -dxPR $INITRAMFS_SOURCE $INITRAMFS_TMP;
 echo "0" > $TMPFILE;
 #if [ "$REPLY" == "y" ]; then
 	(
-		./kernel_logo_mm.sh;
+		./kernel_logo.sh;
 	)&
 #else
 #	echo "1" > $TMPFILE;
