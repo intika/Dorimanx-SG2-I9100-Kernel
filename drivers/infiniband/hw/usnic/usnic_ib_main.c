@@ -218,7 +218,7 @@ static int usnic_ib_netdevice_event(struct notifier_block *notifier,
 {
 	struct usnic_ib_dev *us_ibdev;
 
-	struct net_device *netdev = netdev_notifier_info_to_dev(ptr);
+	struct net_device *netdev = ptr;
 
 	mutex_lock(&usnic_ib_ibdev_list_lock);
 	list_for_each_entry(us_ibdev, &usnic_ib_ibdev_list, ib_dev_link) {
