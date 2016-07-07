@@ -102,7 +102,7 @@ static int hsr_netdev_notify(struct notifier_block *nb, unsigned long event,
 	int res;
 	struct net_device *dev;
 
-	dev = netdev_notifier_info_to_dev(ptr);
+	dev = ptr;
 
 	hsr_priv = get_hsr_master(dev);
 	if (hsr_priv) {

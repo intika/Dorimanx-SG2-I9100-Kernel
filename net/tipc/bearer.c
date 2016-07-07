@@ -565,7 +565,7 @@ static int tipc_l2_device_event(struct notifier_block *nb, unsigned long evt,
 				void *ptr)
 {
 	struct tipc_bearer *b_ptr;
-	struct net_device *dev = netdev_notifier_info_to_dev(ptr);
+	struct net_device *dev = ptr;
 
 	if (!net_eq(dev_net(dev), &init_net))
 		return NOTIFY_DONE;

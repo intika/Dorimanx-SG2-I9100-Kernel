@@ -2213,7 +2213,7 @@ static void efx_update_name(struct efx_nic *efx)
 static int efx_netdev_event(struct notifier_block *this,
 			    unsigned long event, void *ptr)
 {
-	struct net_device *net_dev = netdev_notifier_info_to_dev(ptr);
+	struct net_device *net_dev = ptr;
 
 	if ((net_dev->netdev_ops == &efx_farch_netdev_ops ||
 	     net_dev->netdev_ops == &efx_ef10_netdev_ops) &&
