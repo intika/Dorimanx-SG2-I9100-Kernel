@@ -86,4 +86,3 @@ struct tipc_media ib_media_info = {
 	.hwaddr_len	= INFINIBAND_ALEN,
 	.name		= "ib"
 };
-

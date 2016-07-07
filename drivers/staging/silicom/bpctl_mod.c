@@ -152,7 +152,7 @@ static int bp_get_dev_idx_bsf(struct net_device *dev, int *index)
 static int bp_device_event(struct notifier_block *unused,
 			   unsigned long event, void *ptr)
 {
-	struct net_device *dev = netdev_notifier_info_to_dev(ptr);
+	struct net_device *dev = ptr;
 	static struct bpctl_dev *pbpctl_dev, *pbpctl_dev_m;
 	int dev_num = 0, ret = 0, ret_d = 0, time_left = 0;
 
