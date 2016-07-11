@@ -6897,6 +6897,7 @@ static struct cfg80211_ops wl_cfg80211_ops = {
 	.mgmt_tx = wl_cfg80211_mgmt_tx,
 	.mgmt_frame_register = wl_cfg80211_mgmt_frame_register,
 	.change_bss = wl_cfg80211_change_bss,
+	.set_channel = wl_cfg80211_set_channel,
 	.set_beacon = wl_cfg80211_add_set_beacon,
 	.add_beacon = wl_cfg80211_add_set_beacon,
 #ifdef WL_SCHED_SCAN
