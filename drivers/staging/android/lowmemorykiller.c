@@ -93,15 +93,18 @@ static unsigned long lowmem_deathpending_timeout;
 
 static bool avoid_to_kill(uid_t uid)
 {
-	/* uid info
+	/* 
+	 * uid info
 	 * uid == 0 > root
 	 * uid == 1001 > radio
 	 * uid == 1002 > bluetooth
 	 * uid == 1010 > wifi
+	 * uid == 1013 > media
 	 * uid == 1014 > dhcp
+	 * uid == 1021 > gps
 	 */
-	if (uid == 0 || uid == 1001 || uid == 1002 || uid == 1010 ||
-				uid == 1014) {
+	if (uid == 1001 || uid == 1002 || uid == 1010
+			|| uid == 1014 || uid == 1021) {
 		return 1;
 	}
 	return 0;
