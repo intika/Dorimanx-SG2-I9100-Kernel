@@ -133,7 +133,7 @@
 .\" ========================================================================
 .\"
 .IX Title "GCC 1"
-.TH GCC 1 "2016-06-01" "gcc-4.9.4" "GNU"
+.TH GCC 1 "2016-07-12" "gcc-4.9.4" "GNU"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
@@ -942,7 +942,7 @@ See \s-1RS/6000\s0 and PowerPC Options.
 \&\-mpointers\-to\-nested\-functions \-mno\-pointers\-to\-nested\-functions 
 \&\-msave\-toc\-indirect \-mno\-save\-toc\-indirect 
 \&\-mpower8\-fusion \-mno\-mpower8\-fusion \-mpower8\-vector \-mno\-power8\-vector 
-\&\-mcrypto \-mno\-crypto \-mdirect\-move \-mno\-direct\-move 
+\&\-mcrypto \-mno\-crypto \-mhtm \-mno\-htm \-mdirect\-move \-mno\-direct\-move 
 \&\-mquad\-memory \-mno\-quad\-memory 
 \&\-mquad\-memory\-atomic \-mno\-quad\-memory\-atomic 
 \&\-mcompat\-align\-parm \-mno\-compat\-align\-parm\fR
@@ -17884,7 +17884,7 @@ following options:
 \&\-mpopcntb \-mpopcntd  \-mpowerpc64 
 \&\-mpowerpc\-gpopt  \-mpowerpc\-gfxopt  \-msingle\-float \-mdouble\-float 
 \&\-msimple\-fpu \-mstring  \-mmulhw  \-mdlmzb  \-mmfpgpr \-mvsx 
-\&\-mcrypto \-mdirect\-move \-mpower8\-fusion \-mpower8\-vector 
+\&\-mcrypto \-mdirect\-move \-mhtm \-mpower8\-fusion \-mpower8\-vector 
 \&\-mquad\-memory \-mquad\-memory\-atomic\fR
 .Sp
 The particular options set for any particular \s-1CPU\s0 varies between
@@ -18048,6 +18048,15 @@ access to the cryptographic instructions that were added in version
 Generate code that uses (does not use) the instructions to move data
 between the general purpose registers and the vector/scalar (\s-1VSX\s0)
 registers that were added in version 2.07 of the PowerPC \s-1ISA.\s0
+.IP "\fB\-mhtm\fR" 4
+.IX Item "-mhtm"
+.PD 0
+.IP "\fB\-mno\-htm\fR" 4
+.IX Item "-mno-htm"
+.PD
+Enable (disable) the use of the built-in functions that allow direct
+access to the Hardware Transactional Memory (\s-1HTM\s0) instructions that
+were added in version 2.07 of the PowerPC \s-1ISA.\s0
 .IP "\fB\-mpower8\-fusion\fR" 4
 .IX Item "-mpower8-fusion"
 .PD 0
