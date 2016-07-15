@@ -2047,7 +2047,7 @@ int mshci_add_host(struct mshci_host *host)
 	mmc->ops = &mshci_ops;
 	mmc->f_min = 400000;
 	mmc->f_max = host->max_clk;
-#ifdef CONFIG_MACH_U1
+
 	mmc->caps |= MMC_CAP_SDIO_IRQ;
 #else
 	/*
