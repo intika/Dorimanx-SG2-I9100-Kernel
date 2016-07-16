@@ -43,32 +43,6 @@
 #define UP_THRESHOLD_AT_MIN_FREQ		(40)
 #define FREQ_FOR_RESPONSIVENESS			(400000)
 
-static int hotplug_freq[4][2] = {
-	{0, 500000},
-	{200000, 500000},
-	{200000, 500000},
-	{200000, 0}
-};
-#endif
-
-#ifdef CONFIG_CPU_FREQ_GOV_PEGASUSQ_BOOST
-static unsigned int is_boosting = 0;
-static struct hrtimer boost_timer;
-static DEFINE_MUTEX(boost_mutex);
-
-static void finish_boost_do_work(struct work_struct *work) {
-	mutex_lock(&boost_mutex);
-	is_boosting = 0;
-	mutex_unlock(&boost_mutex);
-}
-
-static DECLARE_WORK(finish_boost_work, finish_boost_do_work);
-
-static enum hrtimer_restart end_boost(struct hrtimer *timer) {
-	schedule_work(&finish_boost_work);
-	return HRTIMER_NORESTART;
-}
-#endif
 
 static unsigned int min_sampling_rate;
 
