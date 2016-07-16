@@ -347,13 +347,6 @@ config SUSPEND_TIME
 	  keeps statistics on the time spent in suspend in
 	  /sys/kernel/debug/suspend_time
 
-config SPEEDUP_KEYRESUME
-	bool "Speed up late resume"
-	depends on SUSPEND
-	default y
-	---help---
-	  Speed up system resume
-
 config WQ_POWER_EFFICIENT_DEFAULT
 	bool "Enable workqueue power-efficient mode by default"
 	depends on PM
