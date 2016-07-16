@@ -1,4 +1,4 @@
-                       This is Dorimanx Kernel 13.X/12.X
+                       This is Dorimanx Kernel 12.X
 
 # You can build this kernel easily on BBQLinux (http://www.bbqlinux.org/), an Arch based distro for Android Devs.
 # Install it and simply do these commands:
@@ -163,16 +163,15 @@ source ~/.git-completion.bash
 #!!!!Login to SSH as ROOT user!!!!!!
 #***********************************
 
-# now if you are ROOT, then build, if you are not ROOT, go away.
+# Change to root mode
+sudo -s
+
+# Change to kernel directory
 cd ~/samsung-i9100/Dorimanx-SG2-I9100-Kernel
 
-# Build LP kernel
-bash load_config_lp.sh
-bash build_lp_kernel.sh
-
-# Build MM kernel
-bash load_config_mm.sh
-bash build_mm_kernel.sh
+# Build kernel
+bash load_config.sh
+bash build_kernel.sh
 
 ==================================================================
 My info guide.
