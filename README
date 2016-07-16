@@ -175,7 +175,7 @@ How to cherry pick commits from other branch to yours.
 
 fetch new branch, checkout inside.
 
-git fetch git://github.com/dorimanx/Dorimanx-SG2-I9100-Kernel.git
+git fetch git://github.com/dragonGR/Dorimanx-SG2-I9100-Kernel.git
 git checkout FETCH_HEAD
 
 now git log
@@ -200,103 +200,6 @@ git push
 all done :)
 
 if git am fail to add patch, you can stop and try to fix the commit, that is another story :)
-
-=================================================================
-
-UNIX & Linux Shell Scripting Tutorial
-
-TOC | Introduction | Variables | If/Else | Looping | Cases | Functions | Search & Sort | Advanced | Forum
-
-If/Else
-
-In order for a script to be very useful, you will need to be able to test the conditions of variables. Most programming and scripting languages have some sort of if/else expression and so does the bourne shell. Unlike most other languages, spaces are very important when using an if statement. Let's do a simple script that will ask a user for a password before allowing him to continue. This is obviously not how you would implement such security in a real system, but it will make a good example of using if and else statements.
-
-#!/bin/sh
-# This is some secure program that uses security.
-
-VALID_PASSWORD="secret" #this is our password.
-
-echo "Please enter the password:"
-read PASSWORD
-
-if [ "$PASSWORD" == "$VALID_PASSWORD" ]; then
-	echo "You have access!"
-else
-	echo "ACCESS DENIED!"
-fi
-
-Remember that the spacing is very important in the if statement. Notice that the termination of the if statement is fi. You will need to use the fi statement to terminate an if whether or not use use an else as well. You can also replace the "==" with "!=" to test if the variables are NOT equal. There are other tokens that you can put in place of the "==" for other types of tests. The following table shows the different expressions allowed.
-Comparisons:
--eq	equal to
--ne	not equal to
--lt	less than
--le	less than or equal to
--gt	greater than
--ge	greater than or equal to
-
-File Operations:
--s	file exists and is not empty
--f	file exists and is not a directory
--d	directory exists
--x	file is executable
--w	file is writable
--r	file is readable
-
-Let's try using a couple of these in a script. This next script will ask for a user name, if there is not a file that exists with the name "username_DAT", the script will prompt the user for their age, it will then make sure that they are old enough to use this program and then it will write their age to a file with the name "username_DAT". If the file already exists, it will just display the age of the user.
-
-#!/bin/sh
-
-# Prompt for a user name...
-echo "Please enter your name:"
-read USERNAME
-
-# Check for the file.
-if [ -s ${USERNAME}_DAT ]; then
-        # Read the age from the file.
-        AGE=`cat ${USERNAME}_DAT`
-        echo "You are $AGE years old!"
-else
-        # Ask the user for his/her age
-        echo "How old are you?"
-        read AGE
-
-	if [ "$AGE" -le 2 ]; then
-		echo "You are too young!"
-	else
-		if [ "$AGE" -ge 100 ]; then
-			echo "You are too old!"
-		else
-			# Write the age to a new file.
-			echo $AGE > ${USERNAME}_DAT
-		fi
-	fi
-fi
-
-Run this program a couple of times. First run it and give it the user name of "john". When it asks for an age, enter the age "1". Notice that it will say that you are too you and then exit. Now run the program again with the name "john" and the age 200. This time the script will tell you that you are too old and exit. Now run the the script again with the name of "john", enter the age 30. The script exits normally this time, the program created a file called "john_DAT" which contains the text "30". Finally run the program one more time and give it the name "john". This time it will not prompt you to enter an age, instead it will read the age from a file and say "Your are 30 years old!".
-
-We introduced something else new in this script. On line 10 of the file, we see the code:
-
-	AGE=`cat ${USERNAME}_DAT`
-
-This is how you execute a command and put the text output from the command into a variable. The unix command cat reads the file named ${USERNAME}_DAT and outputs it to the console. Instead of putting it to the console in our script, we wrap the command with the character `, this puts the text into our variable AGE.
-
-You can test multiple expressions at once by using the || (or) operator or the && (and) operator. This can save you from writing extra code to nest if statements. The above code has a nested if statement where it checks if the age is greater than or equal to 100. This could be changed as well by using elif (else if). The structure of elif is the same as the structure of if, we will use it in an example below. In this example, we will check for certain age ranges. If you are less than 20 or greater than 50, you are out of the age range. If you are between 20 and 30 you are in your 20's and so on.
-
-#!/bin/sh
-
-# Prompt for a user name...
-echo "Please enter your age:"
-read AGE
-
-if [ "$AGE" -lt 20 ] || [ "$AGE" -ge 50 ]; then
-	echo "Sorry, you are out of the age range."
-elif [ "$AGE" -ge 20 ] && [ "$AGE" -lt 30 ]; then
-	echo "You are in your 20s"
-elif [ "$AGE" -ge 30 ] && [ "$AGE" -lt 40 ]; then
-	echo "You are in your 30s"
-elif [ "$AGE" -ge 40 ] && [ "$AGE" -lt 50 ]; then
-	echo "You are in your 40s"
-fi
 
 =================================================================
 
