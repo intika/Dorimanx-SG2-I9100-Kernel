@@ -209,6 +209,7 @@ print_cfs_rq(struct seq_file *m, int cpu, struct cfs_rq *cfs_rq);
 /* in tsk->exit_state */
 #define EXIT_ZOMBIE		16
 #define EXIT_DEAD		32
+#define EXIT_TRACE		(EXIT_ZOMBIE | EXIT_DEAD)
 /* in tsk->state again */
 #define TASK_DEAD		64
 #define TASK_WAKEKILL		128
@@ -413,6 +414,9 @@ static inline void arch_pick_mmap_layout(struct mm_struct *mm) {}
 #define SUID_DUMP_ROOT		2	/* Dump as root */
 
 /* mm flags */
+/* dumpable bits */
+#define MMF_DUMPABLE      0  /* core dump is permitted */
+#define MMF_DUMP_SECURELY 1  /* core file is readable only by root */
 
 /* for SUID_DUMP_* above */
 #define MMF_DUMPABLE_BITS 2
@@ -537,7 +541,6 @@ struct task_cputime {
 #else
 #define PREEMPT_DISABLED	PREEMPT_ENABLED
 #endif
-
 /*
  * Disable preemption until the scheduler is running.
  * Reset by start_kernel()->sched_init()->init_idle().
