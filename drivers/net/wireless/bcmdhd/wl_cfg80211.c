@@ -8032,10 +8032,6 @@ wl_notify_sched_scan_results(struct wl_priv *wl, struct net_device *ndev,
 			 * scan request in the form of cfg80211_scan_request. For timebeing, create
 			 * cfg80211_scan_request one out of the received PNO event.
 			 */
-                        ssid[i].ssid_len = MIN(DOT11_MAX_SSID_LEN, netinfo->pfnsubnet.SSID_len);
-  			memcpy(ssid[i].ssid, netinfo->pfnsubnet.SSID, ssid[i].ssid_len);
-  			request->n_ssids++;
-
 			memcpy(ssid[i].ssid, netinfo->pfnsubnet.SSID,
 				netinfo->pfnsubnet.SSID_len);
 			ssid[i].ssid_len = netinfo->pfnsubnet.SSID_len;
