@@ -124,8 +124,6 @@ void update_rq_clock(struct rq *rq)
 		return;
 
 	delta = sched_clock_cpu(cpu_of(rq)) - rq->clock;
-	if (delta < 0)
-		return;
 	rq->clock += delta;
 	update_rq_clock_task(rq, delta);
 }
@@ -436,7 +434,7 @@ void hrtick_start(struct rq *rq, u64 delay)
 	if (rq == this_rq()) {
 		__hrtick_restart(rq);
 	} else if (!rq->hrtick_csd_pending) {
-		__smp_call_function_single(cpu_of(rq), &rq->hrtick_csd, 0);
+		smp_call_function_single_async(cpu_of(rq), &rq->hrtick_csd);
 		rq->hrtick_csd_pending = 1;
 	}
 }
@@ -832,16 +830,11 @@ static void update_rq_clock_task(struct rq *rq, s64 delta)
 #endif
 #ifdef CONFIG_PARAVIRT_TIME_ACCOUNTING
 	if (static_key_false((&paravirt_steal_rq_enabled))) {
-		u64 st;
-
 		steal = paravirt_steal_clock(cpu_of(rq));
 		steal -= rq->prev_steal_time_rq;
 
 		if (unlikely(steal > delta))
 			steal = delta;
-
-		st = steal_ticks(steal);
-		steal = st * TICK_NSEC;
 
 		rq->prev_steal_time_rq += steal;
 		delta -= steal;

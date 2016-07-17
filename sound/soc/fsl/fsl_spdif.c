@@ -524,7 +524,7 @@ static int fsl_spdif_trigger(struct snd_pcm_substream *substream,
 	struct regmap *regmap = spdif_priv->regmap;
 	int is_playack = (substream->stream == SNDRV_PCM_STREAM_PLAYBACK);
 	u32 intr = is_playack ? INTR_FOR_PLAYBACK : INTR_FOR_CAPTURE;
-	u32 dmaen = is_playack ? SCR_DMA_TX_EN : SCR_DMA_RX_EN;;
+	u32 dmaen = is_playack ? SCR_DMA_TX_EN : SCR_DMA_RX_EN;
 
 	switch (cmd) {
 	case SNDRV_PCM_TRIGGER_START:

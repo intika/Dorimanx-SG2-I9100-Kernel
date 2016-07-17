@@ -968,7 +968,7 @@ static void mshci_set_power(struct mshci_host *host, unsigned short power)
 #ifdef CONFIG_MMC_POLLING_WAIT_CMD23
 static void mshci_check_sbc_status(struct mshci_host *host, int intmask)
 {
-	int timeout, int_status;;
+	int timeout, int_status;
 
 	/* wait for command done or error by polling */
 	timeout = 0x100000; /* it is bigger than 1ms */

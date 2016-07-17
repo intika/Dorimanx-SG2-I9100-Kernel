@@ -104,7 +104,7 @@ int rtl8821ae_init_sw_vars(struct ieee80211_hw *hw)
 
 	rtlpriv->dm.b_dm_initialgain_enable = 1;
 	rtlpriv->dm.dm_flag = 0;
-	rtlpriv->dm.b_disable_framebursting = 0;;
+	rtlpriv->dm.b_disable_framebursting = 0;
 	rtlpriv->dm.thermalvalue = 0;
 	rtlpci->transmit_config = CFENDFORM | BIT(15) | BIT(24) | BIT(25);
 

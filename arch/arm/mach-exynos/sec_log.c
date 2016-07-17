@@ -239,7 +239,7 @@ static ssize_t sec_avc_log_write(struct file *file,
 	ret = -ENOMEM;
 	page = (char *)get_zeroed_page(GFP_KERNEL);
 	if (!page)
-		return ret;;
+		return ret;
 
 	ret = -EFAULT;
 	if (copy_from_user(page, buf, count))

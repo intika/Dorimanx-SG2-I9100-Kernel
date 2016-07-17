@@ -141,6 +141,8 @@ static void late_resume(struct work_struct *work)
 	struct early_suspend *pos;
 	unsigned long irqflags;
 	int abort = 0;
+	struct timer_list timer;
+	struct pm_wd_data data;
 
 #ifdef CONFIG_SPEEDUP_KEYRESUME
 	earlysuspend_old_prio = current->rt_priority;
@@ -153,8 +155,6 @@ static void late_resume(struct work_struct *work)
 	}
 #endif
 
-	struct timer_list timer;
-	struct pm_wd_data data;
 
 	pm_wd_add_timer(&timer, &data, 30);
 
