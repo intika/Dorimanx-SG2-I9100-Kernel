@@ -66,7 +66,10 @@ struct tracepoint_entry {
 };
 
 struct tp_probes {
-	struct rcu_head rcu;
+	union {
+		struct rcu_head rcu;
+		struct list_head list;
+	} u;
 	struct tracepoint_func probes[0];
 };
 
@@ -79,7 +82,7 @@ static inline void *allocate_probes(int count)
 
 static void rcu_free_old_probes(struct rcu_head *head)
 {
-	kfree(container_of(head, struct tp_probes, rcu));
+	kfree(container_of(head, struct tp_probes, u.rcu));
 }
 
 static inline void release_probes(struct tracepoint_func *old)
@@ -87,7 +90,7 @@ static inline void release_probes(struct tracepoint_func *old)
 	if (old) {
 		struct tp_probes *tp_probes = container_of(old,
 			struct tp_probes, probes[0]);
-		call_rcu_sched(&tp_probes->rcu, rcu_free_old_probes);
+		call_rcu_sched(&tp_probes->u.rcu, rcu_free_old_probes);
 	}
 }
 
@@ -446,8 +449,6 @@ static void tracepoint_add_old_probes(void *old)
 			struct tp_probes, probes[0]);
 		list_add(&tp_probes->u.list, &old_probes);
 	}
-	return mod->taints & ~((1 << TAINT_OOT_MODULE) | (1 << TAINT_CRAP) |
-			       (1 << TAINT_UNSIGNED_MODULE));
 }
 
 /**
@@ -637,16 +638,13 @@ bool trace_module_has_bad_taint(struct module *mod)
 
 static int tracepoint_module_coming(struct module *mod)
 {
-	struct tp_module *tp_mod;
+	struct tp_module *tp_mod, *iter;
 	int ret = 0;
-
-	if (!mod->num_tracepoints)
-		return 0;
 
 	/*
 	 * We skip modules that taint the kernel, especially those with different
 	 * module headers (for forced load), to make sure we don't cause a crash.
-	 * Staging, out-of-tree, and unsigned GPL modules are fine.
+	 * Staging and out-of-tree GPL modules are fine.
 	 */
 	if (trace_module_has_bad_taint(mod))
 		return 0;
