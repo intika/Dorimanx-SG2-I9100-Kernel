@@ -91,6 +91,9 @@ elif [ "a$GCCVERSION" == "a0502" ]; then
 elif [ "a$GCCVERSION" == "a0503" ]; then
 	cp $KERNELDIR/arch/arm/boot/compressed/Makefile_linaro $KERNELDIR/arch/arm/boot/compressed/Makefile;
 	echo "GCC 5.3.x Compiler Detected, building";
+elif [ "a$GCCVERSION" == "a0600" ]; then
+	cp $KERNELDIR/arch/arm/boot/compressed/Makefile_linaro $KERNELDIR/arch/arm/boot/compressed/Makefile;
+	echo "GCC 6.0.x Compiler Detected, building";
 else
 	echo "Compiler not recognized! please fix the 'build_kernel.sh'-script to match your compiler.";
 	exit 0;
@@ -241,17 +244,17 @@ if [ -e $KERNELDIR/arch/arm/boot/zImage ]; then
 	cd $KERNELDIR/READY-JB/ && zip -r Kernel_${GETVER}-`date +"[%H-%M]-[%d-%m]-JB-SGII-DRAGON-TRIM"`.zip .;
 
 	# push to android
-	ADB_STATUS=`adb get-state`;
-	if [ "$ADB_STATUS" == "device" ]; then
-		read -t 3 -p "push kernel to android, 3sec timeout (y/n)?";
-		if [ "$REPLY" == "y" ]; then
-			adb push $KERNELDIR/READY-JB/Kernel_*JB*.zip /sdcard/;
-			read -t 3 -p "reboot to recovery, 3sec timeout (y/n)?";
-			if [ "$REPLY" == "y" ]; then
-				adb reboot recovery;
-			fi;
-		fi;
-	fi;
+#	ADB_STATUS=`adb get-state`;
+#	if [ "$ADB_STATUS" == "device" ]; then
+#		read -t 3 -p "push kernel to android, 3sec timeout (y/n)?";
+#		if [ "$REPLY" == "y" ]; then
+#			adb push $KERNELDIR/READY-JB/Kernel_*JB*.zip /sdcard/;
+#			read -t 3 -p "reboot to recovery, 3sec timeout (y/n)?";
+#			if [ "$REPLY" == "y" ]; then
+#				adb reboot recovery;
+#			fi;
+#		fi;
+#	fi;
 else
 	# with red-color
 	echo -e "\e[1;31mKernel STUCK in BUILD! no zImage exist\e[m"
