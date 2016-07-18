@@ -2767,7 +2767,6 @@ static int m5mo_check_version(struct v4l2_subdev *sd)
 
 	cam_info("*************************************\n");
 	cam_info("F/W Version: %s\n", state->exif.unique_id);
-	cam_dbg("Binary Released: %s %s\n", __DATE__, __TIME__);
 	cam_info("*************************************\n");
 
 	return 0;
@@ -3029,3 +3028,4 @@ module_exit(m5mo_mod_exit);
 MODULE_AUTHOR("Goeun Lee <ge.lee@samsung.com>");
 MODULE_DESCRIPTION("driver for Fusitju M5MO LS 8MP camera");
 MODULE_LICENSE("GPL");
+
