@@ -52,7 +52,7 @@ static inline struct proc_dir_entry *PDE(const struct inode *inode)
 
 static inline void *__PDE_DATA(const struct inode *inode)
 {
-	return PDE(inode)->data;
+	return PDE_DATA(inode);
 }
 
 static inline struct pid *proc_pid(struct inode *inode)
