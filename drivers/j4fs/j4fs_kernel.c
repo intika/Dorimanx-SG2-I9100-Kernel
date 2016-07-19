@@ -418,7 +418,7 @@ int j4fs_file_write(struct file *f, const char *buf, size_t n, loff_t *pos)
 
 	j4fs_GrossLock();
 
-	inode = f->f_dentry->d_inode;
+	inode = file_inode(f);
 
 	if (!S_ISBLK(inode->i_mode) && f->f_flags & O_APPEND)
 		ipos = inode->i_size;
@@ -687,7 +687,7 @@ static DWORD valid_offset[128][2];
 int j4fs_readdir (struct file * filp, void * dirent, filldir_t filldir)
 {
 	unsigned int curoffs, offset, cur_link;
-	struct inode *inode = filp->f_dentry->d_inode;
+	struct inode *inode = file_inode(filp);
 	struct j4fs_inode_info *ei = J4FS_I(inode);
 	struct j4fs_inode *raw_inode;
 	int i,j, nErr;
@@ -710,7 +710,7 @@ int j4fs_readdir (struct file * filp, void * dirent, filldir_t filldir)
 	offset = filp->f_pos;
 
 	if (offset == 0) {
-		nErr=filldir(dirent, ".", 1, offset, filp->f_dentry->d_inode->i_ino, DT_DIR);
+		nErr=filldir(dirent, ".", 1, offset, file_inode(filp)->i_ino, DT_DIR);
 		if (nErr != 0) {
 			T(J4FS_TRACE_ALWAYS,("%s %d: error(nErr=0x%x)\n",__FUNCTION__,__LINE__,nErr));
 			goto error1;
