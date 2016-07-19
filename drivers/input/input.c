@@ -287,7 +287,7 @@ static int input_get_disposition(struct input_dev *dev,
 				break;
 			}
 
-			if (!!test_bit(code, dev->key) != !!value) {
+			if ((!!test_bit(code, dev->key)) != !!value) {
 
 				__change_bit(code, dev->key);
 				disposition = INPUT_PASS_TO_HANDLERS;
@@ -334,7 +334,7 @@ static int input_get_disposition(struct input_dev *dev,
 	case EV_SND:
 		if (is_event_supported(code, dev->sndbit, SND_MAX)) {
 
-			if (!!test_bit(code, dev->snd) != !!value)
+			if ((!!test_bit(code, dev->snd)) != !!value)
 				__change_bit(code, dev->snd);
 			disposition = INPUT_PASS_TO_ALL;
 		}
