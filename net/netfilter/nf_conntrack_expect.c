@@ -3,6 +3,7 @@
 /* (C) 1999-2001 Paul `Rusty' Russell
  * (C) 2002-2006 Netfilter Core Team <coreteam@netfilter.org>
  * (C) 2003,2004 USAGI/WIDE Project <http://www.linux-ipv6.org>
+ * (c) 2005-2012 Patrick McHardy <kaber@trash.net>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -578,7 +579,7 @@ static int exp_proc_init(struct net *net)
 static void exp_proc_remove(struct net *net)
 {
 #ifdef CONFIG_NF_CONNTRACK_PROCFS
-	proc_net_remove(net, "nf_conntrack_expect");
+	remove_proc_entry("nf_conntrack_expect", net->proc_net);
 #endif /* CONFIG_NF_CONNTRACK_PROCFS */
 }
 
