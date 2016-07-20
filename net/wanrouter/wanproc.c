@@ -270,7 +270,7 @@ static int wandev_show(struct seq_file *m, void *v)
 
 static int wandev_open(struct inode *inode, struct file *file)
 {
-	return single_open(file, wandev_show, PDE_DATA(inode));
+	return single_open(file, wandev_show, PDE(inode)->data);
 }
 
 static const struct file_operations wandev_fops = {

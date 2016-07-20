@@ -3818,9 +3818,9 @@ void __net_exit ip_vs_control_net_cleanup(struct net *net)
 	ip_vs_trash_cleanup(net);
 	ip_vs_stop_estimator(net, &ipvs->tot_stats);
 	ip_vs_control_net_cleanup_sysctl(net);
-	remove_proc_entry("ip_vs_stats_percpu", net->proc_net);
-	remove_proc_entry("ip_vs_stats", net->proc_net);
-	remove_proc_entry("ip_vs", net->proc_net);
+	proc_net_remove(net, "ip_vs_stats_percpu");
+	proc_net_remove(net, "ip_vs_stats");
+	proc_net_remove(net, "ip_vs");
 	free_percpu(ipvs->tot_stats.cpustats);
 }
 

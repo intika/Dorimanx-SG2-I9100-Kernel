@@ -612,7 +612,7 @@ int __net_init __ip_vs_app_init(struct net *net)
 void __net_exit __ip_vs_app_cleanup(struct net *net)
 {
 	unregister_ip_vs_app(net, NULL /* all */);
-	remove_proc_entry("ip_vs_app", net->proc_net);
+	proc_net_remove(net, "ip_vs_app");
 }
 
 int __init ip_vs_app_init(void)

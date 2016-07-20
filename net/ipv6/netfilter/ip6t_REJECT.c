@@ -7,8 +7,6 @@
  * Authors:
  *	Yasuyuki Kozakai	<yasuyuki.kozakai@toshiba.co.jp>
  *
- * Copyright (c) 2005-2007 Patrick McHardy <kaber@trash.net>
- *
  * Based on net/ipv4/netfilter/ipt_REJECT.c
  *
  * This program is free software; you can redistribute it and/or

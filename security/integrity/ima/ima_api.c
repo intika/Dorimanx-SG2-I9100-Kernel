@@ -132,7 +132,7 @@ void ima_add_violation(struct file *file, const unsigned char *filename,
 		       const char *op, const char *cause)
 {
 	struct ima_template_entry *entry;
-	struct inode *inode = file_inode(file);
+	struct inode *inode = file->f_dentry->d_inode;
 	int violation = 1;
 	int result;
 

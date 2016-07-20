@@ -2143,7 +2143,7 @@ static int __net_init netlink_net_init(struct net *net)
 static void __net_exit netlink_net_exit(struct net *net)
 {
 #ifdef CONFIG_PROC_FS
-	remove_proc_entry("netlink", net->proc_net);
+	proc_net_remove(net, "netlink");
 #endif
 }
 

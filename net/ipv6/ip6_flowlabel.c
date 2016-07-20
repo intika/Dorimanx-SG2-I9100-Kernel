@@ -783,7 +783,7 @@ static int __net_init ip6_flowlabel_proc_init(struct net *net)
 
 static void __net_exit ip6_flowlabel_proc_fini(struct net *net)
 {
-	remove_proc_entry("ip6_flowlabel", net->proc_net);
+	proc_net_remove(net, "ip6_flowlabel");
 }
 #else
 static inline int ip6_flowlabel_proc_init(struct net *net)

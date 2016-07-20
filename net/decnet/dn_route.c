@@ -1917,7 +1917,7 @@ void __exit dn_route_cleanup(void)
 	del_timer(&dn_route_timer);
 	dn_run_flush(0);
 
-	remove_proc_entry("decnet_cache", init_net.proc_net);
+	proc_net_remove(&init_net, "decnet_cache");
 	dst_entries_destroy(&dn_dst_ops);
 }
 

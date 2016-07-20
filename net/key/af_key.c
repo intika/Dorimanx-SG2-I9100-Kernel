@@ -3734,7 +3734,7 @@ static int __net_init pfkey_init_proc(struct net *net)
 
 static void __net_exit pfkey_exit_proc(struct net *net)
 {
-	remove_proc_entry("pfkey", net->proc_net);
+	proc_net_remove(net, "pfkey");
 }
 #else
 static inline int pfkey_init_proc(struct net *net)

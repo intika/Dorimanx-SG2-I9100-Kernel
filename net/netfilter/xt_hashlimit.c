@@ -3,7 +3,6 @@
  *	separately for each hashbucket (sourceip/sourceport/dstip/dstport)
  *
  *	(C) 2003-2004 by Harald Welte <laforge@netfilter.org>
- *	(C) 2006-2012 Patrick McHardy <kaber@trash.net>
  *	Copyright © CC Computer Consultants GmbH, 2007 - 2008
  *
  * Development of this code was funded by Astaro AG, http://www.astaro.com/
@@ -157,22 +156,11 @@ dsthash_find(const struct xt_hashlimit_htable *ht,
 /* allocate dsthash_ent, initialize dst, put in htable and lock it */
 static struct dsthash_ent *
 dsthash_alloc_init(struct xt_hashlimit_htable *ht,
-		   const struct dsthash_dst *dst, bool *race)
+		   const struct dsthash_dst *dst)
 {
 	struct dsthash_ent *ent;
 
 	spin_lock(&ht->lock);
-
-	/* Two or more packets may race to create the same entry in the
-	 * hashtable, double check if this packet lost race.
-	 */
-	ent = dsthash_find(ht, dst);
-	if (ent != NULL) {
-		spin_unlock(&ht->lock);
-		*race = true;
-		return ent;
-	}
-
 	/* initialize hash with random val at the time we allocate
 	 * the first hashtable entry */
 	if (unlikely(!ht->rnd_initialized)) {
@@ -595,7 +583,6 @@ hashlimit_mt(const struct sk_buff *skb, struct xt_action_param *par)
 	unsigned long now = jiffies;
 	struct dsthash_ent *dh;
 	struct dsthash_dst dst;
-	bool race = false;
 	u32 cost;
 
 	if (hashlimit_init_dst(hinfo, &dst, skb, par->thoff) < 0)
@@ -604,18 +591,13 @@ hashlimit_mt(const struct sk_buff *skb, struct xt_action_param *par)
 	rcu_read_lock_bh();
 	dh = dsthash_find(hinfo, &dst);
 	if (dh == NULL) {
-		dh = dsthash_alloc_init(hinfo, &dst, &race);
+		dh = dsthash_alloc_init(hinfo, &dst);
 		if (dh == NULL) {
 			rcu_read_unlock_bh();
 			goto hotdrop;
-		} else if (race) {
-			/* Already got an entry, update expiration timeout */
-			dh->expires = now + msecs_to_jiffies(hinfo->cfg.expire);
-			rateinfo_recalc(dh, now, hinfo->cfg.mode);
-		} else {
-			dh->expires = jiffies + msecs_to_jiffies(hinfo->cfg.expire);
-			rateinfo_init(dh, hinfo);
 		}
+		dh->expires = jiffies + msecs_to_jiffies(hinfo->cfg.expire);
+		rateinfo_init(dh, hinfo);
 	} else {
 		/* update expiration timeout */
 		dh->expires = now + msecs_to_jiffies(hinfo->cfg.expire);
@@ -862,7 +844,7 @@ static int __net_init hashlimit_proc_net_init(struct net *net)
 #if IS_ENABLED(CONFIG_IP6_NF_IPTABLES)
 	hashlimit_net->ip6t_hashlimit = proc_mkdir("ip6t_hashlimit", net->proc_net);
 	if (!hashlimit_net->ip6t_hashlimit) {
-		remove_proc_entry("ipt_hashlimit", net->proc_net);
+		proc_net_remove(net, "ipt_hashlimit");
 		return -ENOMEM;
 	}
 #endif
@@ -871,9 +853,9 @@ static int __net_init hashlimit_proc_net_init(struct net *net)
 
 static void __net_exit hashlimit_proc_net_exit(struct net *net)
 {
-	remove_proc_entry("ipt_hashlimit", net->proc_net);
+	proc_net_remove(net, "ipt_hashlimit");
 #if IS_ENABLED(CONFIG_IP6_NF_IPTABLES)
-	remove_proc_entry("ip6t_hashlimit", net->proc_net);
+	proc_net_remove(net, "ip6t_hashlimit");
 #endif
 }
 
