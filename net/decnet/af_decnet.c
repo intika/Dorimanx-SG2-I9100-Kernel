@@ -2414,7 +2414,7 @@ static void __exit decnet_exit(void)
 	dn_neigh_cleanup();
 	dn_fib_cleanup();
 
-	remove_proc_entry("decnet", init_net.proc_net);
+	proc_net_remove(&init_net, "decnet");
 
 	proto_unregister(&dn_proto);
 

@@ -2,7 +2,6 @@
  * H.323 extension for NAT alteration.
  *
  * Copyright (c) 2006 Jing Min Zhao <zhaojingmin@users.sourceforge.net>
- * Copyright (c) 2006-2012 Patrick McHardy <kaber@trash.net>
  *
  * This source code is licensed under General Public License version 2.
  *
@@ -547,9 +546,9 @@ static int nat_callforwarding(struct sk_buff *skb, struct nf_conn *ct,
 	}
 
 	/* Modify signal */
-	if (set_h225_addr(skb, protoff, data, dataoff, taddr,
+	if (!set_h225_addr(skb, protoff, data, dataoff, taddr,
 			   &ct->tuplehash[!dir].tuple.dst.u3,
-			   htons(nated_port)) != 0) {
+			   htons(nated_port)) == 0) {
 		nf_ct_unexpect_related(exp);
 		return -1;
 	}

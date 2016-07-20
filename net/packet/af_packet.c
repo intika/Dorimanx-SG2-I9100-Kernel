@@ -3790,7 +3790,7 @@ static int __net_init packet_net_init(struct net *net)
 
 static void __net_exit packet_net_exit(struct net *net)
 {
-	remove_proc_entry("packet", net->proc_net);
+	proc_net_remove(net, "packet");
 }
 
 static struct pernet_operations packet_net_ops = {

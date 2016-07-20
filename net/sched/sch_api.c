@@ -1767,7 +1767,7 @@ static int __net_init psched_net_init(struct net *net)
 
 static void __net_exit psched_net_exit(struct net *net)
 {
-	remove_proc_entry("psched", net->proc_net);
+	proc_net_remove(net, "psched");
 }
 #else
 static int __net_init psched_net_init(struct net *net)

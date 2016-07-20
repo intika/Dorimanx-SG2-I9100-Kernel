@@ -4470,11 +4470,11 @@ static int __net_init dev_proc_net_init(struct net *net)
 out:
 	return rc;
 out_ptype:
-	remove_proc_entry("ptype", net->proc_net);
+	proc_net_remove(net, "ptype");
 out_softnet:
-	remove_proc_entry("softnet_stat", net->proc_net);
+	proc_net_remove(net, "softnet_stat");
 out_dev:
-	remove_proc_entry("dev", net->proc_net);
+	proc_net_remove(net, "dev");
 	goto out;
 }
 
@@ -4482,9 +4482,9 @@ static void __net_exit dev_proc_net_exit(struct net *net)
 {
 	wext_proc_exit(net);
 
-	remove_proc_entry("ptype", net->proc_net);
-	remove_proc_entry("softnet_stat", net->proc_net);
-	remove_proc_entry("dev", net->proc_net);
+	proc_net_remove(net, "ptype");
+	proc_net_remove(net, "softnet_stat");
+	proc_net_remove(net, "dev");
 }
 
 static struct pernet_operations __net_initdata dev_proc_ops = {

@@ -331,7 +331,7 @@ static int __net_init phonet_init_net(struct net *net)
 
 static void __net_exit phonet_exit_net(struct net *net)
 {
-	remove_proc_entry("phonet", net->proc_net);
+	proc_net_remove(net, "phonet");
 }
 
 static struct pernet_operations phonet_net_ops = {
@@ -361,7 +361,7 @@ void phonet_device_exit(void)
 	rtnl_unregister_all(PF_PHONET);
 	unregister_netdevice_notifier(&phonet_device_notifier);
 	unregister_pernet_subsys(&phonet_net_ops);
-	remove_proc_entry("pnresource", init_net.proc_net);
+	proc_net_remove(&init_net, "pnresource");
 }
 
 int phonet_route_add(struct net_device *dev, u8 daddr)

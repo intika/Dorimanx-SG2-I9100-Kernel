@@ -611,8 +611,8 @@ static long exfat_generic_ioctl(struct file *filp,
     #if !(LINUX_VERSION_CODE < KERNEL_VERSION(3,18,3))
 		  struct inode *inode = filp->f_path.dentry->d_inode;
     #else
-		  struct inode *inode = file_inode(filp);
-    #endif
+		  struct inode *inode = filp->f_dentry->d_inode;
+	#endif
 #endif
 #ifdef CONFIG_EXFAT_KERNEL_DEBUG
 	unsigned int flags;

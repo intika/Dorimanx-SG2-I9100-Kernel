@@ -1427,7 +1427,7 @@ static int __net_init arp_net_init(struct net *net)
 
 static void __net_exit arp_net_exit(struct net *net)
 {
-	remove_proc_entry("arp", net->proc_net);
+	proc_net_remove(net, "arp");
 }
 
 static struct pernet_operations arp_net_ops = {

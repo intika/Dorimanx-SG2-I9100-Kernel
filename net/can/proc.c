@@ -382,7 +382,7 @@ static int can_rcvlist_proc_show(struct seq_file *m, void *v)
 
 static int can_rcvlist_proc_open(struct inode *inode, struct file *file)
 {
-	return single_open(file, can_rcvlist_proc_show, PDE_DATA(inode));
+	return single_open(file, can_rcvlist_proc_show, PDE(inode)->data);
 }
 
 static const struct file_operations can_rcvlist_proc_fops = {
@@ -534,5 +534,5 @@ void can_remove_proc(void)
 		can_remove_proc_readentry(CAN_PROC_RCVLIST_SFF);
 
 	if (can_dir)
-		remove_proc_entry("can", init_net.proc_net);
+		proc_net_remove(&init_net, "can");
 }
