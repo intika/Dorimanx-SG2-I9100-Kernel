@@ -355,7 +355,7 @@ static ssize_t viotap_write(struct file *file, const char *buf,
 	if (op == NULL)
 		return -ENOMEM;
 
-	get_dev_info(file->f_path.dentry->d_inode, &devi);
+	get_dev_info(file_inode(file), &devi);
 
 	/*
 	 * We need to make sure we can send a request.  We use
