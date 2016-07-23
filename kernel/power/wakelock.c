@@ -953,7 +953,7 @@ static int __init wakelocks_init(void)
 		goto err_suspend_sys_sync_work_queue;
 	}
 
-	suspend_work_queue = alloc_workqueue("suspend", WQ_UNBOUND|WQ_HIGHPRI, 0);
+	suspend_work_queue = alloc_workqueue("suspend", WQ_HIGHPRI, 0);
 	if (suspend_work_queue == NULL) {
 		ret = -ENOMEM;
 		goto err_suspend_work_queue;
