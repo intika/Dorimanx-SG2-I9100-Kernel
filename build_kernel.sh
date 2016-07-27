@@ -18,6 +18,9 @@
 # Have fun and update me if something nice can be added to my source.         #
 ###############################################################################
 
+# language
+LANG=C;
+
 # location
 if [ "${1}" != "" ]; then
 	export KERNELDIR=`readlink -f ${1}`;
@@ -158,15 +161,10 @@ done;
 cp -dxPR $INITRAMFS_SOURCE $INITRAMFS_TMP;
 
 # create new image with version & date
-#read -t 3 -p "create new kernel Image LOGO with version & date, 3sec timeout (y/n)?";
 echo "0" > $TMPFILE;
-#if [ "$REPLY" == "y" ]; then
-	(
-		./kernel_logo.sh;
-	)&
-#else
-#	echo "1" > $TMPFILE;
-#fi;
+(
+	./kernel_logo.sh;
+)&
 
 # make modules
 mkdir -p $INITRAMFS_TMP/lib/modules;
@@ -176,6 +174,7 @@ make -j${NR_CPUS} KALLSYMS_EXTRA_PASS=1 modules || exit 1;
 if [ -d $INITRAMFS_TMP/.git ]; then
 	rm -rf $INITRAMFS_TMP/.git;
 fi;
+rm -f $INITRAMFS_TMP/.gitignore;
 
 # clear mercurial repository from tmp-initramfs
 if [ -d $INITRAMFS_TMP/.hg ]; then
@@ -188,7 +187,7 @@ for i in `find $INITRAMFS_TMP -name EMPTY_DIRECTORY`; do
 done;
 
 # remove more from from tmp-initramfs ...
-rm -f $INITRAMFS_TMP/compress-sql.sh;
+rm -f $INITRAMFS_TMP/check_ramdisk_size.sh;
 rm -f $INITRAMFS_TMP/update*;
 
 # copy modules into tmp-initramfs
@@ -203,10 +202,6 @@ for i in `find $INITRAMFS_TMP/lib/modules/ -name '*.ko'`; do
         ${CROSS_COMPILE}strip --strip-debug $i;
 done;
 chmod 755 $INITRAMFS_TMP/lib/modules/*;
-
-# compress modules to reduce initramfs size
-#tar -C $INITRAMFS_TMP/lib -cvf - . | xz -9 -c > $INITRAMFS_TMP/modules.tar.xz;
-#rm -rf $INITRAMFS_TMP/lib/*;
 
 md5sum $INITRAMFS_TMP/res/misc/payload/STweaks.apk | awk '{print $1}' > $INITRAMFS_TMP/res/stweaks_md5;
 chmod 644 $INITRAMFS_TMP/res/stweaks_md5;
@@ -228,12 +223,6 @@ cp $KERNELDIR/arch/arm/boot/compressed/Makefile_clean $KERNELDIR/arch/arm/boot/c
 
 if [ -e $KERNELDIR/arch/arm/boot/zImage ]; then
 	cp $KERNELDIR/.config $KERNELDIR/arch/arm/configs/$KERNEL_CONFIG;
-
-#	echo "Kernel size before payload!";
-#	stat $KERNELDIR/arch/arm/boot/zImage || exit 1;
-
-#	$KERNELDIR/mkshbootimg.py $KERNELDIR/zImage $KERNELDIR/arch/arm/boot/zImage $KERNELDIR/payload.tar.xz $KERNELDIR/recovery.tar.xz;
-
 	cp $KERNELDIR/arch/arm/boot/zImage $KERNELDIR/;
 
 	# clean old files ...
@@ -242,7 +231,6 @@ if [ -e $KERNELDIR/arch/arm/boot/zImage ]; then
 
 	# copy all needed to ready kernel folder
 	cp $KERNELDIR/.config $KERNELDIR/READY/;
-#	echo "Kernel size after payload merge!";
 	stat $KERNELDIR/zImage || exit 1;
 	cp $KERNELDIR/zImage /$KERNELDIR/READY/boot/;
 
@@ -256,7 +244,7 @@ if [ -e $KERNELDIR/arch/arm/boot/zImage ]; then
 		cd $KERNELDIR/READY/ && zip -r Kernel_${GETVER}-`date +"[%H-%M]-[%d-%m]-MM-LP-SGII-GSSTUDIOS-TRIM"`.zip .;
 	fi;
 
-	# push to android
+#	# push to android
 #	ADB_STATUS=`adb get-state`;
 #	if [ "$ADB_STATUS" == "device" ]; then
 #		read -t 3 -p "push kernel to android, 3sec timeout (y/n)?";
