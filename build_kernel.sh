@@ -94,6 +94,9 @@ elif [ "a$GCCVERSION" == "a0503" ]; then
 elif [ "a$GCCVERSION" == "a0600" ]; then
 	cp $KERNELDIR/arch/arm/boot/compressed/Makefile_linaro $KERNELDIR/arch/arm/boot/compressed/Makefile;
 	echo "GCC 6.0.x Compiler Detected, building";
+elif [ "a$GCCVERSION" == "a0601" ]; then
+	cp $KERNELDIR/arch/arm/boot/compressed/Makefile_linaro $KERNELDIR/arch/arm/boot/compressed/Makefile;
+	echo "GCC 6.1.x Compiler Detected, building";
 else
 	echo "Compiler not recognized! please fix the 'build_kernel.sh'-script to match your compiler.";
 	exit 0;
@@ -244,10 +247,8 @@ if [ -e $KERNELDIR/arch/arm/boot/zImage ]; then
 	# kernel zip name is based on toolchain used, modify to however you like
 	if [ "a$GCCVERSION" == "a0409" ]; then
 		cd $KERNELDIR/READY-JB/ && zip -r Kernel_${GETVER}-`date +"[%H-%M]-[%d-%m]-KK-SGII-GSSTUDIOS-LINARO-4.9-TRIM"`.zip .;
-	elif [ "a$GCCVERSION" == "a0503" ]; then
-		cd $KERNELDIR/READY-JB/ && zip -r Kernel_${GETVER}-`date +"[%H-%M]-[%d-%m]-KK-SGII-GSSTUDIOS-UBER-5.3-TRIM"`.zip .;
-	elif [ "a$GCCVERSION" == "a0600" ]; then
-		cd $KERNELDIR/READY-JB/ && zip -r Kernel_${GETVER}-`date +"[%H-%M]-[%d-%m]-KK-SGII-GSSTUDIOS-UBER-6.0-TRIM"`.zip .;
+	elif [ "a$GCCVERSION" == "a0601" ]; then
+		cd $KERNELDIR/READY-JB/ && zip -r Kernel_${GETVER}-`date +"[%H-%M]-[%d-%m]-KK-SGII-GSSTUDIOS-UBER-6.1-TRIM"`.zip .;
 	else
 		cd $KERNELDIR/READY-JB/ && zip -r Kernel_${GETVER}-`date +"[%H-%M]-[%d-%m]-KK-SGII-GSSTUDIOS-TRIM"`.zip .;
 	fi;
