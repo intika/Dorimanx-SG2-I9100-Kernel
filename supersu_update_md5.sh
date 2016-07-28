@@ -1,4 +1,4 @@
 #!/bin/sh
-md5sum READY-JB/system/chainfire/SuperSU.apk | awk '{print $1}' > READY-JB/system/chainfire/SuperSU.apk.md5;
+md5sum READY/system/chainfire/SuperSU.apk | awk '{print $1}' > READY/system/chainfire/SuperSU.apk.md5;
 echo "Done!";
-cat READY-JB/system/chainfire/SuperSU.apk.md5;
+cat READY/system/chainfire/SuperSU.apk.md5;
