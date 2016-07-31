@@ -473,6 +473,13 @@ void vmpressure_init(struct vmpressure *vmpr)
 	INIT_WORK(&vmpr->work, vmpressure_work_fn);
 }
 
+int vmpressure_global_init(void)
+{
+	vmpressure_init(&global_vmpressure);
+	return 0;
+}
+late_initcall(vmpressure_global_init);
+
 /**
  * vmpressure_cleanup() - shuts down vmpressure control structure
  * @vmpr:	Structure to be cleaned up
@@ -488,10 +495,3 @@ void vmpressure_cleanup(struct vmpressure *vmpr)
 	 */
 	flush_work(&vmpr->work);
 }
-
-int vmpressure_global_init(void)
-{
-	vmpressure_init(&global_vmpressure);
-	return 0;
-}
-late_initcall(vmpressure_global_init);
