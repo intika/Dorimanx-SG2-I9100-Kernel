@@ -58,28 +58,28 @@ static short lowmem_adj[6] = {
 };
 static int lowmem_adj_size = 6;
 static int lowmem_minfree[6] = {
-	 4 * 1024,	/* Foreground App: 	16 MB	*/
-	 8 * 1024,	/* Visible App: 	32 MB	*/
-	16 * 1024,	/* Secondary Server: 	65 MB	*/
-	28 * 1024,	/* Hidden App: 		114 MB	*/
-	45 * 1024,	/* Content Provider: 	184 MB	*/
-	50 * 1024,	/* Empty App: 		204 MB	*/
+	3 * 512,	/* 6MB */
+	2 * 1024,	/* 8MB */
+	4 * 1024,	/* 16MB */
+	16 * 1024,	/* 64MB */
+	20 * 1024,	/* 80MB */
+	28 * 1024,	/* 112MB */
 };
 static int lowmem_minfree_screen_off[6] = {
-	 4 * 1024,	/* 16 MB */
-	 8 * 1024,	/* 32 MB */
-	16 * 1024,	/* 65 MB */
-	28 * 1024,	/* 114 MB */
-	45 * 1024,	/* 184 MB */
-	50 * 1024,	/* 204 MB */
+	3 * 512,	/* 6MB */
+	2 * 1024,	/* 8MB */
+	4 * 1024,	/* 16MB */
+	16 * 1024,	/* 64MB */
+	20 * 1024,	/* 80MB */
+	28 * 1024,	/* 112MB */
 };
 static int lowmem_minfree_screen_on[6] = {
-	 4 * 1024,	/* 16 MB */
-	 8 * 1024,	/* 32 MB */
-	16 * 1024,	/* 65 MB */
-	28 * 1024,	/* 114 MB */
-	45 * 1024,	/* 184 MB */
-	50 * 1024,	/* 204 MB */
+	3 * 512,	/* 6MB */
+	2 * 1024,	/* 8MB */
+	4 * 1024,	/* 16MB */
+	16 * 1024,	/* 64MB */
+	20 * 1024,	/* 80MB */
+	28 * 1024,	/* 112MB */
 };
 static int lowmem_minfree_size = 6;
 
@@ -221,7 +221,7 @@ static unsigned long lowmem_scan(struct shrinker *s, struct shrink_control *sc)
 		if (avoid_to_kill(uid) || protected_apps(p->comm)) {
 #else
 		if (avoid_to_kill(uid)) {
-			if (tasksize * (long)(PAGE_SIZE / 1024) >= 50000) {
+			if (tasksize * (long)(PAGE_SIZE / 1024) >= 80000) {
 				selected = p;
 				selected_tasksize = tasksize;
 				selected_oom_score_adj = oom_score_adj;
