@@ -706,6 +706,7 @@ static unsigned long lowmem_scan(struct shrinker *s, struct shrink_control *sc)
 
 		if (lowmem_debug_level >= 2 && selected_oom_score_adj == 0) {
 			show_mem(SHOW_MEM_FILTER_NODES);
+			dump_tasks(NULL, NULL);
 			show_mem_call_notifiers();
 		}
 
@@ -1020,6 +1021,8 @@ module_param_array_named(minfree, lowmem_minfree, uint, &lowmem_minfree_size,
 			 S_IRUGO | S_IWUSR);
 module_param_array_named(minfree_screen_off, lowmem_minfree_screen_off, uint,
 			 &lowmem_minfree_size, S_IRUGO | S_IWUSR);
+module_param_array_named(minfree_screen_on, lowmem_minfree_screen_on, uint,
+			 &lowmem_minfree_size, S_IRUGO | S_IWUSR);
 module_param_named(debug_level, lowmem_debug_level, uint, S_IRUGO | S_IWUSR);
 module_param_named(auto_oom, lowmem_auto_oom, uint, S_IRUGO | S_IWUSR);
 module_param_named(lmk_fast_run, lmk_fast_run, int, S_IRUGO | S_IWUSR);
@@ -1031,4 +1034,3 @@ module_init(lowmem_init);
 module_exit(lowmem_exit);
 
 MODULE_LICENSE("GPL");
-
